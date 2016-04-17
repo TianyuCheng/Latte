@@ -22,6 +22,14 @@ References
 --------
 We referred to the Latte Paper.
 
+
+- Usage Documentation of Matrix Multiplication of MKL Library:
+   https://software.intel.com/en-us/node/468480
+
+- Performance Comparison of Matrix Multiplication of MKL Library:
+   http://www.ics.uci.edu/~paolo/FastMM/FMM-Reference/reference.html
+
+
 Acknowledgements
 -------
 We would like to give many thanks to Prof. Pingali and our Teaching Assistant Mr. Roshan for their teaching and instructions. 
