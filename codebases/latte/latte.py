@@ -23,17 +23,32 @@ class Network(object):
     """
     def __init__(self):
         super(Network, self).__init__()
+        self.ensembles = []
+        self.layers    = {}
 
     def create_ensemble(self, neuron_type, num_neurons):
-        ensemble = Ensemble(neuron_type, num_neurons)
+        ID = len(self.ensembles)
+        ensemble = Ensemble(ID, neuron_type, num_neurons)
+        self.ensembles.append(ensemble)
         return ensemble
 
     def add_connections(self, ensemble_source, ensemble_sink, connections):
-        layer = Layer(ensemble_source, ensemble_sink)
+        index = (ensemble_source.ID, ensemble_sink.ID)
+        if index in self.layers:
+            layer = self.layers[index]
+        else:
+            layer = Layer(ensemble_source, ensemble_sink, connections)
+            self.layers[index] = layer
+
         # TODO: extract forward and backward function here
         forward  = layer.get_forward_ast()
         backward = layer.get_backward_ast()
-        return layer
+        print "Forward AST:  ", forward
+        print "Backward AST: ", backward
+        return
+
+    def solve(self):
+        print "unimplemented"
 
 #  _   _                             
 # | \ | | ___ _   _ _ __ ___  _ __   
@@ -75,10 +90,11 @@ class Ensemble(object):
     """
         Ensemble: A group of neurons of same level
     """
-    def __init__(self, neuron_type, num_neurons):
+    def __init__(self, ID, neuron_type, num_neurons):
         super(Ensemble, self).__init__()
+        self.ID = ID
         self.neuron_type = neuron_type
-        self.neurons = [ neuron_type() ] * num_neurons
+        self.neurons     = [ neuron_type() ] * num_neurons
 
 #  _                           
 # | |    __ _ _   _  ___ _ __  
@@ -93,17 +109,18 @@ class Layer(object):
         Layer: connection manager between two ensembles
     """
 
-    def __init__(self, source, sink):
+    def __init__(self, source, sink, connections):
         super(Layer, self).__init__()
         self.ensemble_source = source
         self.ensemble_sink   = sink
+        self.connections     = connections
 
     def get_forward_ast(self):
-        source = inspect.getsource(neuron_subtype.forward)
+        source = inspect.getsource(self.ensemble_source.neuron_type)
         module = compiler.parse(source)
         return module
 
     def get_backward_ast(self):
-        source = inspect.getsource(neuron_subtype.backward)
+        source = inspect.getsource(self.ensemble_sink.neuron_type)
         module = compiler.parse(source)
         return module
