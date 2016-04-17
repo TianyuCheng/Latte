@@ -12,12 +12,27 @@ class WeightedNeuron(Neuron):
 
     def __init__(self):
         super(WeightedNeuron, self).__init__()
+        self.weights          = None     # type Vector
+        self.gradient_weights = None     # type Vector
+        self.bias             = None     # type Vector
+        self.gradient_bias    = None     # type Vector
 
     def forward(self):
-        print "This implements the forward algorithm for WeightedNeuron" 
+        # perform dot product of weights and inputs
+        for i in xrange(len(self.inputs[0])):
+            self.value += self.weights[i] * self.inputs[0][i]
+        # add the bias
+        self.value += self.bias[1]
 
     def backward(self):
-        print "This implements the backward algorithm for WeightedNeuron" 
+        # compute back propagated gradient
+        for i in xrange(len(self.inputs[0])):
+            self.gradient_inputs[0][i] += self.weights[i] * self.gradient
+        # compute weight gradient
+        for i in xrange(len(self.inputs[0])):
+            self.gradient_weights[i] += self.weights[i] * self.gradient
+        # compute the bias gradient
+        self.gradient_bias += self.gradient
 
 
 # scripts to generate DNN

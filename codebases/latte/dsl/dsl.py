@@ -68,7 +68,7 @@ class Neuron(object):
         self.value           = None     # type Float32
         self.gradient        = None     # type Float32
         self.inputs          = None     # type Vector<Vector>
-        self.inputs_gradient = None     # type Vector<Vector>
+        self.gradient_inputs = None     # type Vector<Vector>
 
     @abstractmethod
     def forward(self):
