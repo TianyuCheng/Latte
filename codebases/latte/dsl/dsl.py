@@ -118,9 +118,24 @@ class Layer(object):
     def get_forward_ast(self):
         source = inspect.getsource(self.ensemble_source.neuron_type)
         module = compiler.parse(source)
-        return module
+        return self._get_function_(module, "forward")
 
     def get_backward_ast(self):
         source = inspect.getsource(self.ensemble_sink.neuron_type)
         module = compiler.parse(source)
-        return module
+        return self._get_function_(module, "backward")
+
+    def _get_function_(self, ast, func_name):
+        nodes = ast.getChildren() if isinstance(ast, compiler.ast.Node) else ast
+        for node in nodes:
+            if node is None: continue
+            if isinstance(node, compiler.ast.Function):
+                if node.name == func_name:
+                    return node
+            elif isinstance(node, compiler.ast.Node):
+                ret = self._get_function_(node, func_name)
+                if ret: return ret
+            elif isinstance(node, list):
+                ret = self._get_function_(node, func_name)
+                if ret: return ret
+        return None
