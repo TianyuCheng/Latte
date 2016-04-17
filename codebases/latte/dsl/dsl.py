@@ -118,7 +118,7 @@ class Layer(object):
     def get_forward_ast(self):
         source = inspect.getsource(self.ensemble_source.neuron_type)
         module = compiler.parse(source)
-        function = self._get_function_(module, "backward")
+        function = self._get_function_(module, "forward")
         assert function is not None
         return function.code
 
