@@ -130,8 +130,7 @@ class Layer(object):
         return function.code
 
     def _get_function_(self, ast, func_name):
-        nodes = ast.getChildren() if isinstance(ast, compiler.ast.Node) else ast
-        for node in nodes:
+        for node in ast.getChildren():
             if node is None: continue
             if isinstance(node, compiler.ast.Function):
                 if node.name == func_name:
