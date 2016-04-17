@@ -19,20 +19,20 @@ class WeightedNeuron(Neuron):
 
     def forward(self):
         # perform dot product of weights and inputs
-        for i in xrange(len(self.inputs[0])):
-            self.value += self.weights[i] * self.inputs[0][i]
+        for i in (0, inputs[0].length, 1):
+            value += weights[i] * inputs[0][i]
         # add the bias
-        self.value += self.bias[1]
+        value += bias[0]
 
     def backward(self):
         # compute back propagated gradient
-        for i in xrange(len(self.inputs[0])):
-            self.gradient_inputs[0][i] += self.weights[i] * self.gradient
+        for i in (0, inputs[0].length, 1):
+            gradient_inputs[0][i] += weights[i] * gradient
         # compute weight gradient
-        for i in xrange(len(self.inputs[0])):
-            self.gradient_weights[i] += self.weights[i] * self.gradient
+        for i in (0, inputs[0].length, 1):
+            gradient_weights[i] += weights[i] * gradient
         # compute the bias gradient
-        self.gradient_bias += self.gradient
+        gradient_bias[0] += gradient
 
 
 # scripts to generate DNN
