@@ -1,6 +1,4 @@
-#include "Network.h"
-#include "Ensemble.h"
-#include "Neuron.h"
+#include "Latte.h"
 
 void add_connection (Network& net, Ensemble& enm1, Ensemble& enm2, map<int, vector<int>>& mappings) {
 
@@ -35,6 +33,25 @@ void solve (Network& network, Solver& solver) {
 
     }
     // 6. evaluate accuracy and timing performance
-    evaluate ();
+    // evaluate ();
     
+}
+
+int main (int argn, char** argv) {
+    Network net1;
+    Network net2;
+    Network net3;
+    cout << "[net1] " << net1.get_string() << endl;
+    cout << "[net2] " << net2.get_string() << endl;
+    cout << "[net3] " << net3.get_string() << endl;
+
+    Neuron neuron1;
+    Neuron neuron2;
+    Neuron neuron3;
+    cout << "[neuron1] " << neuron1.get_string() << endl;
+    cout << "[neuron2] " << neuron2.get_string() << endl;
+    cout << "[neuron3] " << neuron3.get_string() << endl;
+
+    /* TODO: more unit tests here */
+
 }

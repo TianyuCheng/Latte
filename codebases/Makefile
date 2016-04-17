@@ -3,18 +3,12 @@ CXX_FLAGS := -std=c++11
 
 BUILD_DIR := bin
 
-all: bin network ensemble neuron
+all: bin CppLatte
 
 bin:
 	@mkdir -p $(BUILD_DIR)
 
-neuron: Neuron.cpp
-	$(CC) $(CXX_FLAGS) $< -o $(BUILD_DIR)/$@
-
-ensemble: Ensemble.cpp
-	$(CC) $(CXX_FLAGS) $< -o $(BUILD_DIR)/$@
-
-network: Network.cpp
+CppLatte: Latte.cpp
 	$(CC) $(CXX_FLAGS) $< -o $(BUILD_DIR)/$@
 
 clean:
