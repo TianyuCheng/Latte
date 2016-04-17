@@ -1,2 +1,2 @@
 from latte import *
-__all__ = [ "Neuron" ]
+__all__ = [ "Network", "Neuron" ]
