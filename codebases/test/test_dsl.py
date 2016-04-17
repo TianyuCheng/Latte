@@ -12,10 +12,10 @@ class WeightedNeuron(Neuron):
 
     def __init__(self):
         super(WeightedNeuron, self).__init__()
-        self.weights          = None     # type Vector
-        self.gradient_weights = None     # type Vector
-        self.bias             = None     # type Vector
-        self.gradient_bias    = None     # type Vector
+        self.weights = []           # type Vector
+        self.gradient_weights = []  # type Vector
+        self.bias = []              # type Vector
+        self.gradient_bias = []     # type Vector
 
     def forward(self):
         # perform dot product of weights and inputs
