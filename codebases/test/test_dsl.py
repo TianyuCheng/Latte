@@ -3,7 +3,7 @@
 import os, sys
 sys.path.append(os.path.abspath(".."))
 
-from latte import *
+from latte.dsl import *
 
 # neuron subtype
 class WeightedNeuron(Neuron):

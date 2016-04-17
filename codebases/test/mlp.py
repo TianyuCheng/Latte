@@ -1,8 +1,10 @@
 '''
     Testcase: Multi-layer Perceptron 
 '''
+import os, sys
+sys.path.append(os.path.abspath(".."))
 
-from libLatte import *
+from latte.lib import *
 
 net = Network()
 data_enm, label_enm = binLibsvmDataLayer(net, )

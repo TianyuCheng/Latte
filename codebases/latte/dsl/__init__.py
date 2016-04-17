@@ -1,2 +1,2 @@
-from latte import *
+from dsl import *
 __all__ = [ "Network", "Neuron" ]
