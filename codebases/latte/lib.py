@@ -151,9 +151,9 @@ class DataNeuron(Neuron):
 
     def forward(self):
         # remember to load input feature to data neuron before forward propa
-        assert len(forward_adj) > 0, "No forward adjacency element. "
-        for next_neuron in forward_adj:
-            next_neuron.inputs[self.pos_x, self.pos_y] = self.output
+        assert len(self.forward_adj) > 0, "No forward adjacency element. "
+        for next_neuron in self.forward_adj:
+            next_neuron.inputs[self.pos_x][self.pos_y] = self.output
 
     def backward(self):
         pass # no backward propagation for data neuron
@@ -210,6 +210,14 @@ class Ensemble:
         for neuron in self.neurons:
             neuron.init_grad_inputs_dim(dim_x, dim_y)
 
+    def run_forward_propagate(self):
+        for neuron in self.neurons:
+            neuron.forward()
+    def run_backward_propagate(self):
+        for neuron in self.neurons:
+            neuron.backward()
+
+
 class Network:
     def __init__(self):
         self.network_id = allocate_network_id()
@@ -224,7 +232,7 @@ class Network:
 
     def __getitem__(self, idx):
         assert 0 <= idx and idx < len(self.ensembles)
-        return self.ensembles[i]
+        return self.ensembles[idx]
 
     def get_ensembles(self): return self.ensembles
 
@@ -242,7 +250,65 @@ class Network:
         self.test_features = test_fea
         self.test_labels = test_labels
 
+    def load_data_instance(self, idx):
+        dim_data = len(self.ensembles[0].neurons)
+        for i in range(dim_data):
+            self.ensembles[0].neurons[i].output = self.train_features[idx][i]
+        dim_label = len(self.ensembles[-1].neurons)
+        for i in range(dim_label):
+            if i == self.train_labels[idx] - 1:
+                self.ensembles[-1].neurons[i].label = 1
+            else: 
+                self.ensembles[-1].neurons[i].label = 0
+
+
+class Solver:
+    def __init__(self, iterations):
+        self.iterations = iterations
+        pass
+
+    def solve(self):
+        pass
+
+class SGD(Solver):
+    def __init__(self, iterations, step_size):
+        Solver.__init__(self, iterations)
+        self.alpha = step_size
+
+    def update_weights(self, net):
+        for i in range(1, len(net.ensembles)): 
+            for j in range(net[i].get_size()):
+                for prev in net[i][j].backward_adj:
+                    diff = net[i][j].grad_output * prev.output
+                    net[i][j].weights[prev.pos_x][prev.pos_y] -= diff
+
+    def solve(self, net):
+        assert net.train_features is not None
+        assert net.train_labels is not None
+        assert net.test_features is not None
+        assert net.test_labels is not None
+        train_size = len(net.train_features)
+        test_size = len(net.test_features)
+        assert train_size == len(net.train_labels)
+        assert test_size == len(net.test_labels)
+        
+        for iter_count in range(self.iterations):
+            for data_idx in range(train_size):
+                net.load_data_instance(data_idx)
+                for i in range(len(net.ensembles)): 
+                    net[i].run_forward_propagate()
+                    net[i].run_backward_propagate()
+                self.update_weights(net)
+        # TODO: performance evaluation
+        pass
+
+def solve(solver, net):
+    assert isinstance(solver, Solver), "solve: solver argument is not type Solver"
+    assert isinstance(net, Network), "solve: net argument is not type Network"
+    solver.solve(net)
+
 #class WeightedNeuron(Neuron):
+
 
 if __name__ == "__main__":
     # TODO: ADD Unit testing of standard library for latte HERE
