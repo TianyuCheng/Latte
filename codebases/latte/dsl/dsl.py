@@ -2,8 +2,6 @@ import compiler, inspect
 import compiler.ast
 from abc import abstractmethod
 
-from variable import *
-
 ensemble_id_counter = 0
 neuron_id_counter = 0
 network_id_counter = 0
