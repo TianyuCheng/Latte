@@ -24,10 +24,14 @@ def allocate_network_id ():
     network_id_counter += 1
     return assigned_id
 
-# TODO: how to xaiver initialize
-def Xaiver_weights_init (dim_x, dim_y):
-    
-    return [[]]
+def Xaiver_weights_init (dim_x, dim_y, prev_enm_size):
+    cur_enm_size = dim_x * dim_y;
+    high = 1.0 * np.sqrt( 6 / (prev_enm_size + cur_enm_size) )
+    low = -1.0 * high 
+    result = []
+    for i in range(dim_x):
+        result.append([ np.random.uniform(low, high) for j in range(dim_y) ])
+    return result
 
 def add_connection (net, prev_enm, cur_enm, mappings):
     # update adjacency lists
@@ -35,8 +39,6 @@ def add_connection (net, prev_enm, cur_enm, mappings):
         assert 0 <= i and i < prev_enm.get_size()
         prev_enm[i].forward_adj = [ cur_enm[j] for j in indices ]
         for j in indices: cur_enm[j].backward_adj.append(prev_enm[i])
-    # add weights
-    # net.add_weights(prev_enm, cur_enm, mappings)
     return
 
 ''' 
@@ -77,9 +79,9 @@ def FullyConnectedLayer(net, prev_enm, N, TYPE):
     # construct a new ensemble
     M = prev_enm.get_size()
     cur_enm = Ensemble(N, TYPE)
-    cur_enm.set_inputs_dim (1, M)
     cur_enm.set_backward_adj(prev_enm)
     prev_enm.set_forward_adj(cur_enm)
+    cur_enm.set_inputs_dim (1, M)
     # enforce connections
     mappings = {}
     for i in range(M): mappings.update({i:[j for j in range(N)]})
@@ -112,10 +114,10 @@ class Neuron:
     def __eq__(self, other):
         return self.neuron_id == other.neuron_id
 
-    def init_dim (self, dim_x, dim_y):
+    def init_dim (self, dim_x, dim_y, prev_enm_size):
         self.inputs      = [ [0.0] * dim_y ] * dim_x
         self.grad_inputs = [ [0.0] * dim_y ] * dim_x
-        self.weights     = Xaiver_weights_init (dim_x, dim_y)
+        self.weights     = Xaiver_weights_init (dim_x, dim_y, prev_enm_size)
 
     def forward(self):
         # innder product of inputs and weights
@@ -171,10 +173,12 @@ class Ensemble:
         return self.neurons[idx]
 
     def get_size(self): return self.size
-    def set_forward_adj (self, enm):  self.prev_adj_enm = enm
-    def set_backward_adj (self, enm): self.next_adj_enm = enm
+    def set_forward_adj (self, enm):  self.next_adj_enm = enm
+    def set_backward_adj (self, enm): self.prev_adj_enm = enm
     def set_inputs_dim(self, dim_x, dim_y):
-        for neuron in self.neurons: neuron.init_dim (dim_x, dim_y)
+        prev_enm_size = self.prev_adj_enm.get_size()
+        for neuron in self.neurons: 
+            neuron.init_dim (dim_x, dim_y, prev_enm_size)
 
 class Network:
     def __init__(self):
@@ -207,12 +211,6 @@ class Network:
         self.train_labels = train_labels
         self.test_features = test_fea
         self.test_labels = test_labels
-
-    '''
-    def add_weights (self, prev_enm, cur_enm, mappings):
-        tmp_weights = Xaiver_init(prev_enm.get_size(), cur_enm.get_size())
-        self.weights.update({(prev_enm, cur_enm):tmp_weights})
-    '''
 
 #class WeightedNeuron(Neuron):
 
