@@ -22,7 +22,11 @@ def allocate_network_id ():
     network_id_counter += 1
     return assigned_id
 
-# TODO: how to xaiver initialize and represent weights?
+# TODO: how to xaiver initialize
+def Xaiver_init (M, N):
+    
+    return [[]]
+
 def add_connection (net, prev_enm, cur_enm, mappings):
     # update adjacency lists
     for i, indices in mappings:
@@ -30,17 +34,23 @@ def add_connection (net, prev_enm, cur_enm, mappings):
         prev_enm[i].forward_adj = [ cur_enm[j] for j in indices ]
         for j in indices: cur_enm[j].backward_adj.append(prev_enm[i])
     # add weights
+    net.add_weights(prev_enm, cur_enm, mappings)
     return
 
-def binLibsvmDataLayer(net, train_file, test_file, dim):
-    # read data files
+def read_libsvm (file_name)
     
+
+    return data, data_dim
+
+def LibsvmDataLayer(net, train_file, test_file, dim):
+    # read data files
+    train_data, train_dim = read_libsvm(train_file)
+    test_data, test_dim = read_libsvm(test_file)
     # construct data and label ensembles
     data_enm = Ensemble(train_dim, Neuron)
-    label_enm = Ensemble(test_dim, Neuron)
     # add to networks
-    networks.set_data_ensemble(data_enm)
-    networks.set_label_ensemble(data_enm)
+    net.set_data_ensemble(data_enm)
+    net.set_datasets(train_data, test_data)
     return data_enm, label_enm
 
 def FullyConnectedLayer(net, prev_enm, N, TYPE):
@@ -55,9 +65,10 @@ def FullyConnectedLayer(net, prev_enm, N, TYPE):
     net.add_ensemble (cur_enm)
     return cur_enm
 
-def SigmoidLossLayer(net, loss):
+def SoftmaxLossLayer(net, prev_enm, loss_enm):
     
-    pass
+    label_enm = Ensemble(test_dim, SoftmaxNeuron)
+    return 
 
 class Neuron:
     def __init__(self):
@@ -75,9 +86,14 @@ class Neuron:
         return self.neuron_id == other.neuron_id
 
     def forward(self):
+        # innder product of inputs and weights
+
+        # put output value to the inputs of next layer
+
         pass
 
     def backward(self):
+
         pass
 
 class Ensemble:
@@ -94,8 +110,7 @@ class Ensemble:
         assert 0 <= idx and idx < len(self.neurons)
         return self.neurons[idx]
 
-    def get_size(self):
-        return self.size
+    def get_size(self): return self.size
 
     def set_inputs_dim(self, nrows, ncols):
         for neuron in self.neurons:
@@ -110,6 +125,7 @@ class Network:
     def __init__(self):
         self.network_id = allocate_network_id()
         self.ensembles = []
+        self.weights = {}
         pass
 
     def __eq__(self, other):
@@ -124,11 +140,19 @@ class Network:
 
     def add_ensemble(self, enm):
         assert isinstance(enm, Ensemble) and len(self.ensembles) >= 2
-        self.ensembles.insert(-1, enm)
+        self.ensembles.append(enm)
 
-    def set_data_label_ensemble(self, data_enm, label_enm):
+    def set_data_ensemble(self, data_enm):
         assert len(self.ensembles) == 0 # must be empty ensembles
-        self.ensembles = [data_enm, label_enm]
+        self.ensembles = [data_enm]
+    
+    def set_datasets (self, train_data):
+        self.train_data = train_data
+        self.test_data = test_data
+
+    def add_weights (self, prev_enm, cur_enm, mappings):
+        tmp_weights = Xaiver_init(prev_enm.get_size(), cur_enm.get_size())
+        self.weights.update({(prev_enm, cur_enm):tmp_weights})
 
 #class WeightedNeuron(Neuron):
 
