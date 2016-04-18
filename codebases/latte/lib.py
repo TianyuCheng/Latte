@@ -26,11 +26,12 @@ def allocate_network_id ():
 
 def Xaiver_weights_init (dim_x, dim_y, prev_enm_size):
     cur_enm_size = dim_x * dim_y;
-    high = 1.0 * np.sqrt( 6 / (prev_enm_size + cur_enm_size) )
+    high = np.sqrt( 6.0 / (prev_enm_size + cur_enm_size) )
     low = -1.0 * high 
     result = []
     for i in range(dim_x):
         result.append([ np.random.uniform(low, high) for j in range(dim_y) ])
+    #print result
     return result
 
 def add_connection (net, prev_enm, cur_enm, mappings):
@@ -95,11 +96,12 @@ def SoftmaxLossLayer(net, prev_enm, nLabels):
     return 
 
 class Neuron:
-    def __init__(self, pos_x, pos_y):
+    def __init__(self, enm, pos_x, pos_y):
         # management info
         self.neuron_id = allocate_ensemble_id()
         self.pos_x = pos_x
         self.pos_y = pos_y
+        self.enm = enm
         # data info
         self.weights     = [[]]
         self.inputs      = [[]]
@@ -136,10 +138,9 @@ class Neuron:
         
         pass
 
-# TODO:
 class DataNeuron(Neuron):
-    def __init__(self, pos_x, pos_y):
-        Neuron.__init__(self, pos_x, pos_y)
+    def __init__(self, enm, pos_x, pos_y):
+        Neuron.__init__(self, enm, pos_x, pos_y)
 
     def forward(self):
         # remember to load input feature to data neuron before forward propa
@@ -152,15 +153,33 @@ class DataNeuron(Neuron):
 
 # TODO:
 class SoftmaxNeuron(Neuron):
-    def __init__(self, pos_x, pos_y):
-        Neuron.__init__(self, pos_x, pos_y)
+    def __init__(self, enm, pos_x, pos_y):
+        Neuron.__init__(self, enm, pos_x, pos_y)
+        self.label = None
+    
+    def forward(self):
+        dp_result = 0.0
+        for i in len(self.inputs):
+            for j in len(self.inputs[0]):
+                dp_result = self.weights[i][j] * self.inputs[i][j]
+        self.output = e**dp_result
+
+    # NOTE: remember to invoke this annotate() and before backward
+    def annotate(self):
+        size = self.enm.get_size()
+        divisor = sum( [ self.enm.neurons[i].output for i in range(size) ] )
+        self.output = self.output / divisor
+
+    def backward(self):
+        diff = self.label - self.output
+        pass
 
 class Ensemble:
     def __init__(self, N, TYPE):
         self.ensemble_id = allocate_ensemble_id()
         self.size = N
         # NOTE: currently only allow 1-d ensemble
-        self.neurons = [TYPE(1, i) for i in range(N)]
+        self.neurons = [TYPE(self, 1, i) for i in range(N)]
         self.prev_adj_enm = None
         self.next_adj_enm = None
         return  
