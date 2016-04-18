@@ -42,16 +42,15 @@ def read_libsvm (file_name)
 
     return data, data_dim
 
-def LibsvmDataLayer(net, train_file, test_file, dim):
+def LibsvmDataLayer(net, train_file, test_file, nFeatures, nLabels):
     # read data files
-    train_data, train_dim = read_libsvm(train_file)
-    test_data, test_dim = read_libsvm(test_file)
-    # construct data and label ensembles
-    data_enm = Ensemble(train_dim, Neuron)
-    # add to networks
-    net.set_data_ensemble(data_enm)
+    train_data = read_libsvm(train_file)
+    test_data  = read_libsvm(test_file)
     net.set_datasets(train_data, test_data)
-    return data_enm, label_enm
+    # construct data and label ensembles
+    data_enm = Ensemble(nFeatures, DataNeuron)
+    net.set_data_ensemble(data_enm)
+    return data_enm, nLabels
 
 def FullyConnectedLayer(net, prev_enm, N, TYPE):
     # construct a new ensemble
@@ -65,9 +64,9 @@ def FullyConnectedLayer(net, prev_enm, N, TYPE):
     net.add_ensemble (cur_enm)
     return cur_enm
 
-def SoftmaxLossLayer(net, prev_enm, loss_enm):
-    
-    label_enm = Ensemble(test_dim, SoftmaxNeuron)
+def SoftmaxLossLayer(net, prev_enm, nLabels):
+    # TODO: 
+    label_enm = Ensemble(nLabels, SoftmaxNeuron)
     return 
 
 class Neuron:
@@ -95,6 +94,12 @@ class Neuron:
     def backward(self):
 
         pass
+
+class DataNeuron(Neuron):
+    def __init__(self):
+        pass
+
+class SoftmaxNeuron(Neuron)
 
 class Ensemble:
     def __init__(self, N, TYPE):
