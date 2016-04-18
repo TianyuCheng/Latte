@@ -24,26 +24,39 @@ def allocate_network_id ():
 
 # TODO: how to xaiver initialize and represent weights?
 def add_connection (net, prev_enm, cur_enm, mappings):
+    # update adjacency lists
     for i, indices in mappings:
         assert 0 <= i and i < prev_enm.get_size()
         prev_enm[i].forward_adj = [ cur_enm[j] for j in indices ]
         for j in indices: cur_enm[j].backward_adj.append(prev_enm[i])
+    # add weights
     return
 
 def binLibsvmDataLayer(net, train_file, test_file, dim):
-    pass
+    # read data files
+    
+    # construct data and label ensembles
+    data_enm = Ensemble(train_dim, Neuron)
+    label_enm = Ensemble(test_dim, Neuron)
+    # add to networks
+    networks.set_data_ensemble(data_enm)
+    networks.set_label_ensemble(data_enm)
+    return data_enm, label_enm
 
 def FullyConnectedLayer(net, prev_enm, N, TYPE):
+    # construct a new ensemble
     M = prev_enm.get_size()
     cur_enm = Ensemble(N, TYPE)
     cur_enm.set_inputs_dim (1, M)
+    # enforce connections
     mappings = {}
     for i in len(M): mappings.update(i, [j for j in len(N)])
     add_connection (net, prev_enm, cur_enm, mappings)
     net.add_ensemble (cur_enm)
     return cur_enm
 
-def SigmoidLossLayer():
+def SigmoidLossLayer(net, loss):
+    
     pass
 
 class Neuron:
@@ -110,12 +123,14 @@ class Network:
         return self.ensembles
 
     def add_ensemble(self, enm):
-        assert isinstance(enm, Ensemble)
-        self.ensembles.append(enm)
+        assert isinstance(enm, Ensemble) and len(self.ensembles) >= 2
+        self.ensembles.insert(-1, enm)
 
+    def set_data_label_ensemble(self, data_enm, label_enm):
+        assert len(self.ensembles) == 0 # must be empty ensembles
+        self.ensembles = [data_enm, label_enm]
 
 #class WeightedNeuron(Neuron):
-
 
 if __name__ == "__main__":
     # TODO: ADD Unit testing of standard library for latte HERE
