@@ -18,6 +18,7 @@ void Xaiver_initialize() {
 
 int ITERATIONS = 1000;
 void solve (Network& network, Solver& solver) {
+    
     // 1. mapping to shared memory region
     // INPUT: network architecture
     // OUTPUT: compact memory allocation of computing neurons 
@@ -31,8 +32,9 @@ void solve (Network& network, Solver& solver) {
         // 5. backward routine through pattern matching 
         // (solver like sgd is used here..)
 
+        // 6. update weight
     }
-    // 6. evaluate accuracy and timing performance
+    // 7. evaluate accuracy and timing performance
     // evaluate ();
     
 }

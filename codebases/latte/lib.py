@@ -4,6 +4,7 @@
 import sys
 import numpy as np
 import math
+import random
 
 
 ensemble_id_counter = 0
@@ -66,7 +67,8 @@ def LibsvmDataLayer(net, train_file, test_file, nFeatures, nLabels):
     # read data files
     train_features, train_labels = read_libsvm(train_file, nFeatures, nLabels)
     test_features, test_labels  = read_libsvm(test_file, nFeatures, nLabels)
-    net.set_datasets(train_features, train_labels, test_features, test_features)
+    # print "test_labels: ", test_labels
+    net.set_datasets(train_features, train_labels, test_features, test_labels)
     '''
     for x in train_features: print x
     for x in train_labels: print x
@@ -195,12 +197,11 @@ class Ensemble:
 
     def __eq__(self, other): 
         return self.ensemble_id == other.ensemble_id
-
+    def __len__(self): return len(self.neurons)
     def __getitem__(self, idx):
         assert 0 <= idx and idx < len(self.neurons)
         return self.neurons[idx]
 
-    def __len__(self): return len(self.neurons)
 
     def get_size(self): return self.size
     def set_forward_adj(self, enm):  self.next_adj_enm = enm
@@ -219,7 +220,6 @@ class Ensemble:
     def run_backward_propagate(self):
         for neuron in self.neurons:
             neuron.backward()
-
 
 class Network:
     def __init__(self):
@@ -247,23 +247,42 @@ class Network:
         assert len(self.ensembles) == 0 # must be empty ensembles
         self.ensembles = [data_enm]
     
-    def set_datasets (self, train_fea, train_labels, test_fea, test_labels):
-        self.train_features = train_fea
-        self.train_labels = train_labels
+    def set_datasets (self, train_fea, train_labels, test_fea, test_labels, shuffle=False):
+        if shuffle:
+            indexes = range(len(train_fea))
+            random.seed(1)
+            random.shuffle(indexes)
+            self.train_features, self.train_labels = [], []
+            for i in range(len(indexes)):
+                self.train_features.append(train_fea[indexes[i]])
+                self.train_labels.append(train_labels[indexes[i]])
+        else:
+            self.train_features = train_fea
+            self.train_labels = train_labels
+
+        #for i in range(len(train_fea)):
+        #    print self.train_labels[i], self.train_features[i]
         self.test_features = test_fea
         self.test_labels = test_labels
 
-    def load_data_instance(self, idx):
+    def load_data_instance(self, idx, train=True):
+        if train: 
+            features_mat = self.train_features
+            labels_vec = self.train_labels
+        else:
+            features_mat = self.test_features
+            labels_vec = self.test_labels
+
         dim_data = len(self.ensembles[0].neurons)
         for i in range(dim_data):
-            self.ensembles[0].neurons[i].output = self.train_features[idx][i]
+            self.ensembles[0].neurons[i].output = features_mat[idx][i]
+
         dim_label = len(self.ensembles[-1].neurons)
         for i in range(dim_label):
-            if i == self.train_labels[idx] - 1:
+            if i == labels_vec[idx] - 1:
                 self.ensembles[-1].neurons[i].label = 1
             else: 
                 self.ensembles[-1].neurons[i].label = 0
-
 
 class Solver:
     def __init__(self, iterations):
@@ -305,9 +324,20 @@ class SGD(Solver):
                 for i in range(len(net.ensembles)): 
                     net[i].run_backward_propagate()
                 self.update_weights(net)
-        # TODO: performance evaluation
-        
-        pass
+
+        # performance evaluation
+        preds = []
+        for data_idx in range(test_size):
+            net.load_data_instance(data_idx, train=False)
+            for i in range(len(net.ensembles)): 
+                net[i].run_forward_propagate()
+            pred = np.argmax ([ out_neuron.output for out_neuron in net[-1].neurons] )
+            preds.append(pred)
+        assert(len(preds) == test_size), "dimensionality of preds and test_size does not match"
+        nCorrect = sum([preds[i] == net.test_labels[i]-1 for i in range(test_size)])
+        for i in range(len(preds)):
+            print "preds: ", preds[i], ", target: ", net.test_labels[i]
+        print "Accuracy:", 1.0 * nCorrect / test_size
 
 def solve(solver, net):
     assert isinstance(solver, Solver), "solve: solver argument is not type Solver"
