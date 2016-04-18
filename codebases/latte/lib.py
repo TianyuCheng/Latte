@@ -103,13 +103,13 @@ class Neuron:
         self.pos_y = pos_y
         self.enm = enm
         # data info
-        self.weights     = [[]]
-        self.inputs      = [[]]
-        self.grad_inputs = [[]]
-        self.output      = 0.0
-        self.grad_output = 0.0
+        self.weights      = [[]]
+        self.inputs       = [[]]
+        self.grad_inputs  = [[]]
+        self.output       = 0.0
+        self.grad_output  = 0.0
         # architecture info
-        self.forward_adj  = []   # forward adjacency list
+        self.forward_adj  = []  # forward adjacency list
         self.backward_adj = []  # backward adjacency list
         return 
 
@@ -129,6 +129,7 @@ class Neuron:
             for j in len(self.inputs[0]):
                 dp_result = self.weights[i][j] * self.inputs[i][j]
         self.output = np.tanh(dp_result)
+        self.grad_output = 1 - np.tanh(dp_result) ** 2 # gradient of tanh
         # put output value to the inputs of next layer
         for next_neuron in forward_adj:
             next_neuron.inputs[self.pos_x, self.pos_y] = self.output
@@ -171,7 +172,7 @@ class SoftmaxNeuron(Neuron):
         self.output = self.output / divisor
 
     def backward(self):
-        diff = self.label - self.output
+        diff = self.output - self.label 
         pass
 
 class Ensemble:
