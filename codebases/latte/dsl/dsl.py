@@ -69,65 +69,7 @@ class Network(object):
         self._shared_variable_analysis_()
 
     def _shared_variable_analysis_(self):
-        """ analyze shared variables in each layer """
-        for (i, j), layer in self.layers.iteritems():
-            print "Layer (%d, %d)" % (i, j)
-            # extract forward and backward function here
-            forward = layer.get_forward_ast()
-            backward = layer.get_backward_ast()
-            # analyze shared variables in each layer
-            print "--------------------------"
-            print "Forward  AST: ", forward
-            print "Forward  AST Analysis:"
-            forward_variables = self._extract_variables_(forward)
-            print "--------------------------"
-            print "Backward AST: ", backward
-            print "Backward AST Analysis:"
-            backward_variables = self._extract_variables_(backward)
-
-            for var, node in forward_variables.iteritems():
-                print "forward var: ", var
-
-            for var, node in backward_variables.iteritems():
-                print "backward var: ", var
-
-    def _extract_variables_(self, ast):
-        variables = {}      # empty variable mapping
-
-        # check if ast is iterable
-        if ast is None or isinstance(ast, str) or isinstance(ast, int):
-            return variables
-
-        # iterate through all children of this node
-        for node in ast.getChildren():
-            if isinstance(node, compiler.ast.For):
-                children = node.getChildren()
-                assert len(children) == 4
-                assert isinstance(children[0], compiler.ast.AssName)
-                index = children[0].name
-                start, stop, step = children[1].getChildren()
-                code = children[2]
-                variables[index] = IndexVariable(index, start, stop, step)
-                variables.update(self._extract_variables_(code))
-            elif isinstance(node, compiler.ast.Subscript):
-                children = node.getChildren()
-                assert len(children) >= 3
-                array = children[0].name
-                variables[array] = ArrayVariable(array)
-            # if isinstance(node, compiler.ast.Name):
-            #     # print "Variable: ", node.name
-            #     variables[node.name] = Variable(node.name)
-            # elif isinstance(node, compiler.ast.AssName):
-            #     # print "Variable: ", node.name
-            #     variables[node.name] = Variable(node.name)
-            # elif isinstance(node, compiler.ast.Getattr):
-            #     self._print_variables_(node)
-            #     print "Attribute:", node.attrname
-            # elif isinstance(node, compiler.ast.Const):
-            #     print "Constant: ", node.value
-            else:
-                variables.update(self._extract_variables_(node))
-        return variables
+        pass
 
 
 #  _   _
