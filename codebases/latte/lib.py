@@ -3,6 +3,7 @@
 '''
 import sys
 import numpy as np
+import math
 
 
 ensemble_id_counter = 0
@@ -92,9 +93,8 @@ def FullyConnectedLayer(net, prev_enm, N, TYPE):
     return cur_enm
 
 def SoftmaxLossLayer(net, prev_enm, nLabels):
-    # TODO: 
     label_enm = Ensemble(nLabels, SoftmaxNeuron)
-    return 
+    return FullyConnectedLayer(net, prev_enm, nLabels, SoftmaxNeuron)
 
 class Neuron:
     def __init__(self, enm, pos_x, pos_y):
@@ -126,24 +126,24 @@ class Neuron:
 
     def forward(self):
         # innder product of inputs and weights
-        assert len(forward_adj) > 0, "No forward adjacency element. "
+        assert len(self.forward_adj) > 0, "No forward adjacency element. "
         dp_result = 0.0
         for i in range(len(self.inputs)):
-            for j in range(len(self.inputs[0])):
+            for j in range(len(self.inputs[i])):
                 dp_result = self.weights[i][j] * self.inputs[i][j]
         self.output = np.tanh(dp_result)
         self.grad_output = 1 - np.tanh(dp_result) ** 2 # gradient of tanh
         # put output value to the inputs of next layer
-        for next_neuron in forward_adj:
-            next_neuron.inputs[self.pos_x, self.pos_y] = self.output
+        for next_neuron in self.forward_adj:
+            next_neuron.inputs[self.pos_x][self.pos_y] = self.output
 
     def backward(self):
         # update error
-        self.grad_output = sum(self.grad_inputs) * self.grad_output
+        self.grad_output = sum( [ sum(x) for x in self.grad_inputs ] ) * self.grad_output
         # update previous neuron's grad_inputs: product of error and weight
-        for prev_neuron in backward_adj:
+        for prev_neuron in self.backward_adj:
             value = self.grad_output * self.weights[prev_neuron.pos_x][prev_neuron.pos_y]
-            backward_adj.grad_inputs[self.pos_x][self.pos_y] = value
+            prev_neuron.grad_inputs[self.pos_x][self.pos_y] = value
 
 class DataNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
@@ -153,6 +153,7 @@ class DataNeuron(Neuron):
         # remember to load input feature to data neuron before forward propa
         assert len(self.forward_adj) > 0, "No forward adjacency element. "
         for next_neuron in self.forward_adj:
+            #print self.pos_x, self.pos_y, len(next_neuron.inputs), len(next_neuron.inputs[0])
             next_neuron.inputs[self.pos_x][self.pos_y] = self.output
 
     def backward(self):
@@ -165,10 +166,10 @@ class SoftmaxNeuron(Neuron):
     
     def forward(self):
         dp_result = 0.0
-        for i in len(self.inputs):
-            for j in len(self.inputs[0]):
+        for i in range(len(self.inputs)):
+            for j in range(len(self.inputs[i])):
                 dp_result = self.weights[i][j] * self.inputs[i][j]
-        self.output = exp(dp_result)
+        self.output = math.exp(dp_result)
 
     # NOTE: remember to invoke this annotate() and before backward
     def annotate(self):
@@ -178,16 +179,16 @@ class SoftmaxNeuron(Neuron):
 
     def backward(self):
         self.grad_output = self.output - self.label 
-        for prev_neuron in backward_adj:
+        for prev_neuron in self.backward_adj:
             dot_prod = self.grad_output * self.weights[prev_neuron.pos_x][prev_neuron.pos_y]
-            backward_adj.grad_inputs[self.pos_x][self.pos_y] = dot_prod
+            prev_neuron.grad_inputs[self.pos_x][self.pos_y] = dot_prod
 
 class Ensemble:
     def __init__(self, N, TYPE):
         self.ensemble_id = allocate_ensemble_id()
         self.size = N
         # NOTE: currently only allow 1-d ensemble
-        self.neurons = [TYPE(self, 1, i) for i in range(N)]
+        self.neurons = [TYPE(self, 0, i) for i in range(N)]
         self.prev_adj_enm = None
         self.next_adj_enm = None
         return  
@@ -198,6 +199,8 @@ class Ensemble:
     def __getitem__(self, idx):
         assert 0 <= idx and idx < len(self.neurons)
         return self.neurons[idx]
+
+    def __len__(self): return len(self.neurons)
 
     def get_size(self): return self.size
     def set_forward_adj(self, enm):  self.next_adj_enm = enm
@@ -231,7 +234,7 @@ class Network:
         return self.network_id == other.network_id
 
     def __getitem__(self, idx):
-        assert 0 <= idx and idx < len(self.ensembles)
+        assert idx < len(self.ensembles)
         return self.ensembles[idx]
 
     def get_ensembles(self): return self.ensembles
@@ -297,9 +300,13 @@ class SGD(Solver):
                 net.load_data_instance(data_idx)
                 for i in range(len(net.ensembles)): 
                     net[i].run_forward_propagate()
+                for j in range(len(net[-1])):
+                    net[-1][j].annotate()
+                for i in range(len(net.ensembles)): 
                     net[i].run_backward_propagate()
                 self.update_weights(net)
         # TODO: performance evaluation
+        
         pass
 
 def solve(solver, net):
