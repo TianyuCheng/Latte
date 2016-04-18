@@ -1,6 +1,7 @@
 '''
     Standard library for Latte Programming Model
 '''
+import sys
 
 
 ensemble_id_counter = 0
@@ -37,16 +38,35 @@ def add_connection (net, prev_enm, cur_enm, mappings):
     net.add_weights(prev_enm, cur_enm, mappings)
     return
 
-def read_libsvm (file_name)
-    
-
-    return data, data_dim
+''' 
+    libsvm format: label fea_id:f_val 
+    Note that fea_id is 1-based 
+'''
+def read_libsvm (file_name, nFeatures, nLabels):
+    fread = open(file_name, "r")
+    features = []
+    labels = []
+    for line in fread:
+        fields = line.split()
+        fea = [ 0.0 ] * nFeatures
+        for i in range(1, len(fields)):
+            pair = fields[i].split(":")
+            fea[int(pair[0])-1] = float(pair[1])
+        features.append(fea)
+        labels.append(int(fields[0]))
+    fread.close()
+    return features, labels
 
 def LibsvmDataLayer(net, train_file, test_file, nFeatures, nLabels):
     # read data files
-    train_data = read_libsvm(train_file)
-    test_data  = read_libsvm(test_file)
-    net.set_datasets(train_data, test_data)
+    train_features, train_labels = read_libsvm(train_file, nFeatures, nLabels)
+    test_features, test_labels  = read_libsvm(test_file, nFeatures, nLabels)
+    net.set_datasets(train_features, train_labels, test_features, test_features)
+    '''
+    for x in train_features: print x
+    for x in train_labels: print x
+    sys.exit(0)
+    '''
     # construct data and label ensembles
     data_enm = Ensemble(nFeatures, DataNeuron)
     net.set_data_ensemble(data_enm)
@@ -59,7 +79,7 @@ def FullyConnectedLayer(net, prev_enm, N, TYPE):
     cur_enm.set_inputs_dim (1, M)
     # enforce connections
     mappings = {}
-    for i in len(M): mappings.update(i, [j for j in len(N)])
+    for i in len(M): mappings.update(i, [j for j in range(len(N))])
     add_connection (net, prev_enm, cur_enm, mappings)
     net.add_ensemble (cur_enm)
     return cur_enm
@@ -95,17 +115,21 @@ class Neuron:
 
         pass
 
+# TODO:
 class DataNeuron(Neuron):
     def __init__(self):
         pass
 
-class SoftmaxNeuron(Neuron)
+# TODO:
+class SoftmaxNeuron(Neuron):
+    def __init__(self):
+        pass
 
 class Ensemble:
     def __init__(self, N, TYPE):
         self.ensemble_id = allocate_ensemble_id()
         self.size = N
-        self.neurons = [TYPE() for i in len(N)]
+        self.neurons = [TYPE() for i in range(len(N))]
         return  
 
     def __eq__(self, other):
@@ -121,9 +145,9 @@ class Ensemble:
         for neuron in self.neurons:
             neuron.inputs = [] 
             neuron.grad_inputs = []
-            for i in len(nrows):
-                neuron.inputs.append([0.0 * ncols])
-                neuron.grad_inputs.append([0.0 * ncols])
+            for i in range(nrows):
+                neuron.inputs.append([0.0] * ncols)
+                neuron.grad_inputs.append([0.0] * ncols)
         return 
 
 class Network:
@@ -131,7 +155,10 @@ class Network:
         self.network_id = allocate_network_id()
         self.ensembles = []
         self.weights = {}
-        pass
+        self.train_features = None
+        self.train_labels = None
+        self.test_features = None
+        self.test_labels = None
 
     def __eq__(self, other):
         return self.network_id == other.network_id
@@ -140,8 +167,7 @@ class Network:
         assert 0 <= idx and idx < len(self.ensembles)
         return self.ensembles[i]
 
-    def get_ensembles(self):
-        return self.ensembles
+    def get_ensembles(self): return self.ensembles
 
     def add_ensemble(self, enm):
         assert isinstance(enm, Ensemble) and len(self.ensembles) >= 2
@@ -151,9 +177,11 @@ class Network:
         assert len(self.ensembles) == 0 # must be empty ensembles
         self.ensembles = [data_enm]
     
-    def set_datasets (self, train_data):
-        self.train_data = train_data
-        self.test_data = test_data
+    def set_datasets (self, train_fea, train_labels, test_fea, test_labels):
+        self.train_features = train_fea
+        self.train_labels = train_labels
+        self.test_features = test_fea
+        self.test_labels = test_labels
 
     def add_weights (self, prev_enm, cur_enm, mappings):
         tmp_weights = Xaiver_init(prev_enm.get_size(), cur_enm.get_size())

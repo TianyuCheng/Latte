@@ -10,6 +10,12 @@ Authors
     + Email: tianyu.cheng@utexas.edu
 
 - Student II
+    + Name: Loc
+    + EID: 
+    + Email: 
+
+
+- Student III
     + Name: Xin Lin
     + EID: xl5224
     + Email: jimmylin@utexas.edu
