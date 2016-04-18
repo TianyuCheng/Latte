@@ -46,8 +46,8 @@ ensemble2 = net.create_ensemble(WeightedNeuron, 10)
 ensemble3 = net.create_ensemble(WeightedNeuron, 10)
 ensemble4 = net.create_ensemble(WeightedNeuron, 10)
 
-# add connections between ensembles
-net.add_connections(ensemble1, ensemble2, [(i, j) for i in range(10) for j in range(10)])
-net.add_connections(ensemble2, ensemble3, [(i, j) for i in range(10) for j in range(10)])
+# # add connections between ensembles
+# net.add_connections(ensemble1, ensemble2, [(i, j) for i in range(10) for j in range(10)])
+# net.add_connections(ensemble2, ensemble3, [(i, j) for i in range(10) for j in range(10)])
 
 net.solve()
