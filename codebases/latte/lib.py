@@ -125,8 +125,8 @@ class Neuron:
         # innder product of inputs and weights
         assert len(forward_adj) > 0, "No forward adjacency element. "
         dp_result = 0.0
-        for i in len(self.inputs):
-            for j in len(self.inputs[0]):
+        for i in range(len(self.inputs)):
+            for j in range(len(self.inputs[0])):
                 dp_result = self.weights[i][j] * self.inputs[i][j]
         self.output = np.tanh(dp_result)
         # put output value to the inputs of next layer
