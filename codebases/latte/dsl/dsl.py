@@ -46,9 +46,9 @@ class Network(object):
         # adding the new network into global network list
         network_list.append(self)
 
-    def create_ensemble(self, neuron_type, num_neurons):
+    def create_ensemble(self, neuron_type, dim):
         """ create a new ensemble in this network """
-        ensemble = Ensemble(neuron_type, num_neurons)
+        ensemble = Ensemble(neuron_type, dim)
         self.ensembles[ensemble.ID] = ensemble
         return ensemble
 
@@ -117,11 +117,38 @@ class Ensemble(object):
     """
         Ensemble: A group of neurons of same level
     """
-    def __init__(self, neuron_type, num_neurons):
+    def __init__(self, neuron_type, dim):
         super(Ensemble, self).__init__()
         self.ID = allocate_ensemble_id()
         self.neuron_type = neuron_type
-        self.neurons = [neuron_type()] * num_neurons
+        # create neurons in this ensemble
+        if isinstance(dim, int):
+            # single dimension neuron network will be 
+            # implicitly converted to 2D neuron network
+            dim = 1, dim
+        r, c = dim
+        self.neurons = [ [neuron_type() for i in xrange(c)] for j in xrange(r) ]
+        self.connections = dict()
+
+    def get_neuron_at(self, index):
+        if isinstance(index, int):
+            # single dimension neuron network will be 
+            # implicitly converted to 2D neuron network
+            index = 0, index
+        r, c = index
+        return self.neurons[r][c]
+
+    def add_connection(self, idx1, idx2):
+        # convert the single dimension index to two dimensions
+        if isinstance(idx1, int):
+            idx1 = 0, idx1
+        if isinstance(idx2, int):
+            idx2 = 0, idx2
+        # check if this index already has connections
+        if idx1 not in self.connections:
+            self.connections[idx] = set()
+        # add connection
+        self.connections[idx].add(idx2)
 
 #  _
 # | |    __ _ _   _  ___ _ __
