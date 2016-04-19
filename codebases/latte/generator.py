@@ -30,33 +30,40 @@ def make_main_header():
 
 def make_newlines(num=1):
     return "\n" * num
-def make_indent(num=indent):
-    return "    " * num
 
 def make_mkl_malloc(mat_name, dim_x, dim_y):
     return "double* %s = mkl_init_mat (%s, %s);" % (mat_name, dim_x, dim_y)
 
 def make_mkl_free(mat_name): return "mkl_free(%s);" % (mat_name)
 
-
+def make_FC_weights_init(name, dim_x, dim_y):
+    return "vector<vector<double*>> %s (%s, %s);\n"
 
 # input list of ensembles name
 def make_allocate_block(ensembles_info):
     allocate_block = ["// Allocating memory for Output, Grad_output Matrices"]
-    for enm in ensembles_info:
-        allocate_block
     for enm in ensembles_info:
         output_mat_name = enm[0]+"_output"
         output_dim_x = enm[0]+".dim_x"
         output_dim_y = enm[0]+".dim_y"
         output_malloc_str = make_mkl_malloc(output_mat_name, output_dim_x, output_dim_y)
         allocate_block.append(output_malloc_str) 
+
         grad_mat_name = enm[0]+"_grad_output"
         grad_dim_x = enm[0]+".next_dim_x"
         grad_dim_y = enm[0]+".next_dim_y"
         grad_malloc_str = make_mkl_malloc(grad_mat_name, grad_dim_x, grad_dim_y)
         allocate_block.append(grad_malloc_str) 
     return allocate_block
+
+def make_weight_init_block(ensembles_info):
+    block = []
+    for enm in ensembles_info:
+        mat_name = enm[0]+"_weights"
+        prev_dim_x = enm[0]+".prev_dim_x"
+        prev_dim_y = enm[0]+".prev_dim_y"
+        block.append(make_FC_weights_init(mat_name, prev_dim_x, prev_dim_y))
+    return block
 
 def make_deallocate_block(ensembles_info):
     deallocate_block = ["// Deallocating memory for Output, Grad_output Matrices"]
@@ -71,7 +78,6 @@ def make_loop_header(v, upper):
 def make_solve_block():
     solve_block = []
     solve_block.append(make_loop_header("iter", "ITERATIONS")+"{")
-    
     # TODO: load next instance of train data (feature and label)
     
     # TODO: forward propagation
