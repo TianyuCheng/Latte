@@ -18,4 +18,4 @@ for i in range(len(inputs[0])):
     print "Match?", matched
     if matched:
         for key, value in tmpl.wildcard.iteritems():
-            print key, value
+            print "%s:\t%s" % (key, value)
