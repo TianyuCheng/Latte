@@ -28,7 +28,7 @@ class ASTTemplate(object):
         if isinstance(tpl, Discard):
             # ignore Discard
             tpl_kid = tpl.getChildren()[0]
-            if tpl_kid.name.startswith('_'):
+            if tpl_kid.name.startswith('_') and len(tpl_kid.name) > 1:
                 self.wildcard[tpl_kid.name] = tgt
                 return True
             else:
