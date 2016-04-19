@@ -30,11 +30,15 @@ def make_main_header():
 
 def make_newlines(num=1):
     return "\n" * num
+def make_indent(num=indent):
+    return "    " * num
 
 def make_mkl_malloc(mat_name, dim_x, dim_y):
     return "double* %s = mkl_init_mat (%s, %s);" % (mat_name, dim_x, dim_y)
 
 def make_mkl_free(mat_name): return "mkl_free(%s);" % (mat_name)
+
+
 
 # input list of ensembles name
 def make_allocate_block(ensembles_info):
@@ -61,6 +65,24 @@ def make_deallocate_block(ensembles_info):
         deallocate_block.append(make_mkl_free(enm[0]+"_grad_output")) 
     return deallocate_block
 
+def make_loop_header(v, upper):
+    return "for (int %s = 0; %s < %s; %s ++) " % (v, v, upper, v)
+
+def make_solve_block():
+    solve_block = []
+    solve_block.append(make_loop_header("iter", "ITERATIONS")+"{")
+    
+    # TODO: load next instance of train data (feature and label)
+    
+    # TODO: forward propagation
+
+    # TODO: annotate
+
+    # TODO: backward propagation
+
+    solve_block.append("}") # end the iteration loop
+    return solve_block
+
 ensembles_info = []
 ensembles_info.append(("data_layer", 10, 10))
 ensembles_info.append(("FC_layer", 20, 20))
@@ -83,6 +105,9 @@ def main(program_file, cpp_file):
     main_body_strs = []
     # allocating block 
     main_body_strs.append(make_allocate_block(ensembles_info))
+
+    # run solver
+    main_body_strs.append(make_solve_block())
 
     # deallocating block
     main_body_strs.append(make_deallocate_block(ensembles_info))
