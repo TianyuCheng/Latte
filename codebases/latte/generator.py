@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 '''
     Latte Compiler 
 '''
@@ -30,6 +31,9 @@ def make_main_header():
 
 def make_newlines(num=1):
     return "\n" * num
+
+# def make_indent(num=indent):
+#     return "    " * num
 
 def make_mkl_malloc(mat_name, dim_x, dim_y):
     return "double* %s = mkl_init_mat (%s, %s);" % (mat_name, dim_x, dim_y)

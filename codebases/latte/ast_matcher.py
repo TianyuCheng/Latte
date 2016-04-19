@@ -2,6 +2,7 @@
 
 import inspect, compiler
 from compiler.ast import *
+from dsl import printAst
 
 def template(tmpl_func):
     def template_wrapper():
@@ -16,6 +17,32 @@ class ASTTemplate(object):
         ast = compiler.parse(source)
         self.ast = ast_remove_template(ast)
         self.types = [ type(None), int, float, str ]
+
+    def matchall(self, tgt):
+        self.matches = []
+        self._matchall(tgt)
+        return len(self.matches) > 0
+
+    def _matchall(self, tgt):
+        # if the tgt node is not iterable, then stop
+        for instance_type in self.types:
+            if isinstance(tgt, instance_type):
+                return
+        if isinstance(tgt, list):
+            # try fitting a match when the target is a list
+            pass
+            # TODO: deal with lists
+            # printAst(tgt)
+        else:
+            # try fitting a match when the target is a node
+            tgt_type = str(tgt).split('(')[0]
+            tpl_type = str(self.ast).split('(')[0]
+            if tgt_type == tpl_type:
+                # check if this node is a match, store in the matches list
+                if self.match(tgt):
+                    self.matches.append(self.wildcard)
+            for node in tgt.getChildren():
+                self._matchall(node)
 
     def match(self, tgt):
         """ match ast with template """

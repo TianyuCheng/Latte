@@ -1,2 +1,3 @@
 from dsl import *
-__all__ = [ "Network", "Neuron" ]
+from astPrinter import printAst
+__all__ = [ "Network", "Neuron" , "printAst"]
