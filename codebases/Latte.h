@@ -7,6 +7,9 @@
 #include <iostream>
 #include <fstream>
 #include <cassert>
+#include <stdio.h>
+#include <stdlib.h>
+//#include "mkl.h"
 
 using namespace std;
 
@@ -26,6 +29,46 @@ void add_connection(Network& net, Ensemble& enm1, Ensemble& enm2, Connection &co
 // Ensemble* LibsvmDataLayer(Network &net, string train_file, string test_file, int &n_features, int n_labels);
 // Ensemble* FullyConnectedLayer(Network &net, Ensemble &prev_ensemble, int N);
 // Ensemble* SoftmaxLossLayer(Network &net, Ensemble &prev_ensemble, int n_labels);
+
+double min (vector<double> vec) {
+    assert(vec.size() > 0 && "empty vector input.");
+    double min_value = vec[0];
+    for (int i = 1; i < vec.size(); i++) 
+        if (vec[i] < min_value) min_value = vec[i];
+    return min_value;
+}
+double max (vector<double> vec) {
+    assert(vec.size() > 0 && "empty vector input.");
+    double max_value = vec[0];
+    for (int i = 1; i < vec.size(); i++) 
+        if (vec[i] > max_value) max_value = vec[i];
+    return max_value;
+}
+int argmin (vector<double> vec) {
+    assert(vec.size() > 0 && "empty vector input.");
+    int min_index = 0;
+    double min_value = vec[0];
+    for (int i = 1; i < vec.size(); i++) 
+        if (vec[i] < min_value) {
+            min_index = i;
+            min_value = vec[i];
+        }
+    return min_index;
+}
+int argmax (vector<double> vec) {
+    assert(vec.size() > 0 && "empty vector input.");
+    int max_index = 0;
+    double max_value = vec[0];
+    for (int i = 1; i < vec.size(); i++) 
+        if (vec[i] > max_value) {
+            max_index = i;
+            max_value = vec[i];
+        }
+    return max_index;
+}
+double* mkl_init_mat (int dim_x, int dim_y) {
+    return (double*) mkl_malloc ( dim_x*dim_y*sizeof(double), 64);;
+}
 
 typedef struct Index {
     int r = 1;
