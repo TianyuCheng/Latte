@@ -4,8 +4,7 @@
 import sys
 import numpy as np
 import math
-import random
-
+import random 
 
 ensemble_id_counter = 0
 neuron_id_counter = 0
@@ -69,11 +68,7 @@ def LibsvmDataLayer(net, train_file, test_file, nFeatures, nLabels):
     test_features, test_labels  = read_libsvm(test_file, nFeatures, nLabels)
     # print "test_labels: ", test_labels
     net.set_datasets(train_features, train_labels, test_features, test_labels)
-    '''
-    for x in train_features: print x
-    for x in train_labels: print x
-    sys.exit(0)
-    '''
+
     # construct data and label ensembles
     data_enm = Ensemble(nFeatures, DataNeuron)
     net.set_data_ensemble(data_enm)
@@ -247,7 +242,7 @@ class Network:
         assert len(self.ensembles) == 0 # must be empty ensembles
         self.ensembles = [data_enm]
     
-    def set_datasets (self, train_fea, train_labels, test_fea, test_labels, shuffle=False):
+    def set_datasets (self, train_fea, train_labels, test_fea, test_labels, shuffle=True):
         if shuffle:
             indexes = range(len(train_fea))
             random.seed(1)
@@ -336,7 +331,7 @@ class SGD(Solver):
         assert(len(preds) == test_size), "dimensionality of preds and test_size does not match"
         nCorrect = sum([preds[i] == net.test_labels[i]-1 for i in range(test_size)])
         for i in range(len(preds)):
-            print "preds: ", preds[i], ", target: ", net.test_labels[i]
+            print "preds: ", preds[i]+1, ", target: ", net.test_labels[i]
         print "Accuracy:", 1.0 * nCorrect / test_size
 
 def solve(solver, net):
