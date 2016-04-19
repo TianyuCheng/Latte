@@ -8,104 +8,100 @@
 
 using namespace std;
 
-class Neuron {
-    public:
+// forward declaration for Latte classes
+class Network;
+class Neuron;
+class Ensemble;
+class Solver;
+class SGDSolver;
+class Connection;
 
-    static int neuron_id_counter;
-    Neuron () {
-        neuron_id = neuron_id_counter++;
-    }
+class Neuron
+{
+public:
+    // constructor and destructor
+    Neuron(Ensemble &ensemble, int pos_x, int pos_y);
+    virtual ~Neuron();
 
-    int get_id () {
-        return neuron_id;
-    }
-
-    string get_string () {
-        string result = "";
-        result += "Neuron ID: " + to_string(neuron_id);
-        return result;
-    }
-
-    private:
-
-    int neuron_id;
+    // initialization functions
+    void init_inputs_dim(int dim_x, int dim_y, int prev_enm_size);
+    void init_grad_inputs_dim(int dim_x, int dim_y);
+    
+    // forward and backward propagation functions
+    virtual void forward() = 0;
+    virtual void backward() = 0;
+private:
+    int pos_x;
+    int pos_y;
 };
 
-int Neuron::neuron_id_counter = 0;
-#
+/**
+ * Ensemble class
+ * The template refers to the type of 
+ * Neuron residing in the ensemble
+ * */
+class Ensemble
+{
+public:
+    // constructor and destructor
+    Ensemble(int size);
+    Ensemble(int row, int col);
+    virtual ~Ensemble();
 
-class Ensemble {
-    //######################################################
-    public:
-    //######################################################
-    static int ensemble_id_counter;
-    Ensemble () {
-        ensemble_id = ensemble_id_counter++;
-    }
-
-    int get_id () { return ensemble_id; }
-    Neuron* get_neuron (int neuron_id) {
-        if (neurons.find(neuron_id) == neurons.end()) 
-            assert (false && "No corresponding neuron found in this ensemble.");
-        else return neurons[neuron_id];
-    }
-
-    string get_string () {
-        string result = "";
-        result += "Ensemble ID: " + to_string(ensemble_id);
-        return result;
-    }
-
-    //######################################################
-    private:
-    //######################################################
-    int ensemble_id;
-    map<int, Neuron*> neurons;
+    int get_size() { return neurons.size(); }
+    void set_forward_adj(Connection &forward_adj);
+    void set_backward_adj(Connection &backward_adj);
+private:
+    std::vector<Neuron*> neurons;
 };
 
-int Ensemble::ensemble_id_counter = 0;
+/**
+ * Network class
+ * */
+class Network
+{
+public:
+    // constructor and destructor
+    Network();
+    virtual ~Network();
 
-class Network {
-    //######################################################
-    public:
-    //######################################################
-    static int network_id_counter;
-    Network () {
-        network_id = network_id_counter++;
-    }
-
-    int get_id () { return network_id; }
-
-    Ensemble* get_ensemble (int enm_id) {
-        if (ensembles.find(enm_id) == ensembles.end()) 
-            assert(false && "No ensemble found in this network. ");
-        else return ensembles[enm_id];
-    }
-
-    Neuron* get_neuron (int neuron_id) {
-        if (neurons.find(neuron_id) == neurons.end()) 
-            assert(false && "No neuron found in this network. ");
-        else return neurons[neuron_id];
-    }
-
-    string get_string () {
-        string result = "";
-        result += "Network ID: " + to_string(network_id);
-        return result;
-    }
-
-    //######################################################
-    private:
-    //######################################################
-    int network_id;
-    map<int, Ensemble*> ensembles;
-    map<int, Neuron*> neurons;
+    void add_ensemble(Ensemble &ensemble);
+    void set_data_ensemble(Ensemble &data_ensemble);
+    void set_datasets(vector<vector<int>> &train_feature, 
+                      vector<int> &train_labels,
+                      vector<vector<int>> &test_feature, 
+                      vector<int> &test_labels);
+    const vector<int>& load_data_instance(int idx);
+private:
+    vector<Ensemble> ensembles;
 };
 
-class Solver {
-    public:
-        string solver_name;
+/**
+ * Base Solver class
+ * */
+class Solver
+{
+public:
+    // constructor and destructor
+    Solver() { }
+    virtual ~Solver();
+    // need to override this abstract function: solve
+    virtual void solve(Network &net) = 0;
 };
 
-int Network::network_id_counter = 0;
+/**
+ * Stochastic Gradient Descent
+ * Solver for Deep Neural Network
+ * */
+class SGDSolver : public Solver
+{
+public:
+    SGDSolver(int iter) : iterations(iter) {
+    }
+    virtual ~SGDSolver ();
+    void solve(Network &net);
+private:
+    int iterations;
+};
+
 #endif

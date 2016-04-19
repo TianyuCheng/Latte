@@ -1,11 +1,11 @@
 #include "Latte.h"
 
-void add_connection (Network& net, Ensemble& enm1, Ensemble& enm2, map<int, vector<int>>& mappings) {
+void add_connection(Network& net, Ensemble& enm1, Ensemble& enm2, Connection &connection) {
 
     return ;
 }
 
-void shared_variable_analsyis () {
+void shared_variable_analsyis() {
 
     return ;
 }
@@ -40,6 +40,7 @@ void solve (Network& network, Solver& solver) {
 }
 
 int main (int argn, char** argv) {
+#if 0
     Network net1;
     Network net2;
     Network net3;
@@ -55,5 +56,5 @@ int main (int argn, char** argv) {
     cout << "[neuron3] " << neuron3.get_string() << endl;
 
     /* TODO: more unit tests here */
-
+#endif
 }
