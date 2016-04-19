@@ -3,7 +3,9 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <memory>
 #include <iostream>
+#include <fstream>
 #include <cassert>
 
 using namespace std;
@@ -16,43 +18,81 @@ class Solver;
 class SGDSolver;
 class Connection;
 
+void read_libsvm(vector<vector<float> > &features, vector<int> &labels, string &filename, int n_features, int &n_labels);
+void shared_variable_analsyis();
+void Xaiver_initialize();
+void add_connection(Network& net, Ensemble& enm1, Ensemble& enm2, Connection &connection);
+
+// Ensemble* LibsvmDataLayer(Network &net, string train_file, string test_file, int &n_features, int n_labels);
+// Ensemble* FullyConnectedLayer(Network &net, Ensemble &prev_ensemble, int N);
+// Ensemble* SoftmaxLossLayer(Network &net, Ensemble &prev_ensemble, int n_labels);
+
+typedef struct Index {
+    int r = 1;
+    int c;
+} Dim;
+
+/**
+ * Connection
+ * Functor for connection mappings from ensemble to ensemble
+ * */
+class Connection
+{
+public:
+    virtual Index operator() (Index index) = 0;
+};
+
+/**
+ * Neuron class
+ * Base class for Neuron subtyping
+ * */
 class Neuron
 {
 public:
     // constructor and destructor
-    Neuron(Ensemble &ensemble, int pos_x, int pos_y);
-    virtual ~Neuron();
+    Neuron(Ensemble &ensemble, int pos_x, int pos_y) : x(pos_x), y(pos_y) {
+    }
+    virtual ~Neuron() {
+    }
 
     // initialization functions
     void init_inputs_dim(int dim_x, int dim_y, int prev_enm_size);
     void init_grad_inputs_dim(int dim_x, int dim_y);
     
     // forward and backward propagation functions
-    virtual void forward() = 0;
-    virtual void backward() = 0;
+    void forward();
+    void backward();
 private:
-    int pos_x;
-    int pos_y;
+    int x;
+    int y;
 };
 
 /**
  * Ensemble class
- * The template refers to the type of 
- * Neuron residing in the ensemble
  * */
 class Ensemble
 {
 public:
     // constructor and destructor
-    Ensemble(int size);
-    Ensemble(int row, int col);
-    virtual ~Ensemble();
-
+    Ensemble(Dim s) : size(s) {
+        neurons.resize(size.r * size.c);
+        // all neurons constructions are independent
+        #pragma omp parallel for
+        for (int i = 0; i < neurons.size(); ++i)
+            neurons[i] = new Neuron(*this, i / s.r, i % s.c);
+    }
+    virtual ~Ensemble() {
+        // all neurons destructions are independent
+        #pragma omp parallel for
+        for (int i = 0; i < neurons.size(); ++i)
+            delete neurons[i];
+    }
     int get_size() { return neurons.size(); }
     void set_forward_adj(Connection &forward_adj);
     void set_backward_adj(Connection &backward_adj);
 private:
-    std::vector<Neuron*> neurons;
+    Dim size;
+    vector<Neuron*> neurons;
 };
 
 /**
@@ -65,15 +105,22 @@ public:
     Network();
     virtual ~Network();
 
-    void add_ensemble(Ensemble &ensemble);
-    void set_data_ensemble(Ensemble &data_ensemble);
-    void set_datasets(vector<vector<int>> &train_feature, 
-                      vector<int> &train_labels,
-                      vector<vector<int>> &test_feature, 
-                      vector<int> &test_labels);
+    Ensemble& create_ensemble(Dim dim);
     const vector<int>& load_data_instance(int idx);
+
+    // getters called for data loading
+    vector<vector<float>> & get_train_features() { return train_features; }
+    vector<vector<float>> & get_test_features() { return test_features; }
+    vector<int> & get_train_labels() { return train_labels; }
+    vector<int> & get_test_labels() { return test_labels; }
+
 private:
     vector<Ensemble> ensembles;
+    // data
+    vector<vector<float>> train_features;
+    vector<vector<float>> test_features;
+    vector<int> train_labels;
+    vector<int> test_labels;
 };
 
 /**

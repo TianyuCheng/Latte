@@ -1,5 +1,5 @@
 CC		  := g++
-CXX_FLAGS := -std=c++11
+CXX_FLAGS := -std=c++11 -fopenmp
 
 BUILD_DIR := bin
 

@@ -1,18 +1,74 @@
 #include "Latte.h"
 
+void read_libsvm(vector<vector<float>> &features, vector<int> &labels, string &filename, int n_features, int &n_labels) {
+    ifstream in(filename, std::ifstream::in);
+    // check the validity of the input file
+    if (!in.good()) {
+        cerr << "Cannot read file: " << filename << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    // reading from the libsvm data set
+    for (string line; getline(in, line); ) {
+        // create a new vector to store this data instance
+        features.push_back(vector<float>());
+        vector<float> &tokens = features.back();
+
+        // split the string and load the data
+        size_t start = 0, end = 0;
+        for (n_features = 0; (end = line.find(":", start)) != string::npos; n_features++) {
+            string str = line.substr(start, end - start);
+            start = end + 1;
+            if (n_features == 0) labels.push_back(stoi(str));      // the first integer is label
+            else                 tokens.push_back(stof(str));      // the following are features
+        }
+    }
+    in.close();
+    n_features--;   // the first is label, do not count it
+    n_labels = labels.size();
+    return ;
+}
+
+Ensemble* LibsvmDataLayer(Network &net, string train_file, string test_file, int n_features, int &n_labels) {
+    vector<vector<float>> &train_features = net.get_train_features();
+    vector<vector<float>> &test_features = net.get_test_features();
+    vector<int> &train_labels = net.get_train_labels();
+    vector<int> &test_labels = net.get_test_labels();
+
+    read_libsvm(train_features, train_labels, train_file, n_features, n_labels);
+    read_libsvm(test_features, test_labels, test_file, n_features, n_labels);
+    // TODO: this function is not finished yet
+    // How do we arrange the data, SoA directly, or AoS -> SoA?
+    return nullptr;
+}
+
+Ensemble* FullyConnectedLayer(Network &net, Ensemble &prev_ensemble, int N) {
+    return nullptr;
+}
+
+Ensemble* SoftmaxLossLayer(Network &net, Ensemble &prev_ensemble, int n_labels) {
+
+    return nullptr;
+}
+
 void add_connection(Network& net, Ensemble& enm1, Ensemble& enm2, Connection &connection) {
 
-    return ;
+    return;
 }
 
 void shared_variable_analsyis() {
 
-    return ;
+    return;
 }
 
 void Xaiver_initialize() {
 
-    return ;
+    return;
+}
+
+Ensemble& Network::create_ensemble(Dim dim) {
+    ensembles.push_back(Ensemble(dim));
+    return ensembles.back();
 }
 
 
