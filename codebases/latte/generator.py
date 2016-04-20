@@ -36,12 +36,17 @@ def make_newlines(num=1):
 #     return "    " * num
 
 def make_mkl_malloc(mat_name, dim_x, dim_y):
-    return "double* %s = mkl_init_mat (%s, %s);" % (mat_name, dim_x, dim_y)
+    return "double* %s = init_mkl_mat (%s, %s);" % (mat_name, dim_x, dim_y)
 
 def make_mkl_free(mat_name): return "mkl_free(%s);" % (mat_name)
 
-def make_FC_weights_init(name, dim_x, dim_y):
-    return "vector<vector<double*>> %s (%s, %s);\n"
+def make_FC_weights_init(name, dim_x, dim_y, prev_dim_x, prev_dim_y):
+    declare_str = "vector<vector<double*>> %s (%s, %s);\n" % (name, dim_x, dim_y)
+    init_str = "init_weights_mats(%s, %s, %s);" % (name, prev_dim_x, prev_dim_y)
+    return declare_str + init_str
+
+def make_FC_weights_free(name):
+    return "free_weights_mats(%s);" % (name)
 
 # input list of ensembles name
 def make_allocate_block(ensembles_info):
@@ -52,7 +57,7 @@ def make_allocate_block(ensembles_info):
         output_dim_y = enm[0]+".dim_y"
         output_malloc_str = make_mkl_malloc(output_mat_name, output_dim_x, output_dim_y)
         allocate_block.append(output_malloc_str) 
-
+    for enm in ensembles_info[:-1]:
         grad_mat_name = enm[0]+"_grad_output"
         grad_dim_x = enm[0]+".next_dim_x"
         grad_dim_y = enm[0]+".next_dim_y"
@@ -60,13 +65,21 @@ def make_allocate_block(ensembles_info):
         allocate_block.append(grad_malloc_str) 
     return allocate_block
 
-def make_weight_init_block(ensembles_info):
-    block = []
+def make_weights_init_block(ensembles_info):
+    block = ["// initialize weights of layers "]
     for enm in ensembles_info:
         mat_name = enm[0]+"_weights"
+        dim_x = enm[0]+".dim_x"
+        dim_y = enm[0]+".dim_y"
         prev_dim_x = enm[0]+".prev_dim_x"
         prev_dim_y = enm[0]+".prev_dim_y"
-        block.append(make_FC_weights_init(mat_name, prev_dim_x, prev_dim_y))
+        block.append(make_FC_weights_init(mat_name, dim_x, dim_y, prev_dim_x, prev_dim_y))
+    return block
+def make_weights_deallocate_block(ensembles_info):
+    block = ["// deallocate weights of layers "]
+    for enm in ensembles_info:
+        mat_name = enm[0]+"_weights"
+        block.append(make_FC_weights_free(mat_name))
     return block
 
 def make_deallocate_block(ensembles_info):
@@ -102,12 +115,12 @@ def main(program_file, cpp_file):
     # processing program_file here
     # get AST
     AST = compiler.parseFile(program_file)
-    AST = ast_remove_module(AST)
     # pattern match
-    patn_net = network()
-    matched = patn_net.match(AST)
+    patn_net = template_FullyConnectedLayer()
+    matched = patn_net.matchall(AST)
     print "Match?", matched
     if matched:
+        for x in patn_net.matches: print x
         for key, value in patn_net.wildcard.iteritems():
             print "%s:\t%s" % (key, value)
     ## OUTPUT: enm_names []
@@ -115,11 +128,13 @@ def main(program_file, cpp_file):
     main_body_strs = []
     # allocating block 
     main_body_strs.append(make_allocate_block(ensembles_info))
+    main_body_strs.append(make_weights_init_block(ensembles_info[1:]))
 
     # run solver
     main_body_strs.append(make_solve_block())
 
     # deallocating block
+    main_body_strs.append(make_weights_deallocate_block(ensembles_info[1:]))
     main_body_strs.append(make_deallocate_block(ensembles_info))
 
     cpp_out = open(cpp_file, "w+")

@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <random>
 #include <iostream>
 #include <fstream>
 #include <cassert>
@@ -23,7 +24,6 @@ class Connection;
 
 void read_libsvm(vector<vector<float> > &features, vector<int> &labels, string &filename, int n_features, int &n_labels);
 void shared_variable_analsyis();
-void Xaiver_initialize();
 void add_connection(Network& net, Ensemble& enm1, Ensemble& enm2, Connection &connection);
 
 // Ensemble* LibsvmDataLayer(Network &net, string train_file, string test_file, int &n_features, int n_labels);
@@ -66,8 +66,32 @@ int argmax (vector<double> vec) {
         }
     return max_index;
 }
-double* mkl_init_mat (int dim_x, int dim_y) {
+void Xaiver_initialize (double* mat, int n_j, int n_jp) {
+    double high = sqrt(6.0 / (n_j+n_jp)), low = -1.0 * high;
+    default_random_engine generator;
+    uniform_real_distribution<double> distribution(low, high);
+    for (int i = 0; i < n_j; i ++) *(mat+i) = distribution(generator);
+}
+double* init_mkl_mat (int dim_x, int dim_y) {
     return (double*) mkl_malloc ( dim_x*dim_y*sizeof(double), 64);;
+}
+void init_weights_mats (vector<vector<double*>>& mat, int prev_dim_x, int prev_dim_y) {
+    assert(mat.size() > 0 && "mat.size should be greater than 0");
+    int dim_x = mat.size(), dim_y = mat[0].size();
+    int n_j = prev_dim_x * prev_dim_y, n_jp = dim_x * dim_y;
+    for (int i = 0; i < dim_x; i ++) {
+        for (int j = 0; j < dim_y; j ++) {
+            mat[i][j] = mkl_init_mat(prev_dim_x, prev_dim_y);
+            Xaiver_initialize(mat[i][j], n_j, n_jp);
+        }
+    }
+}
+void free_weights_mats (vector<vector<double*>>& mat) {
+    assert(mat.size() > 0 && "mat.size should be greater than 0");
+    int dim_x = mat.size(), dim_y = mat[0].size();
+    for (int i = 0; i < dim_x; i ++) 
+        for (int j = 0; j < dim_y; j ++) 
+            mkl_free(mat[i][j]);
 }
 
 typedef struct Index {
