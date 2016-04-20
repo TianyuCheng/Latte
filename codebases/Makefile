@@ -14,8 +14,13 @@ CppLatte: Latte.cpp
 	$(CC) -c ${CXX_FLAGS} $<
 	$(CC) -o Latte Latte.o ${LINK_FLAGS}
 
+mlp: mlp.cpp
+	$(CC) -c ${CXX_FLAGS} $<
+	$(CC) -o mlp mlp.o ${LINK_FLAGS}
+
 clean:
 	rm -rf $(BUILD_DIR)
 	rm -rf *.o
+	rm -rf Latte mlp
 
 	# $(CXX_FLAGS) $< -o $(BUILD_DIR)/$@
