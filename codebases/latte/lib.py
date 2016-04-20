@@ -94,6 +94,13 @@ def SoftmaxLossLayer(net, prev_enm, dim_x, nLabels):
     label_enm = Ensemble(nLabels, SoftmaxNeuron)
     return FullyConnectedLayer(net, prev_enm, dim_x, nLabels, SoftmaxNeuron)
 
+def inner_product (A, B):
+    dp_result = 0.0
+    for i in range(len(A)):
+        for j in range(len(A[i])):
+            dp_result += A[i][j] * B[i][j]
+    return dp_result
+
 class Neuron:
     def __init__(self, enm, pos_x, pos_y):
         # management info
@@ -125,15 +132,12 @@ class Neuron:
     def forward(self):
         # innder product of inputs and weights
         assert len(self.forward_adj) > 0, "No forward adjacency element. "
-        dp_result = 0.0
-        for i in range(len(self.inputs)):
-            for j in range(len(self.inputs[i])):
-                dp_result += self.weights[i][j] * self.inputs[i][j]
+        dp_result = inner_product (self.weights, self.inputs)
         # activation
         self.output = np.tanh(dp_result)
         # preset the gradient for back propagation
         self.grad_output = 1 - np.tanh(dp_result) ** 2 
-        # put output value to the inputs of next layer
+        # Data Copy: put output value to the inputs of next layer
         for next_neuron in self.forward_adj:
             next_neuron.inputs[self.pos_x][self.pos_y] = self.output
 
@@ -150,10 +154,7 @@ class InnerProductNeuron(Neuron):
         Neuron.__init__(self, enm, pos_x, pos_y)
 
     def forward(self):
-        dp_result = 0.0
-        for i in range(len(self.inputs)):
-            for j in range(len(self.inputs[i])):
-                dp_result += self.weights[i][j] * self.inputs[i][j]
+        dp_result = inner_product (self.weights, self.inputs)
         self.output = dp_result
         self.grad_output = 1.0
         for next_neuron in self.forward_adj:
