@@ -129,8 +129,10 @@ class Neuron:
         for i in range(len(self.inputs)):
             for j in range(len(self.inputs[i])):
                 dp_result += self.weights[i][j] * self.inputs[i][j]
+        # activation
         self.output = np.tanh(dp_result)
-        self.grad_output = 1 - np.tanh(dp_result) ** 2 # gradient of tanh
+        # preset the gradient for back propagation
+        self.grad_output = 1 - np.tanh(dp_result) ** 2 
         # put output value to the inputs of next layer
         for next_neuron in self.forward_adj:
             next_neuron.inputs[self.pos_x][self.pos_y] = self.output
@@ -142,6 +144,43 @@ class Neuron:
         for prev_neuron in self.backward_adj:
             value = self.grad_output * self.weights[prev_neuron.pos_x][prev_neuron.pos_y]
             prev_neuron.grad_inputs[self.pos_x][self.pos_y] = value
+            
+class InnerProductNeuron(Neuron):
+    def __init__(self, enm, pos_x, pos_y):
+        Neuron.__init__(self, enm, pos_x, pos_y)
+
+    def forward(self):
+        dp_result = 0.0
+        for i in range(len(self.inputs)):
+            for j in range(len(self.inputs[i])):
+                dp_result += self.weights[i][j] * self.inputs[i][j]
+        self.output = dp_result
+        self.grad_output = 1.0
+        for next_neuron in self.forward_adj:
+            next_neuron.inputs[self.pos_x][self.pos_y] = self.output
+
+    def backward(self): Neuron.backward(self)
+
+class ReLUNeuron(Neuron):
+    def __init__(self, enm, pos_x, pos_y):
+        Neuron.__init__(self, enm, pos_x, pos_y)
+
+    def forward(self):
+        pass
+
+    def backward(self):
+        pass 
+
+class ConvolutionNeuron(Neuron):
+    def __init__(self, enm, pos_x, pos_y):
+        Neuron.__init__(self, enm, pos_x, pos_y)
+
+    def forward(self):
+        pass
+
+    def backward(self):
+        pass 
+
 
 class DataNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
@@ -156,6 +195,16 @@ class DataNeuron(Neuron):
 
     def backward(self):
         pass # no backward propagation for data neuron
+
+class SigmoidNeuron(Neuron):
+    def __init__(self, enm, pos_x, pos_y):
+        Neuron.__init__(self, enm, pos_x, pos_y)
+
+    def forward(self):
+        pass
+
+    def backward(self):
+        pass 
 
 class SoftmaxNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
