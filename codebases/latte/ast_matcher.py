@@ -59,8 +59,13 @@ class ASTTemplate(object):
             # ignore Discard
             tpl_kid = tpl.getChildren()[0]
             if tpl_kid.name.startswith('_') and len(tpl_kid.name) > 1:
-                self.wildcard[tpl_kid.name] = tgt
-                return True
+                if tpl_kid.name not in self.wildcard:
+                    # if this is the first time we see this wildcard variable
+                    self.wildcard[tpl_kid.name] = tgt
+                    return True
+                else:
+                    # if we have seen it before, we need to verify the match
+                    return self._match(self.wildcard[tpl_kid.name], tgt)
             else:
                 return self._match(tpl_kid, tgt)
 
@@ -83,9 +88,13 @@ class ASTTemplate(object):
         for tpl_kid, tgt_kid in kids:
             isa_match = False
             if isinstance(tpl_kid, Name) or isinstance(tpl_kid, AssName):
-                if tpl_kid.name.startswith('_'):
-                    self.wildcard[tpl_kid.name] = tgt_kid
+                if tpl_kid.name.startswith('_') and len(tpl_kid.name) > 1:
                     isa_match = True
+                    if tpl_kid.name not in self.wildcard:
+                        # if this is the first time we see this wildcard variable
+                        self.wildcard[tpl_kid.name] = tgt_kid
+                    else:
+                        return self._match(self.wildcard[tpl_kid.name], tgt_kid)
 
             # if not performing matching operations, then try verbatim comparison
             if not isa_match:
