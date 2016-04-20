@@ -30,24 +30,24 @@ void add_connection(Network& net, Ensemble& enm1, Ensemble& enm2, Connection &co
 // Ensemble* FullyConnectedLayer(Network &net, Ensemble &prev_ensemble, int N);
 // Ensemble* SoftmaxLossLayer(Network &net, Ensemble &prev_ensemble, int n_labels);
 
-double min (vector<double> vec) {
+float min (vector<float> vec) {
     assert(vec.size() > 0 && "empty vector input.");
-    double min_value = vec[0];
+    float min_value = vec[0];
     for (int i = 1; i < vec.size(); i++) 
         if (vec[i] < min_value) min_value = vec[i];
     return min_value;
 }
-double max (vector<double> vec) {
+float max (vector<float> vec) {
     assert(vec.size() > 0 && "empty vector input.");
-    double max_value = vec[0];
+    float max_value = vec[0];
     for (int i = 1; i < vec.size(); i++) 
         if (vec[i] > max_value) max_value = vec[i];
     return max_value;
 }
-int argmin (vector<double> vec) {
+int argmin (vector<float> vec) {
     assert(vec.size() > 0 && "empty vector input.");
     int min_index = 0;
-    double min_value = vec[0];
+    float min_value = vec[0];
     for (int i = 1; i < vec.size(); i++) 
         if (vec[i] < min_value) {
             min_index = i;
@@ -55,10 +55,10 @@ int argmin (vector<double> vec) {
         }
     return min_index;
 }
-int argmax (vector<double> vec) {
+int argmax (vector<float> vec) {
     assert(vec.size() > 0 && "empty vector input.");
     int max_index = 0;
-    double max_value = vec[0];
+    float max_value = vec[0];
     for (int i = 1; i < vec.size(); i++) 
         if (vec[i] > max_value) {
             max_index = i;
@@ -66,16 +66,18 @@ int argmax (vector<double> vec) {
         }
     return max_index;
 }
-void Xaiver_initialize (double* mat, int n_j, int n_jp) {
-    double high = sqrt(6.0 / (n_j+n_jp)), low = -1.0 * high;
-    default_random_engine generator;
-    uniform_real_distribution<double> distribution(low, high);
+void Xaiver_initialize (float* mat, int n_j, int n_jp) {
+    float high = sqrt(6.0 / (n_j+n_jp)), low = -1.0 * high;
+    random_device rd;
+    default_random_engine generator( rd() );
+    uniform_real_distribution<float> distribution(0.9, 1.0);
+    // uniform_real_distribution<float> distribution(low, high);
     for (int i = 0; i < n_j; i ++) *(mat+i) = distribution(generator);
 }
-double* init_mkl_mat (int dim_x, int dim_y) {
-    return (double*) mkl_malloc ( dim_x*dim_y*sizeof(double), 64);;
+float* init_mkl_mat (int dim_x, int dim_y) {
+    return (float*) mkl_malloc ( dim_x*dim_y*sizeof(float), 64);;
 }
-void init_weights_mats (vector<vector<double*>>& mat, int prev_dim_x, int prev_dim_y) {
+void init_weights_mats (vector<vector<float*>>& mat, int prev_dim_x, int prev_dim_y) {
     assert(mat.size() > 0 && "mat.size should be greater than 0");
     int dim_x = mat.size(), dim_y = mat[0].size();
     int n_j = prev_dim_x * prev_dim_y, n_jp = dim_x * dim_y;
@@ -86,12 +88,24 @@ void init_weights_mats (vector<vector<double*>>& mat, int prev_dim_x, int prev_d
         }
     }
 }
-void free_weights_mats (vector<vector<double*>>& mat) {
+void free_weights_mats (vector<vector<float*>>& mat) {
     assert(mat.size() > 0 && "mat.size should be greater than 0");
     int dim_x = mat.size(), dim_y = mat[0].size();
     for (int i = 0; i < dim_x; i ++) 
         for (int j = 0; j < dim_y; j ++) 
             mkl_free(mat[i][j]);
+}
+/* Dot product of two matrices (float *) */
+void sgemm (float* C, float* A, float* B, int size) {
+    cblas_sgemm ( 
+            CblasColMajor, // 
+            CblasTrans,    // op(A)
+            CblasNoTrans,  // op(B)
+            1, 1, size,    // m, n, k
+            1.0, A, size,  // alpha, A, lda
+            B, size,       //        B, ldb
+            0.0, C, 1      // beta,  C, ldc
+            );   
 }
 
 typedef struct Index {
@@ -221,7 +235,7 @@ public:
 class SGDSolver : public Solver
 {
 public:
-    SGDSolver(int iter, double step) : iterations(iter) {
+    SGDSolver(int iter, float step) : iterations(iter) {
     }
     virtual ~SGDSolver ();
     void solve(Network &net);

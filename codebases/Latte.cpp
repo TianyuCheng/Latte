@@ -61,10 +61,6 @@ void shared_variable_analsyis() {
     return;
 }
 
-void Xaiver_initialize() {
-
-    return;
-}
 
 /*
 Ensemble& Network::create_ensemble(Dim dim) {
@@ -82,7 +78,6 @@ void solve (Network& network, Solver& solver) {
     // OUTPUT: compact memory allocation of computing neurons 
     shared_variable_analsyis(); 
     // 2. initialize the connection (weights) parameter of network 
-    Xaiver_initialize();
     // 3. 
     for (int iter = 0; iter < ITERATIONS; iter++) {
         // 4. forward routine through pattern matching
@@ -98,15 +93,35 @@ void solve (Network& network, Solver& solver) {
 }
 
 int main (int argn, char** argv) {
-    double* haha = init_mkl_mat(5, 5);
-    Xaiver_initialize(haha, 25, 30);
+    float* A = init_mkl_mat(5, 5);
+    Xaiver_initialize(A, 25, 30);
+    cout << "Mat A: " << endl;
     for (int i = 0; i < 5; i ++) {
         for (int j = 0; j < 5; j ++) {
-            cout << *(haha+5*i+j) << " ";
+            cout << *(A+5*i+j) << " ";
         }
         cout << endl;
     }
-    mkl_free(haha);
+    float* B = init_mkl_mat(5, 5);
+    Xaiver_initialize(B, 25, 30);
+    cout << "Mat B: " << endl;
+    for (int i = 0; i < 5; i ++) {
+        for (int j = 0; j < 5; j ++) {
+            cout << *(B+5*i+j) << " ";
+        }
+        cout << endl;
+    }
+    float* C = init_mkl_mat(25, 25);
+    int m = 1, n = 1, k = 25;
+    float alpha = 1.0, beta = 0.0;
+    int lda = k, ldb = k, ldc = 1;
+    sgemm (C, A, B, k);
+    cout << "Mat C: " << *C  << endl;
+    cout << "Mat C: " << *(C+1)  << endl;
+
+    mkl_free(C);
+    mkl_free(B);
+    mkl_free(A);
 #if 0
     Network net1;
     Network net2;
