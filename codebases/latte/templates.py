@@ -10,15 +10,15 @@ def template_Network():
 
 @template
 def template_FullyConnectedLayer():
-    _name = FullyConnectedLayer(_net, _enm, _N1, _N2, _Neuron)
+    _name = FullyConnectedLayer(_net, _prev, _dim_x, _dim_y, _Neuron)
 
 @template
 def template_LibsvmDataLayer():
-    _name, _nLabels = LibsvmDataLayer(_net, _train, _test, _nFeatures, _nLabels)
+    _name = LibsvmDataLayer(_net, _train, _test, _dim_x, _dim_y)
 
 @template
 def template_SoftmaxLossLayer():
-    _name = SoftmaxLossLayer(_net, _enm, _nLabels)
+    _name = SoftmaxLossLayer(_net, _prev, _dim_x, _dim_y)
 
 @template
 def template_Ensemble():

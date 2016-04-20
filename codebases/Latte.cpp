@@ -66,10 +66,12 @@ void Xaiver_initialize() {
     return;
 }
 
+/*
 Ensemble& Network::create_ensemble(Dim dim) {
     ensembles.push_back(Ensemble(dim));
     return ensembles.back();
 }
+*/
 
 
 int ITERATIONS = 1000;

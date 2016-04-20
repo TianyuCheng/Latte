@@ -140,7 +140,15 @@ private:
 class Ensemble
 {
 public:
+    int dim_x, dim_y; 
+    Ensemble *prev, *next;
     // constructor and destructor
+    Ensemble(int dim_x, int dim_y, Ensemble* prev) {
+        this->dim_x = dim_x; 
+        this->dim_y = dim_y; 
+        this->prev = prev;
+        if (prev != NULL) prev->next = this;
+    }
     Ensemble(Dim s) : size(s) {
         neurons.resize(size.r * size.c);
         // all neurons constructions are independent
@@ -168,11 +176,15 @@ private:
 class Network
 {
 public:
+    vector<Ensemble*> ensembles;
     // constructor and destructor
-    Network();
-    virtual ~Network();
+    Network() { }
+    virtual ~Network() {}
 
-    Ensemble& create_ensemble(Dim dim);
+    void add_ensemble(Ensemble* enm) { 
+        this->ensembles.push_back(enm);
+    }
+    // Ensemble& create_ensemble(Dim dim);
     const vector<int>& load_data_instance(int idx);
 
     // getters called for data loading
@@ -182,7 +194,6 @@ public:
     vector<int> & get_test_labels() { return test_labels; }
 
 private:
-    vector<Ensemble> ensembles;
     // data
     vector<vector<float>> train_features;
     vector<vector<float>> test_features;
@@ -210,7 +221,7 @@ public:
 class SGDSolver : public Solver
 {
 public:
-    SGDSolver(int iter) : iterations(iter) {
+    SGDSolver(int iter, double step) : iterations(iter) {
     }
     virtual ~SGDSolver ();
     void solve(Network &net);
