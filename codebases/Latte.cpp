@@ -96,6 +96,15 @@ void solve (Network& network, Solver& solver) {
 }
 
 int main (int argn, char** argv) {
+    double* haha = init_mkl_mat(5, 5);
+    Xaiver_initialize(haha, 25, 30);
+    for (int i = 0; i < 5; i ++) {
+        for (int j = 0; j < 5; j ++) {
+            cout << *(haha+5*i+j) << " ";
+        }
+        cout << endl;
+    }
+    mkl_free(haha);
 #if 0
     Network net1;
     Network net2;

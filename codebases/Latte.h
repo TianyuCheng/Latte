@@ -10,7 +10,7 @@
 #include <cassert>
 #include <stdio.h>
 #include <stdlib.h>
-//#include "mkl.h"
+#include <mkl.h>
 
 using namespace std;
 
@@ -81,7 +81,7 @@ void init_weights_mats (vector<vector<double*>>& mat, int prev_dim_x, int prev_d
     int n_j = prev_dim_x * prev_dim_y, n_jp = dim_x * dim_y;
     for (int i = 0; i < dim_x; i ++) {
         for (int j = 0; j < dim_y; j ++) {
-            mat[i][j] = mkl_init_mat(prev_dim_x, prev_dim_y);
+            mat[i][j] = init_mkl_mat(prev_dim_x, prev_dim_y);
             Xaiver_initialize(mat[i][j], n_j, n_jp);
         }
     }
