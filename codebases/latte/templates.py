@@ -25,6 +25,10 @@ def template_Ensemble():
     _net.add_ensemble(_cur_enm)
 
 @template
+def template_SGD():
+    _name = SGD(_iter, _step)
+
+@template
 def template_add_connection():
     add_connection(_net, _prev_enm, _cur_enm, _mappings)
 

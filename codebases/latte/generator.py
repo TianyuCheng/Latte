@@ -8,6 +8,7 @@ import compiler.ast
 import inspect, compiler
 from ast_matcher import *
 from templates import *
+import py_compile
 
 NARGS = 3
 
@@ -92,9 +93,18 @@ def make_deallocate_block(ensembles_info):
 def make_loop_header(v, upper):
     return "for (int %s = 0; %s < %s; %s ++) " % (v, v, upper, v)
 
-def make_solve_block():
+def make_init_solver(solver_info):
+    assert solver_info is not None
+    varname = solver_info["_name"].getChildren()[0]
+    iterations = str(solver_info["_iter"].getChildren()[0])
+    step_size = str(solver_info["_step"].getChildren()[0])
+    print (varname, iterations, step_size)
+    return "%s = SGD(%s, %s);" % (varname, iterations, step_size)
+
+def make_solve_block(solver_info):
     solve_block = []
-    solve_block.append(make_loop_header("iter", "ITERATIONS")+"{")
+    iterations = str(solver_info["_iter"].getChildren()[0])
+    solve_block.append(make_loop_header("iter", str(iterations))+"{")
     # TODO: load next instance of train data (feature and label)
     
     # TODO: forward propagation
@@ -112,31 +122,54 @@ ensembles_info.append(("FC_layer", 20, 20))
 ensembles_info.append(("loss_layer", 1, 1))
 
 def main(program_file, cpp_file):
-    # processing program_file here
-    # get AST
-    AST = compiler.parseFile(program_file)
-    # pattern match
-    patn_net = template_FullyConnectedLayer()
+    # Front-end: processing program_file here
+    py_compile.compile(program_file)
+    AST = compiler.parseFile(program_file)  # get AST
+    # managing info
+    networks2enms = {}
+    # pattern matching
+    # (a) network
+    patn_net = template_Network()
     matched = patn_net.matchall(AST)
-    print "Match?", matched
+    print "Network Matched: ", matched
     if matched:
-        for x in patn_net.matches: print x
-        for key, value in patn_net.wildcard.iteritems():
-            print "%s:\t%s" % (key, value)
-    ## OUTPUT: enm_names []
+        for net in patn_net.matches: 
+            net_name = net["_name"].getChildren()[0]
+            networks2enms.update({net_name:[]})
 
+    # (b) Layers
+    patn_fclayer = template_FullyConnectedLayer()
+    matched = patn_fclayer.matchall(AST)
+    print "FullyConnectedLayer Matched: ", matched
+    if matched:
+        for FClayer in patn_fclayer.matches: 
+            print FClayer
+
+    # (c) Solvers
+    solver = None
+    patn_solver = template_SGD()
+    matched = patn_solver.matchall(AST)
+    print "SGD Matched: ", matched
+    if matched:
+        for sgd in patn_solver.matches: 
+            print sgd
+            solver = sgd
+
+    # CODE GENERATION:
     main_body_strs = []
     # allocating block 
     main_body_strs.append(make_allocate_block(ensembles_info))
     main_body_strs.append(make_weights_init_block(ensembles_info[1:]))
 
     # run solver
-    main_body_strs.append(make_solve_block())
+    main_body_strs.append([make_init_solver(solver)])
+    main_body_strs.append(make_solve_block(solver))
 
     # deallocating block
     main_body_strs.append(make_weights_deallocate_block(ensembles_info[1:]))
     main_body_strs.append(make_deallocate_block(ensembles_info))
 
+    # OUTPUT TO CPP FILE
     cpp_out = open(cpp_file, "w+")
     cpp_out.writelines([make_include_header(), make_newlines(2)])
     cpp_out.writelines([make_main_header(), make_newlines(2)])
