@@ -10,15 +10,15 @@ def template_Network():
 
 @template
 def template_FullyConnectedLayer():
-    _name = FullyConnectedLayer(_net, _enm, _N, _Neuron)
+    _name = FullyConnectedLayer(_net, _enm, _N1, _N2, _Neuron)
 
 @template
 def template_LibsvmDataLayer():
-    _data_enm, _nLabels = LibsvmDataLayer(_net, _train, _test, _nFeatures, _nLabels)
+    _name, _nLabels = LibsvmDataLayer(_net, _train, _test, _nFeatures, _nLabels)
 
 @template
 def template_SoftmaxLossLayer():
-    _label_enm = SoftmaxLossLayer(_net, _enm, _nLabels)
+    _name = SoftmaxLossLayer(_net, _enm, _nLabels)
 
 @template
 def template_Ensemble():
@@ -31,6 +31,13 @@ def template_SGD():
 @template
 def template_add_connection():
     add_connection(_net, _prev_enm, _cur_enm, _mappings)
+
+''' list of templates for layers '''
+layer_templates = [
+        template_LibsvmDataLayer(),
+        template_FullyConnectedLayer(),
+        template_SoftmaxLossLayer()
+]
 
 """
 Templates for computation programming paradigm

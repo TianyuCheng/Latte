@@ -15,8 +15,11 @@ class ASTTemplate(object):
     def __init__(self, source):
         super(ASTTemplate, self).__init__()
         ast = compiler.parse(source)
-        self.ast = ast_remove_template(ast)
+        self.ast, self.fname = ast_remove_template(ast)
         self.types = [ type(None), int, float, str ]
+
+    def __str__(self):
+        return self.fname
 
     def matchall(self, tgt):
         self.matches = []
@@ -103,6 +106,7 @@ def ast_remove_template(ast):
     assert isinstance(ast, Module)
     ast = ast.getChildren()[1]      # remove Module
     ast = ast.getChildren()[0]      # remove Stmt
+    fname = ast.getChildren()[1]
     ast = ast.getChildren()[5]      # remove Function
     ast = ast.getChildren()[0]      # find body
-    return ast
+    return ast, fname

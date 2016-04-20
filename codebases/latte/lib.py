@@ -74,10 +74,10 @@ def LibsvmDataLayer(net, train_file, test_file, nFeatures, nLabels):
     net.set_data_ensemble(data_enm)
     return data_enm, nLabels
 
-def FullyConnectedLayer(net, prev_enm, N, TYPE):
+def FullyConnectedLayer(net, prev_enm, N1, N2, TYPE):
     # construct a new ensemble
     M = prev_enm.get_size()
-    cur_enm = Ensemble(N, TYPE)
+    cur_enm = Ensemble(N1 * N2, TYPE)
     cur_enm.set_backward_adj(prev_enm)
     prev_enm.set_forward_adj(cur_enm)
     cur_enm.set_inputs_dim (1, M)

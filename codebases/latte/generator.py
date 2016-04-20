@@ -24,6 +24,7 @@ LATTE_H_PATH = '''"Latte.h"'''
 def make_include_header():
     header = ""
     header += '''#include ''' + LATTE_H_PATH 
+    header += '''\n\n#using namespace std;'''
     return header
 
 def make_main_header():
@@ -51,7 +52,7 @@ def make_FC_weights_free(name):
 
 # input list of ensembles name
 def make_allocate_block(ensembles_info):
-    allocate_block = ["// Allocating memory for Output, Grad_output Matrices"]
+    allocate_block = ["// allocating memory for Output, Grad_output Matrices"]
     for enm in ensembles_info:
         output_mat_name = enm[0]+"_output"
         output_dim_x = enm[0]+".dim_x"
@@ -84,7 +85,7 @@ def make_weights_deallocate_block(ensembles_info):
     return block
 
 def make_deallocate_block(ensembles_info):
-    deallocate_block = ["// Deallocating memory for Output, Grad_output Matrices"]
+    deallocate_block = ["// deallocating memory for Output, Grad_output Matrices"]
     for enm in ensembles_info:
         deallocate_block.append(make_mkl_free(enm[0]+"_output")) 
         deallocate_block.append(make_mkl_free(enm[0]+"_grad_output")) 
@@ -100,6 +101,20 @@ def make_init_solver(solver_info):
     step_size = str(solver_info["_step"].getChildren()[0])
     print (varname, iterations, step_size)
     return "%s = SGD(%s, %s);" % (varname, iterations, step_size)
+
+def make_networks(network_info):
+    assert network_info is not None
+    block = ["// create neural networks "]
+    return block + [ "Network %s;" % net for net in network_info.iterkeys() ]
+
+def make_layers(network_info):
+    assert network_info is not None
+    block = ["// create ensembles used in neural networks"]
+    for net, ensembles in network_info.iteritems():
+        for ensemble in ensembles:
+            # TODO: What do we need to construct an Ensemble in cpp?
+            block.append("Ensemble %s;" % ensemble['_name'].getChildren()[0])
+    return block
 
 def make_solve_block(solver_info):
     solve_block = []
@@ -127,6 +142,7 @@ def main(program_file, cpp_file):
     AST = compiler.parseFile(program_file)  # get AST
     # managing info
     networks2enms = {}
+
     # pattern matching
     # (a) network
     patn_net = template_Network()
@@ -138,12 +154,15 @@ def main(program_file, cpp_file):
             networks2enms.update({net_name:[]})
 
     # (b) Layers
-    patn_fclayer = template_FullyConnectedLayer()
-    matched = patn_fclayer.matchall(AST)
-    print "FullyConnectedLayer Matched: ", matched
-    if matched:
-        for FClayer in patn_fclayer.matches: 
-            print FClayer
+    for patn_layer in layer_templates:
+        matched = patn_layer.matchall(AST)
+        print patn_layer, "Matched: ", matched
+        if matched:
+            for layer in patn_layer.matches: 
+                net_name = layer['_net'].getChildren()[0]
+                assert net_name in networks2enms
+                layer['type'] = str(patn_layer)
+                networks2enms[net_name].append(layer)
 
     # (c) Solvers
     solver = None
@@ -157,6 +176,11 @@ def main(program_file, cpp_file):
 
     # CODE GENERATION:
     main_body_strs = []
+
+    # creating network and ensembles
+    main_body_strs.append(make_networks(networks2enms))
+    main_body_strs.append(make_layers(networks2enms))
+
     # allocating block 
     main_body_strs.append(make_allocate_block(ensembles_info))
     main_body_strs.append(make_weights_init_block(ensembles_info[1:]))
