@@ -73,6 +73,23 @@ solve(sgd, net)
         for key, value in match.iteritems():
             print "%s:\t%s" % (key, value)
 
+def test_axpy():
+    ast = compiler.parse("""
+for i in range(len(inputs[0])):
+    y[i] += x[i] * 0.1
+
+for i in range(len(inputs[0])):
+    y[i] += 0.1 * x[i]
+
+for i in range(len(inputs[0])):
+    y[i] = y[i] + 0.1 * x[i]
+
+for i in range(len(inputs[0])):
+    y[i] = x[i] * 0.1 + y[i]
+    """)
+    match_axpy(ast)
+
 if __name__ == "__main__":
-    test_for_range()
-    test_matchall()
+    # test_for_range()
+    # test_matchall()
+    test_axpy()

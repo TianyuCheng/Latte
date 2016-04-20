@@ -52,3 +52,48 @@ def template_for_range():
 def template_for_xrange():
     for _i in xrange(len(_array)):
         _body
+
+for_templates = [ template_for_range(), template_for_xrange() ]
+
+@template
+def template_axpy_body1():
+    _y[_i] += _alpha * _x[_i]
+
+@template
+def template_axpy_body2():
+    _y[_i] += _x[_i] * _alpha
+
+@template
+def template_axpy_body3():
+    _y[_i] = y[_i] + _alpha * _x[_i]
+
+@template
+def template_axpy_body4():
+    _y[_i] = y[_i] + _x[_i] * _alpha
+
+@template
+def template_axpy_body5():
+    _y[_i] = _alpha * _x[_i] + y[_i]
+
+@template
+def template_axpy_body6():
+    _y[_i] = _x[_i] * _alpha + y[_i]
+
+axpy_body_templates = [
+        template_axpy_body1(),
+        template_axpy_body2(),
+        template_axpy_body3(),
+        template_axpy_body4(),
+        template_axpy_body5(),
+        template_axpy_body6()
+]
+
+def match_axpy(ast):
+    for template in for_templates:
+        if not template.matchall(ast): continue
+        for match in template.matches:
+            body = match['_body']
+            for axpy in axpy_body_templates:
+                if not axpy.matchall(body): continue
+                for axpy_match in axpy.matches:
+                    print axpy_match
