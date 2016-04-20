@@ -11,10 +11,11 @@ bin:
 	@mkdir -p $(BUILD_DIR)
 
 CppLatte: Latte.cpp
-	$(CC) -c ${CXX_FLAGS} Latte.cpp
+	$(CC) -c ${CXX_FLAGS} $<
 	$(CC) -o Latte Latte.o ${LINK_FLAGS}
 
 clean:
 	rm -rf $(BUILD_DIR)
+	rm -rf *.o
 
 	# $(CXX_FLAGS) $< -o $(BUILD_DIR)/$@
