@@ -23,6 +23,14 @@ Authors
 Usage
 -----
 
+Assumptions
+-----
+
+- Assume only one data layer and loss layer in each network
+
+- Assume Function name for data layer must contain "DataLayer"
+
+- Assume Function name for loss layer must contain "LossLayer"
 
 References
 --------

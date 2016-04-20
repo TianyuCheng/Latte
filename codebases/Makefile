@@ -23,4 +23,4 @@ clean:
 	rm -rf *.o
 	rm -rf Latte mlp
 
-	# $(CXX_FLAGS) $< -o $(BUILD_DIR)/$@
+# $(CXX_FLAGS) $< -o $(BUILD_DIR)/$@

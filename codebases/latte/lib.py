@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import math
 import random 
+import time
 
 ensemble_id_counter = 0
 neuron_id_counter = 0
@@ -47,13 +48,13 @@ def add_connection (net, prev_enm, cur_enm, mappings):
     libsvm format: label fea_id:f_val 
     Note that fea_id is 1-based 
 '''
-def read_libsvm (file_name, nFeatures, nLabels):
+def read_libsvm (file_name, fea_dim_x, fea_dim_y):
     fread = open(file_name, "r")
     features = []
     labels = []
     for line in fread:
         fields = line.split()
-        fea = [ 0.0 ] * nFeatures
+        fea = [ 0.0 ] * fea_dim_y 
         for i in range(1, len(fields)):
             pair = fields[i].split(":")
             fea[int(pair[0])-1] = float(pair[1])
@@ -62,17 +63,17 @@ def read_libsvm (file_name, nFeatures, nLabels):
     fread.close()
     return features, labels
 
-def LibsvmDataLayer(net, train_file, test_file, nFeatures, nLabels):
+def LibsvmDataLayer(net, train_file, test_file, fea_dim_x, fea_dim_y):
     # read data files
-    train_features, train_labels = read_libsvm(train_file, nFeatures, nLabels)
-    test_features, test_labels  = read_libsvm(test_file, nFeatures, nLabels)
+    train_features, train_labels = read_libsvm(train_file, fea_dim_x, fea_dim_y)
+    test_features, test_labels  = read_libsvm(test_file, fea_dim_x, fea_dim_y)
     # print "test_labels: ", test_labels
     net.set_datasets(train_features, train_labels, test_features, test_labels)
 
     # construct data and label ensembles
-    data_enm = Ensemble(nFeatures, DataNeuron)
+    data_enm = Ensemble(fea_dim_y, DataNeuron)
     net.set_data_ensemble(data_enm)
-    return data_enm, nLabels
+    return data_enm
 
 def FullyConnectedLayer(net, prev_enm, N1, N2, TYPE):
     # construct a new ensemble
@@ -81,17 +82,17 @@ def FullyConnectedLayer(net, prev_enm, N1, N2, TYPE):
     cur_enm.set_backward_adj(prev_enm)
     prev_enm.set_forward_adj(cur_enm)
     cur_enm.set_inputs_dim (1, M)
-    prev_enm.set_grad_inputs_dim (1, N)
+    prev_enm.set_grad_inputs_dim (1, N2)
     # enforce connections
     mappings = {}
-    for i in range(M): mappings.update({i:[j for j in range(N)]})
+    for i in range(M): mappings.update({i:[j for j in range(N2)]})
     add_connection (net, prev_enm, cur_enm, mappings)
     net.add_ensemble (cur_enm)
     return cur_enm
 
-def SoftmaxLossLayer(net, prev_enm, nLabels):
+def SoftmaxLossLayer(net, prev_enm, dim_x, nLabels):
     label_enm = Ensemble(nLabels, SoftmaxNeuron)
-    return FullyConnectedLayer(net, prev_enm, nLabels, SoftmaxNeuron)
+    return FullyConnectedLayer(net, prev_enm, dim_x, nLabels, SoftmaxNeuron)
 
 class Neuron:
     def __init__(self, enm, pos_x, pos_y):
@@ -127,7 +128,7 @@ class Neuron:
         dp_result = 0.0
         for i in range(len(self.inputs)):
             for j in range(len(self.inputs[i])):
-                dp_result = self.weights[i][j] * self.inputs[i][j]
+                dp_result += self.weights[i][j] * self.inputs[i][j]
         self.output = np.tanh(dp_result)
         self.grad_output = 1 - np.tanh(dp_result) ** 2 # gradient of tanh
         # put output value to the inputs of next layer
@@ -165,7 +166,7 @@ class SoftmaxNeuron(Neuron):
         dp_result = 0.0
         for i in range(len(self.inputs)):
             for j in range(len(self.inputs[i])):
-                dp_result = self.weights[i][j] * self.inputs[i][j]
+                dp_result += self.weights[i][j] * self.inputs[i][j]
         self.output = math.exp(dp_result)
 
     # NOTE: remember to invoke this annotate() and before backward
@@ -309,6 +310,7 @@ class SGD(Solver):
         assert train_size == len(net.train_labels)
         assert test_size == len(net.test_labels)
         
+        begin = time.time()
         for iter_count in range(self.iterations):
             for data_idx in range(train_size):
                 net.load_data_instance(data_idx)
@@ -319,6 +321,9 @@ class SGD(Solver):
                 for i in range(len(net.ensembles)): 
                     net[i].run_backward_propagate()
                 self.update_weights(net)
+            elapse = time.time() - begin
+            print "Iter: %d" % iter_count, "Time Elapse:", elapse, "seconds..."
+        end = time.time()
 
         # performance evaluation
         preds = []
@@ -333,6 +338,7 @@ class SGD(Solver):
         for i in range(len(preds)):
             print "preds: ", preds[i]+1, ", target: ", net.test_labels[i]
         print "Accuracy:", 1.0 * nCorrect / test_size
+        print "Total Time Cost:", end-begin, "seconds."
 
 def solve(solver, net):
     assert isinstance(solver, Solver), "solve: solver argument is not type Solver"
