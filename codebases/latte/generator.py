@@ -10,6 +10,8 @@ from ast_matcher import *
 from templates import *
 import py_compile
 
+from analyzer import *
+
 NARGS = 3
 
 def usage():
@@ -185,6 +187,10 @@ def main(program_file, cpp_file):
         for sgd in patn_solver.matches: 
             print sgd
             solver = sgd
+
+    # analyze lib functions and user-defined scripts
+    process_lib("lib.py")
+    # process_lib("../test/test_dsl.py")
 
     # CODE GENERATION:
     main_body_strs = []
