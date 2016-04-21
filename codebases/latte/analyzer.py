@@ -3,18 +3,35 @@
 '''
 import ast
 
-neuron_code_generators = { }
+neuron_analyzers = { }
 
-class NeuronCodeGenerator(object):
+class NeuronAnalyzer(object):
     """class for neuron specific code generation"""
     def __init__(self, neuron_ast):
-        super(NeuronCodeGenerator, self).__init__()
+        super(NeuronAnalyzer, self).__init__()
         # field variables
+        self.name = neuron_ast.name
         self.neuron_ast = neuron_ast
         self.fields = { }
         # AST processing
         for function_ast in self.extract_functions():
             self.process_init(function_ast)
+
+    def analyze(self, enm_name):
+        """ pass in enm_name to generate SoA code"""
+        self.enm = enm_name
+        self.forward_codes = [ ]
+        self.backward_codes = [ ]
+
+        # find base class and incorporates its fields
+        for base in self.neuron_ast.bases:
+            if base.id in neuron_analyzers:
+                for field, field_type in neuron_analyzers[base.id].fields.iteritems():
+                    self.fields[field] = field_type
+        
+        # AST processing
+        for function_ast in self.extract_functions():
+            self.process_forward(function_ast)
 
     def extract_functions(self):
         """
@@ -34,23 +51,65 @@ class NeuronCodeGenerator(object):
                 # check if the target is an attribute of self
                 if isinstance(node.targets[0], ast.Attribute):
                     if node.targets[0].value.id == "self":
-                        # we need to record this
-                        self.add_field(node.targets[0].attr, node.value)
+                        # we need to record this field
+                        self.add_field(node)
 
-    def add_field(self, field_name, field_type):
-        if isinstance(field_type, ast.Num):
-            self.fields[field_name] = "float"
+    def process_forward(self, function_ast):
+        if function_ast.name != "forward":
             return
+        for node in ast.walk(function_ast):
+            if isinstance(node, ast.Assign):
+                var_name = self.parse_var_name(node.targets[0])
+                var_value = self.parse_expr(node.value)
+                # ignore data copying (naming convention, ends with 'inputs')
+                if var_name.split('[')[0].endswith("inputs"): continue
+                print "Assignment: %s = %s" % (var_name, var_value)
+
+    def add_field(self, node):
+        var_name = self.parse_var_name(node.targets[0])
+        var_type = self.parse_var_type(node)
+        if var_type is None:
+            print "ignore %s.%s" % (self.name, var_name)
+        else:
+            self.fields[var_name] = var_type
+
+    def parse_expr(self, node):
+        if isinstance(node, ast.Call):
+            func = self.parse_var_name(node.func)
+            args = map(self.parse_var_name, node.args)
+            # TODO: try mapping to MLK operations here
+            return func + "(" + ', '.join(args) + ")"
+        if isinstance(node, ast.BinOp):
+            print ast.dump(node)
+        return self.parse_var_name(node)
+    
+    def parse_var_name(self, node):
+        # simply Name node
+        if isinstance(node, ast.Num):
+            return node.n
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            var_name = node.attr
+            # translate array of data into SoA in Cpp
+            if var_name in self.fields and self.fields[var_name].startswith("vector"):
+                var_name = "%s_enm_%s" % (self.enm, node.attr)
+            return var_name
+        if isinstance(node, ast.Index):
+            return self.parse_var_name(node.value)
+        if isinstance(node, ast.Subscript):
+            return self.parse_var_name(node.value) + "[%s]" % self.parse_var_name(node.slice)
+
+    def parse_var_type(self, node):
+        field_type = node.value
+        if isinstance(field_type, ast.Num):
+            return "float"
         elif isinstance(field_type, ast.List):
             # print field_name, field_type.elts
             if field_type.elts == []:
-                self.fields[field_name] = "vector<float>"
-                return
+                return "vector<float>"
             if isinstance(field_type.elts[0], ast.List):
-                self.fields[field_name] = "vector<vector<float>>"
-                return
-        print "ignore field", field_name
-
+                return "vector<vector<float>>"
 
 def extract_neuron_classes(filename):
     """
@@ -78,4 +137,8 @@ def process_lib(filename):
     and their associated forward/backward functions
     """
     for neuron_ast in extract_neuron_classes(filename):
-        neuron_code_generators[neuron_ast.name] = NeuronCodeGenerator(neuron_ast)
+        neuron_analyzers[neuron_ast.name] = NeuronAnalyzer(neuron_ast)
+
+    # test run
+    for name, neuron_analyzer in neuron_analyzers.iteritems():
+        neuron_analyzer.analyze("ip1")
