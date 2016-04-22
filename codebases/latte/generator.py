@@ -4,8 +4,8 @@
 '''
 
 import os, sys
-import compiler.ast
-import inspect, compiler
+import ast
+import inspect
 from ast_matcher import *
 from templates import *
 import py_compile
@@ -106,9 +106,9 @@ def make_loop_header(v, upper):
 
 def make_init_solver(solver_info):
     assert solver_info is not None
-    varname = solver_info["_name"].getChildren()[0]
-    iterations = str(solver_info["_iter"].getChildren()[0])
-    step_size = str(solver_info["_step"].getChildren()[0])
+    varname = solver_info["name"]
+    iterations = str(solver_info["iter"])
+    step_size = str(solver_info["step"])
     print (varname, iterations, step_size)
     return "Solver %s = SGDSolver(%s, %s);" % (varname, iterations, step_size)
 
@@ -122,12 +122,12 @@ def make_layers(network_info):
     block = ["// create ensembles used in neural networks"]
     for net, ensembles in network_info.iteritems():
         for ensemble in ensembles:
-            name = ensemble['_name'].getChildren()[0]
-            dim_x = ensemble['_dim_x'].getChildren()[0]
-            dim_y = ensemble['_dim_y'].getChildren()[0]
-            if "DataLayer" in ensemble['_type']: prev = "NULL"
-            else: prev = "&" + ensemble['_prev'].getChildren()[0]
-            net_name = ensemble['_net'].getChildren()[0]
+            name = ensemble['name']
+            dim_x = ensemble['dim_x']
+            dim_y = ensemble['dim_y']
+            if "DataLayer" in ensemble['type']: prev = "NULL"
+            else: prev = "&" + ensemble['prev']
+            net_name = ensemble['net']
             stmt_str = "Ensemble %s (%s, %s, %s); %s.add_ensemble(&%s);" % \
                     (name, dim_x, dim_y, prev, net_name, name)
             block.append(stmt_str)
@@ -136,7 +136,7 @@ def make_layers(network_info):
 
 def make_solve_block(solver_info, ensembles_info, name2enm):
     solve_block = []
-    iterations = str(solver_info["_iter"].getChildren()[0])
+    iterations = str(solver_info["iter"])
     solve_block.append(make_loop_header("iter", str(iterations))+"{")
     solve_block.append("")
     # TODO: load next instance of train data (feature and label)
@@ -165,7 +165,7 @@ def make_solve_block(solver_info, ensembles_info, name2enm):
 def main(program_file, cpp_file):
     # Front-end: processing program_file here
     py_compile.compile(program_file)
-    AST = compiler.parseFile(program_file)  # get AST
+    AST = ast_parse_file(program_file)  # get AST
     # managing info
     networks2enms = {}
 
@@ -176,7 +176,7 @@ def main(program_file, cpp_file):
     print "Network Matched: ", matched
     if matched:
         for net in patn_net.matches: 
-            net_name = net["_name"].getChildren()[0]
+            net_name = net["name"]
             networks2enms.update({net_name:[]})
 
     # (b) Layers
@@ -184,8 +184,9 @@ def main(program_file, cpp_file):
         matched = patn_layer.matchall(AST)
         print patn_layer, "Matched: ", matched
         if matched:
-            for layer in patn_layer.matches: 
-                net_name = layer['_net'].getChildren()[0]
+            for layer in patn_layer.matches:
+                print layer
+                net_name = layer['net']
                 assert net_name in networks2enms
                 if '_prev' not in layer: layer.update({"_prev": None})
                 layer['_type'] = str(patn_layer).strip("template_")
