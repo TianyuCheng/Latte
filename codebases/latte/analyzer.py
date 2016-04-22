@@ -28,7 +28,7 @@ class NeuronAnalyzer(object):
                     self.fields[field] = field_type
 
     def analyze(self, enm_info):
-        self.enm_name = enm_info[:1]
+        self.enm,  = enm_info[:1]
         self.fp_codes = []
         self.bp_codes = []
         for function in self.extract_functions():
@@ -145,8 +145,9 @@ class NeuronAnalyzer(object):
         if isinstance(node, ast.Attribute):
             var_name = node.attr
             # translate array of data into SoA in Cpp
-            if var_name in self.fields and self.fields[var_name].startswith("vector"):
-                var_name = "%s_enm_%s" % (self.enm, node.attr)
+            # if var_name in self.fields: and self.fields[var_name].startswith("vector"):
+            if var_name in self.fields and node.value.id == "self":
+                var_name = "%s_%s" % (self.enm, node.attr)
             return var_name
         if isinstance(node, ast.Index):
             return self.parse_var_name(node.value)
