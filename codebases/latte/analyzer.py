@@ -17,9 +17,8 @@ class NeuronAnalyzer(object):
         for function_ast in self.extract_functions():
             self.process_init(function_ast)
 
-    def analyze(self, enm_name):
+    def init_fields(self):
         """ pass in enm_name to generate SoA code"""
-        self.enm = enm_name
         self.forward_codes = [ ]
         self.backward_codes = [ ]
 
@@ -28,10 +27,6 @@ class NeuronAnalyzer(object):
             if base.id in neuron_analyzers:
                 for field, field_type in neuron_analyzers[base.id].fields.iteritems():
                     self.fields[field] = field_type
-        
-        # AST processing
-        for function_ast in self.extract_functions():
-            self.process_forward(function_ast)
 
     def extract_functions(self):
         """
@@ -139,8 +134,6 @@ def process_lib(filename):
     for neuron_ast in extract_neuron_classes(filename):
         neuron_analyzers[neuron_ast.name] = NeuronAnalyzer(neuron_ast)
     
-    # # test run
-    # for name, neuron_analyzer in neuron_analyzers.iteritems():
-    #     # neuron_analyzer.analyze("ip1")
-    #     print neuron_analyzer.fields
+    for name, neuron_analyzer in neuron_analyzers.iteritems():
+        neuron_analyzer.init_fields()
     return neuron_analyzers
