@@ -98,7 +98,16 @@ def make_weights_init_block(ensembles_info, name2enm):
         if "DataLayer" in _type: continue
         prev_dim_x = name2enm[_prev][3]
         prev_dim_y = name2enm[_prev][4]
-        init_str = "init_weights_mats(%s, %d, %d);" % (_cur+"_weights", prev_dim_x, prev_dim_y)
+        init_str = "init_weights_mats(%s, %d, %d); " % \
+                (_cur+"_weights", prev_dim_x, prev_dim_y)
+        block.append(init_str)
+    for enm in ensembles_info:
+        _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
+        if "DataLayer" in _type: continue
+        prev_dim_x = name2enm[_prev][3]
+        prev_dim_y = name2enm[_prev][4]
+        init_str = "init_weights_mats(%s, %d, %d);" % \
+                (_cur+"_grad_weights", prev_dim_x, prev_dim_y)
         block.append(init_str)
     return block
 def make_weights_deallocate_block(ensembles_info):
