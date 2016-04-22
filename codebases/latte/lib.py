@@ -110,8 +110,6 @@ class Neuron:
         self.prev_dim_y = 0
         self.enm = enm
         # data info
-        self.weights      = [[]]
-        self.grad_weights = [[]]
         self.inputs       = [[]]  # fp: restore activation of neurons in last layer
         self.grad_inputs  = [[]]  # bp: restore error of last layer
         self.output       = 0.0   # fp: restore activation value of self
@@ -133,6 +131,24 @@ class Neuron:
         self.weights     = Xaiver_weights_init (dim_x, dim_y, self.enm.get_size())
         self.grad_inputs = [ [0.0] * dim_y ] * dim_x
         self.grad_weights= [ [0.0] * dim_y ] * dim_x
+
+    def forward(self): pass
+
+    def backward(self): pass
+
+    def clear_grad_weights(self):
+        for i in range(self.prev_dim_x):
+            for j in range(self.prev_dim_y):
+                self.grad_weights[i][j] = 0.0 
+        # clean up grad_output
+        self.grad_output = 0.0
+
+class FCNeuron(Neuron):
+    def __init__(self, enm, pos_x, pos_y):
+        Neuron.__init__(self, enm, pos_x, pos_y)
+        self.weights      = [[]]
+        self.grad_weights = [[]]
+        return 
 
     def forward(self):
         # innder product of inputs and weights
@@ -163,16 +179,11 @@ class Neuron:
             for j in range(self.prev_dim_y):
                 self.grad_weights[i][j] += self.grad_output * self.inputs[i][j]
 
-    def clear_grad_weights(self):
-        for i in range(self.prev_dim_x):
-            for j in range(self.prev_dim_y):
-                self.grad_weights[i][j] = 0.0 
-        # clean up grad_output
-        self.grad_output = 0.0
-            
 class InnerProductNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
         Neuron.__init__(self, enm, pos_x, pos_y)
+        self.weights      = [[]]
+        self.grad_weights = [[]]
 
     def forward(self):
         dp_result = inner_product (self.weights, self.inputs)
@@ -221,6 +232,8 @@ class DataNeuron(Neuron):
 class SigmoidNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
         Neuron.__init__(self, enm, pos_x, pos_y)
+        self.weights      = [[]]
+        self.grad_weights = [[]]
 
     def forward(self):
         pass
@@ -232,6 +245,8 @@ class SoftmaxNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
         Neuron.__init__(self, enm, pos_x, pos_y)
         self.label = None
+        self.weights      = [[]]
+        self.grad_weights = [[]]
     
     def forward(self):
         dp_result = 0.0

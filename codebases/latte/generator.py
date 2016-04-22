@@ -48,13 +48,14 @@ def make_FC_weights_free(name):
     return "free_weights_mats(%s);" % (name)
 
 # input list of ensembles name
-def make_allocate_block(ensembles_info, attributes):
+def make_allocate_block(ensembles_info, neuron_analyzers):
+    attributes = neuron_analyzers["Neuron"].fields
     allocate_block = []
     for attr in attributes: 
         allocate_block.append("// allocating memory for " + attr )
         for enm in ensembles_info:
             _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
-            output_mat_name = _cur+attr
+            output_mat_name = _cur+ "_" +attr
             output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, _dim_y)
             allocate_block.append(output_malloc_str) 
         allocate_block.append("")
@@ -154,6 +155,9 @@ def make_solve_block(solver_info, ensembles_info, name2enm):
     solve_block.append("}") # end the iteration loop
     return solve_block
 
+def share_var_analyze (neuron_analyzers):
+    pass
+
 def main(program_file, cpp_file):
     # Front-end: processing program_file here
     py_compile.compile(program_file)
@@ -197,10 +201,9 @@ def main(program_file, cpp_file):
 
     #####################################################################
     # analyze lib functions and user-defined scripts
-    neuron_analyzer = process_lib("lib.py")
-    for x in neuron_analyzer:
-        print x, neuron_analyzer[x].fields
-    for x in networks2enms.values()[0]: print x
+    neuron_analyzers = process_lib("lib.py")
+    for x in neuron_analyzers:
+        print x, neuron_analyzers[x].fields
     ensembles_info = [ ( x['name'], \
                          x['type'], \
                          x['prev'], \
@@ -208,11 +211,10 @@ def main(program_file, cpp_file):
                          x['dim_y'], 
                          x['Neuron']) \
                       for x in networks2enms.values()[0] ]
-    #for x in ensembles_info: print x
+    for x in ensembles_info: print x
     name2enm = {}
     for x in ensembles_info: name2enm.update({ x[0] : x })
-    fields = ["_value", "_output", "_grad_output"]
-    #print name2enm
+    share_var_analyze (neuron_analyzers)
     #####################################################################
 
     # CODE GENERATION:
@@ -224,7 +226,7 @@ def main(program_file, cpp_file):
     
     # allocating block 
 
-    main_body_strs.append(make_allocate_block(ensembles_info, fields))
+    main_body_strs.append(make_allocate_block(ensembles_info, neuron_analyzers))
     main_body_strs.append(make_weights_init_block(ensembles_info, name2enm))
 
     # run solver
@@ -233,7 +235,7 @@ def main(program_file, cpp_file):
 
     # deallocating block
     main_body_strs.append(make_weights_deallocate_block(ensembles_info))
-    main_body_strs.append(make_deallocate_block(ensembles_info, fields))
+    main_body_strs.append(make_deallocate_block(ensembles_info, neuron_analyzers))
 
     # OUTPUT TO CPP FILE
     cpp_out = open(cpp_file, "w+")
