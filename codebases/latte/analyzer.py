@@ -103,13 +103,13 @@ class NeuronAnalyzer(object):
     def parse_var_type(self, node):
         field_type = node.value
         if isinstance(field_type, ast.Num):
-            return "float"
+            return "float*"
         elif isinstance(field_type, ast.List):
             # print field_name, field_type.elts
             if field_type.elts == []:
-                return "vector<float>"
+                return "vector<float*>"
             if isinstance(field_type.elts[0], ast.List):
-                return "vector<vector<float>>"
+                return "vector<vector<float*>>"
 
 def extract_neuron_classes(filename):
     """
@@ -138,7 +138,9 @@ def process_lib(filename):
     """
     for neuron_ast in extract_neuron_classes(filename):
         neuron_analyzers[neuron_ast.name] = NeuronAnalyzer(neuron_ast)
-
-    # test run
-    for name, neuron_analyzer in neuron_analyzers.iteritems():
-        neuron_analyzer.analyze("ip1")
+    
+    # # test run
+    # for name, neuron_analyzer in neuron_analyzers.iteritems():
+    #     # neuron_analyzer.analyze("ip1")
+    #     print neuron_analyzer.fields
+    return neuron_analyzers
