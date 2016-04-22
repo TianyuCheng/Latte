@@ -87,7 +87,6 @@ def make_weights_init_block(ensembles_info, name2enm):
     for enm in ensembles_info:
         _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
         if "DataLayer" in _type: continue
-        _prev = _prev.getChildren()[0]
         prev_dim_x = name2enm[_prev][3]
         prev_dim_y = name2enm[_prev][4]
         init_str = "init_weights_mats (%s, %d, %d);" % (_cur+"_weights", prev_dim_x, prev_dim_y)
@@ -145,7 +144,6 @@ def make_solve_block(solver_info, ensembles_info, name2enm):
     forward_str = "// Forward Propagation block \n"
     for enm in ensembles_info[1:]:
         _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
-        _prev = _prev.getChildren()[0]
         # print _cur, _type, _prev, name2enm[_prev][3], name2enm[_prev][4]
         forward_str += "for (int i = 0; i < %s; i++) {\n" % (_dim_x)
         forward_str += "\tfor (int j = 0; j < %s; j ++) {\n" % (_dim_y)
@@ -188,8 +186,8 @@ def main(program_file, cpp_file):
                 print layer
                 net_name = layer['net']
                 assert net_name in networks2enms
-                if '_prev' not in layer: layer.update({"_prev": None})
-                layer['_type'] = str(patn_layer).strip("template_")
+                if 'prev' not in layer: layer.update({"prev": None})
+                layer['type'] = str(patn_layer).strip("template_")
                 networks2enms[net_name].append(layer)
 
     # (c) Solvers
@@ -214,16 +212,17 @@ def main(program_file, cpp_file):
     main_body_strs.append(make_layers(networks2enms))
     
     # allocating block 
-    ensembles_info = [ ( x['_name'].getChildren()[0], \
-                         x['_type'], \
-                         x['_prev'], \
-                         x['_dim_x'].getChildren()[0], \
-                         x['_dim_y'].getChildren()[0]) \
+    # for x in networks2enms.values()[0]: print x
+    ensembles_info = [ ( x['name'], \
+                         x['type'], \
+                         x['prev'], \
+                         x['dim_x'], \
+                         x['dim_y']) \
                       for x in networks2enms.values()[0] ]
+    #for x in ensembles_info: print x
     name2enm = {}
     for x in ensembles_info: name2enm.update({ x[0] : x })
-    print ensembles_info
-    print name2enm
+    #print name2enm
     main_body_strs.append(make_allocate_block(ensembles_info))
     main_body_strs.append(make_weights_init_block(ensembles_info, name2enm))
 
