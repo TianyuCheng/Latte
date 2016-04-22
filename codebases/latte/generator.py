@@ -156,7 +156,17 @@ def make_solve_block(solver_info, ensembles_info, name2enm):
     return solve_block
 
 def share_var_analyze (neuron_analyzers):
-    pass
+    for neuron_name, neuron_analyzer in neuron_analyzers.iteritems():
+        shared_vars = [ ]
+        for field_name in neuron_analyzer.fields.iterkeys():
+            # ignore all inputs
+            if field_name.endswith("inputs"):
+                shared_vars.append(field_name)
+            if field_name.endswith("adj"):
+                shared_vars.append(field_name)
+        # delete all shared variables
+        for shared_var in shared_vars:
+            del neuron_analyzer.fields[shared_var]
 
 def main(program_file, cpp_file):
     # Front-end: processing program_file here
