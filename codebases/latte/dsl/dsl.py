@@ -2,12 +2,15 @@ import compiler, inspect
 import compiler.ast
 from abc import abstractmethod
 
+# global list of networks
+network_list = []
+
 ensemble_id_counter = 0
 neuron_id_counter = 0
 network_id_counter = 0
 
-network_list = []
-
+# The following functions simply allocate ids for neurons,
+# ensembles, and networks
 def allocate_neuron_id():
     global neuron_id_counter
     assigned_id = neuron_id_counter
@@ -84,8 +87,9 @@ class Neuron(object):
     """
     def __init__(self):
         super(Neuron, self).__init__()
-        # basic requirements
         self.ID = allocate_neuron_id()
+
+        # basic requirements
         self.value = 0.0               # type Float32
         self.gradient = 0.0            # type Float32
         self.inputs = [[]]             # type Vector<Vector>
@@ -94,7 +98,7 @@ class Neuron(object):
     @abstractmethod
     def forward(self):
         """
-        describe the forward propagation to next ensemble,
+        describe forward propagation to next ensemble;
         must be user-defined
         """
         return
@@ -102,7 +106,7 @@ class Neuron(object):
     @abstractmethod
     def backward(self):
         """
-        describe the forward propagation to next ensemble,
+        describe backward propagation to next ensemble;
         must be user-defined
         """
         return
@@ -121,12 +125,16 @@ class Ensemble(object):
         super(Ensemble, self).__init__()
         self.ID = allocate_ensemble_id()
         self.neuron_type = neuron_type
+
         # create neurons in this ensemble
         if isinstance(dim, int):
             # single dimension neuron network will be 
             # implicitly converted to 2D neuron network
             dim = 1, dim
+
+        # otherwise dim is a row x column object
         r, c = dim
+
         self.neurons = [ [neuron_type() for i in xrange(c)] for j in xrange(r) ]
         self.connections = dict()
 
