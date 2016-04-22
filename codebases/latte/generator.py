@@ -39,8 +39,8 @@ def make_newlines(num=1):
 # def make_indent(num=indent):
 #     return "    " * num
 
-def make_mkl_malloc(mat_name, dim_x, dim_y):
-    return "float* %s = init_mkl_mat(%s, %s);" % (mat_name, dim_x, dim_y)
+def make_mkl_malloc(mat_name, dim_x, dim_y, tp):
+    return "%s %s = init_mkl_mat(%s, %s);" % (tp, mat_name, dim_x, dim_y)
 
 def make_mkl_free(mat_name): return "mkl_free(%s);" % (mat_name)
 
@@ -56,18 +56,19 @@ def make_allocate_block(ensembles_info, neuron_analyzers):
         for enm in ensembles_info:
             _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
             output_mat_name = _cur+ "_" +attr
-            output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, _dim_y)
+            output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, _dim_y, attributes[attr])
             allocate_block.append(output_malloc_str) 
         allocate_block.append("")
     return allocate_block
 
-def make_deallocate_block(ensembles_info, attributes):
+def make_deallocate_block(ensembles_info, neuron_analyzers):
+    attributes = neuron_analyzers["Neuron"].fields
     deallocate_block = []
     for attr in attributes: 
         deallocate_block.append("// allocating memory for " + attr)
         for enm in ensembles_info:
             _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
-            deallocate_block.append(make_mkl_free(_cur+attr)) 
+            deallocate_block.append(make_mkl_free(_cur+"_" +attr)) 
     return deallocate_block
 
 def make_weights_init_block(ensembles_info, name2enm):
