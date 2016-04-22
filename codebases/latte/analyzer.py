@@ -185,7 +185,7 @@ def extract_neuron_classes(filename):
                     yield node
     return
 
-def process_lib(filename, ensemble_info):
+def process_lib(filename, ensemble_info, name2enm):
     """
     read in a library file parse all neuron types,
     and their associated forward/backward functions

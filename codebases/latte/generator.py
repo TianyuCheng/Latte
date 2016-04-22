@@ -244,7 +244,7 @@ def main(program_file, cpp_file):
     name2enm = {}
     for x in ensembles_info: name2enm.update({ x[0] : x })
 
-    neuron_analyzers, fp_codes, bp_codes = process_lib("lib.py", ensembles_info)
+    neuron_analyzers, fp_codes, bp_codes = process_lib("lib.py", ensembles_info, name2enm)
     for x in neuron_analyzers: print x, neuron_analyzers[x].fields
     for x in fp_codes: print x, fp_codes[x]
     for x in bp_codes: print x, fp_codes[x]
