@@ -195,21 +195,11 @@ def main(program_file, cpp_file):
             print sgd
             solver = sgd
 
+    #####################################################################
     # analyze lib functions and user-defined scripts
     neuron_analyzer = process_lib("lib.py")
     for x in neuron_analyzer:
         print x, neuron_analyzer[x].fields
-
-    # process_lib("../test/test_dsl.py")
-
-    # CODE GENERATION:
-    main_body_strs = []
-
-    # creating network and ensembles
-    main_body_strs.append(make_networks(networks2enms))
-    main_body_strs.append(make_layers(networks2enms))
-    
-    # allocating block 
     for x in networks2enms.values()[0]: print x
     ensembles_info = [ ( x['name'], \
                          x['type'], \
@@ -223,6 +213,17 @@ def main(program_file, cpp_file):
     for x in ensembles_info: name2enm.update({ x[0] : x })
     fields = ["_value", "_output", "_grad_output"]
     #print name2enm
+    #####################################################################
+
+    # CODE GENERATION:
+    main_body_strs = []
+
+    # creating network and ensembles
+    main_body_strs.append(make_networks(networks2enms))
+    main_body_strs.append(make_layers(networks2enms))
+    
+    # allocating block 
+
     main_body_strs.append(make_allocate_block(ensembles_info, fields))
     main_body_strs.append(make_weights_init_block(ensembles_info, name2enm))
 

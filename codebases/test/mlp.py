@@ -9,10 +9,10 @@ from latte.lib import *
 net = Network()
 data_enm = LibsvmDataLayer(net, \
                     '../../datasets/iris-scale-train.libsvm',  \
-                    '../../datasets/iris-scale-test.libsvm', 1, 4)
+                    '../../datasets/iris-scale-test.libsvm', 1, 4, DataNeuron)
 ip1_enm = FullyConnectedLayer(net, data_enm, 1, 20, Neuron)
 ip2_enm = FullyConnectedLayer(net, ip1_enm, 1, 10, Neuron)
-label_enm = SoftmaxLossLayer(net, ip2_enm, 1, 3)
+label_enm = SoftmaxLossLayer(net, ip2_enm, 1, 3, SoftmaxNeuron)
 
 sgd = SGD(1000, 0.1)
 solve(sgd, net)
