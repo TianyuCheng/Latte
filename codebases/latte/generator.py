@@ -48,7 +48,11 @@ def make_FC_weights_free(name):
     return "free_weights_mats(%s);" % (name)
 
 # input list of ensembles name
-def make_allocate_block(ensembles_info, neuron_analyzers):
+def make_allocate_block(ensembles_info, neuron_analyzers, allocate=True):
+    """ 
+    allocate = True -->  Does allocation
+    allocate = False --> Does deallocation
+    """
     # allocate for base neuron type
     attributes = neuron_analyzers["Neuron"].fields
     allocate_block = []
@@ -57,8 +61,11 @@ def make_allocate_block(ensembles_info, neuron_analyzers):
         for enm in ensembles_info:
             _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
             output_mat_name = _cur+ "_" +attr
-            output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, _dim_y, attributes[attr])
-            allocate_block.append(output_malloc_str) 
+            if allocate:
+                output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, _dim_y, attributes[attr])
+                allocate_block.append(output_malloc_str) 
+            else:
+                allocate_block.append(make_mkl_free(output_mat_name)) 
         #allocate_block.append("")
     # allocate for subtype of neuron
     for enm in ensembles_info:
@@ -68,20 +75,13 @@ def make_allocate_block(ensembles_info, neuron_analyzers):
             allocate_block.append("// allocating memory for specific fields of " + _cur)
         for attr in attributes: 
             output_mat_name = _cur+ "_" +attr
-            output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, _dim_y, attributes[attr])
-            allocate_block.append(output_malloc_str) 
+            if allocate:
+                output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, _dim_y, attributes[attr])
+                allocate_block.append(output_malloc_str) 
+            else:
+                allocate_block.append(make_mkl_free(output_mat_name)) 
         #allocate_block.append("")
     return allocate_block
-
-def make_deallocate_block(ensembles_info, neuron_analyzers):
-    attributes = neuron_analyzers["Neuron"].fields
-    deallocate_block = []
-    for attr in attributes: 
-        deallocate_block.append("// allocating memory for " + attr)
-        for enm in ensembles_info:
-            _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
-            deallocate_block.append(make_mkl_free(_cur+"_" +attr)) 
-    return deallocate_block
 
 def make_weights_init_block(ensembles_info, name2enm):
     block = ["// initialize weights of layers "]
@@ -268,7 +268,7 @@ def main(program_file, cpp_file):
 
     # deallocating block
     main_body_strs.append(make_weights_deallocate_block(ensembles_info))
-    main_body_strs.append(make_deallocate_block(ensembles_info, neuron_analyzers))
+    main_body_strs.append(make_allocate_block(ensembles_info, neuron_analyzers, False))
 
     # OUTPUT TO CPP FILE
     cpp_out = open(cpp_file, "w+")
