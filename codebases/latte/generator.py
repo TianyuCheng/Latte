@@ -55,67 +55,65 @@ def make_allocate_block(ensembles_info, neuron_analyzers, allocate=True):
     """
     # allocate for base neuron type
     attributes = neuron_analyzers["Neuron"].fields
-    allocate_block = []
+    block = []
     for attr in attributes: 
-        allocate_block.append("// allocating memory for " + attr )
+        if allocate:
+            block.append("// allocating memory for " + attr )
+        else:
+            block.append("// deallocating memory for " + attr )
         for enm in ensembles_info:
             _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
             output_mat_name = _cur+ "_" +attr
             if allocate:
                 output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, _dim_y, attributes[attr])
-                allocate_block.append(output_malloc_str) 
+                block.append(output_malloc_str) 
             else:
-                allocate_block.append(make_mkl_free(output_mat_name)) 
-        #allocate_block.append("")
+                block.append(make_mkl_free(output_mat_name)) 
+        #block.append("")
     # allocate for subtype of neuron
     for enm in ensembles_info:
         _cur, _type, _prev, _dim_x, _dim_y, _neurontype  = enm[:6]
         attributes = neuron_analyzers[_neurontype].fields
         if len(attributes) > 0:
-            allocate_block.append("// allocating memory for specific fields of " + _cur)
+            if allocate:
+                block.append("// allocating memory for specific fields of " + _cur)
+            else:
+                block.append("// deallocating memory for specific fields of " + _cur)
         for attr in attributes: 
             output_mat_name = _cur+ "_" +attr
             if allocate:
                 output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, _dim_y, attributes[attr])
-                allocate_block.append(output_malloc_str) 
+                block.append(output_malloc_str) 
             else:
-                allocate_block.append(make_mkl_free(output_mat_name)) 
-        #allocate_block.append("")
-    return allocate_block
-
-def make_weights_init_block(ensembles_info, name2enm):
-    block = ["// initialize weights of layers "]
-    '''
-    for enm in ensembles_info:
-        _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
-        if "DataLayer" in _type: continue
-        declare_str = "vector<vector<float*>> %s(%s, vector<float*>(%s, NULL));" \
-                % (_cur+"_weights", _dim_x, _dim_y)
-        block.append(declare_str)
-    '''
-    for enm in ensembles_info:
-        _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
-        if "DataLayer" in _type: continue
-        prev_dim_x = name2enm[_prev][3]
-        prev_dim_y = name2enm[_prev][4]
-        init_str = "init_weights_mats(%s, %d, %d); " % \
-                (_cur+"_weights", prev_dim_x, prev_dim_y)
-        block.append(init_str)
-    for enm in ensembles_info:
-        _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
-        if "DataLayer" in _type: continue
-        prev_dim_x = name2enm[_prev][3]
-        prev_dim_y = name2enm[_prev][4]
-        init_str = "init_weights_mats(%s, %d, %d);" % \
-                (_cur+"_grad_weights", prev_dim_x, prev_dim_y)
-        block.append(init_str)
+                block.append(make_mkl_free(output_mat_name)) 
+        #block.append("")
     return block
-def make_weights_deallocate_block(ensembles_info):
-    block = ["// deallocate weights of layers "]
+
+def make_weights_init_block(ensembles_info, name2enm, allocate=True):
+    if allocate:
+        block = ["// initialize weights of layers "]
+    else:
+        block = ["// deallocate weights of layers "]
     for enm in ensembles_info:
-        if "DataLayer" in enm[1]: continue
-        mat_name = enm[0]+"_weights"
-        block.append(make_FC_weights_free(mat_name))
+        _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
+        if "DataLayer" in _type: continue
+        prev_dim_x = name2enm[_prev][3]
+        prev_dim_y = name2enm[_prev][4]
+        if allocate:
+            init_str = "init_weights_mats(%s, %d, %d); " % (_cur+"_weights", prev_dim_x, prev_dim_y)
+        else:
+            init_str = make_FC_weights_free(_cur+"_weights")
+        block.append(init_str)
+    for enm in ensembles_info:
+        _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
+        if "DataLayer" in _type: continue
+        prev_dim_x = name2enm[_prev][3]
+        prev_dim_y = name2enm[_prev][4]
+        if allocate:
+            init_str = "init_weights_mats(%s, %d, %d); " % (_cur+"_grad_weights", prev_dim_x, prev_dim_y)
+        else:
+            init_str = make_FC_weights_free(_cur+"_grad_weights")
+        block.append(init_str)   
     return block
 
 def make_loop_header(v, upper):
@@ -267,7 +265,7 @@ def main(program_file, cpp_file):
     main_body_strs.append(make_solve_block(solver, ensembles_info, name2enm))
 
     # deallocating block
-    main_body_strs.append(make_weights_deallocate_block(ensembles_info))
+    main_body_strs.append(make_weights_init_block(ensembles_info, name2enm, False))
     main_body_strs.append(make_allocate_block(ensembles_info, neuron_analyzers, False))
 
     # OUTPUT TO CPP FILE

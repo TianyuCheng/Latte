@@ -161,6 +161,7 @@ class FCNeuron(Neuron):
         self.output = np.tanh(dp_result)
         # preset the gradient for back propagation
         self.grad_activation = (1 - np.tanh(dp_result) ** 2 )
+
         # Data Copy: put output value to the inputs of next layer
         for next_neuron in self.forward_adj:
             next_neuron.inputs[self.pos_x][self.pos_y] = self.output
@@ -171,9 +172,11 @@ class FCNeuron(Neuron):
         for i in range(self.prev_dim_x):
             for j in range(self.prev_dim_y):
                 self.grad_inputs[i][j] = self.grad_output * self.weights[i][j]
+                
         # backpropagate error
         for prev in self.backward_adj:
             prev.grad_output += self.grad_inputs[prev.pos_x][prev.pos_y] 
+
         # weights update 
         for i in range(self.prev_dim_x):
             for j in range(self.prev_dim_y):
