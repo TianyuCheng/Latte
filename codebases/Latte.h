@@ -70,12 +70,12 @@ void Xaiver_initialize (float* mat, int n_j, int n_jp) {
     float high = sqrt(6.0 / (n_j+n_jp)), low = -1.0 * high;
     random_device rd;
     default_random_engine generator( rd() );
-    uniform_real_distribution<float> distribution(0.9, 1.0);
+    uniform_real_distribution<float> distribution(low, high);
     // uniform_real_distribution<float> distribution(low, high);
     for (int i = 0; i < n_j; i ++) *(mat+i) = distribution(generator);
 }
 float* init_mkl_mat (int dim_x, int dim_y) {
-    return (float*) mkl_malloc ( dim_x*dim_y*sizeof(float), 64);;
+    return (float*) mkl_malloc ( dim_x*dim_y*sizeof(float), 64);
 }
 void init_weights_mats (vector<vector<float*>>& mat, int prev_dim_x, int prev_dim_y) {
     assert(mat.size() > 0 && "mat.size should be greater than 0");
@@ -112,6 +112,8 @@ void evaluate (vector<int>& preds, vector<int>& labels) {
 
 /* Dot product of two matrices (float *) */
 void sgemm (float* C, float* A, float* B, int size) {
+    // A, B, C are all rolling into vector in memory
+    // C = alpha * A * B + beta * C
     cblas_sgemm ( 
             CblasColMajor, // 
             CblasTrans,    // op(A)
