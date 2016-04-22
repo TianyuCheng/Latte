@@ -48,30 +48,25 @@ def make_FC_weights_free(name):
     return "free_weights_mats(%s);" % (name)
 
 # input list of ensembles name
-def make_allocate_block(ensembles_info):
-    allocate_block = ["// allocating memory for Output, Grad_output Matrices"]
-    for enm in ensembles_info:
-        _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
-        output_mat_name = _cur+"_value"
-        output_dim_x    = _dim_x
-        output_dim_y    = _dim_y
-        output_malloc_str = make_mkl_malloc(output_mat_name, output_dim_x, output_dim_y)
-        allocate_block.append(output_malloc_str) 
-    allocate_block.append("")
-    for enm in ensembles_info:
-        _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
-        # if "DataLayer" in _type: continue
-        grad_mat_name = _cur+"_grad_value"
-        grad_malloc_str = make_mkl_malloc(grad_mat_name, _dim_x, _dim_y)
-        allocate_block.append(grad_malloc_str) 
+def make_allocate_block(ensembles_info, attributes):
+    allocate_block = []
+    for attr in attributes: 
+        allocate_block.append("// allocating memory for " + attr )
+        for enm in ensembles_info:
+            _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
+            output_mat_name = _cur+attr
+            output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, _dim_y)
+            allocate_block.append(output_malloc_str) 
+        allocate_block.append("")
     return allocate_block
-def make_deallocate_block(ensembles_info):
-    deallocate_block = ["// deallocating memory for Output, Grad_output Matrices"]
-    for enm in ensembles_info:
-        deallocate_block.append(make_mkl_free(enm[0]+"_output")) 
-    for enm in ensembles_info:
-        if "LossLayer" in enm[1]: continue
-        deallocate_block.append(make_mkl_free(enm[0]+"_grad_output")) 
+
+def make_deallocate_block(ensembles_info, attributes):
+    deallocate_block = []
+    for attr in attributes: 
+        deallocate_block.append("// allocating memory for " + attr)
+        for enm in ensembles_info:
+            _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
+            deallocate_block.append(make_mkl_free(_cur+attr)) 
     return deallocate_block
 
 def make_weights_init_block(ensembles_info, name2enm):
@@ -186,6 +181,7 @@ def main(program_file, cpp_file):
                 net_name = layer['net']
                 assert net_name in networks2enms
                 if 'prev' not in layer: layer.update({"prev": None})
+                
                 layer['type'] = str(patn_layer).strip("template_")
                 networks2enms[net_name].append(layer)
 
@@ -200,7 +196,10 @@ def main(program_file, cpp_file):
             solver = sgd
 
     # analyze lib functions and user-defined scripts
-    process_lib("lib.py")
+    neuron_analyzer = process_lib("lib.py")
+    for x in neuron_analyzer:
+        print x, neuron_analyzer[x].fields
+
     # process_lib("../test/test_dsl.py")
 
     # CODE GENERATION:
@@ -211,18 +210,20 @@ def main(program_file, cpp_file):
     main_body_strs.append(make_layers(networks2enms))
     
     # allocating block 
-    # for x in networks2enms.values()[0]: print x
+    for x in networks2enms.values()[0]: print x
     ensembles_info = [ ( x['name'], \
                          x['type'], \
                          x['prev'], \
                          x['dim_x'], \
-                         x['dim_y']) \
+                         x['dim_y'], 
+                         x['Neuron']) \
                       for x in networks2enms.values()[0] ]
     #for x in ensembles_info: print x
     name2enm = {}
     for x in ensembles_info: name2enm.update({ x[0] : x })
+    fields = ["_value", "_output", "_grad_output"]
     #print name2enm
-    main_body_strs.append(make_allocate_block(ensembles_info))
+    main_body_strs.append(make_allocate_block(ensembles_info, fields))
     main_body_strs.append(make_weights_init_block(ensembles_info, name2enm))
 
     # run solver
@@ -231,7 +232,7 @@ def main(program_file, cpp_file):
 
     # deallocating block
     main_body_strs.append(make_weights_deallocate_block(ensembles_info))
-    main_body_strs.append(make_deallocate_block(ensembles_info))
+    main_body_strs.append(make_deallocate_block(ensembles_info, fields))
 
     # OUTPUT TO CPP FILE
     cpp_out = open(cpp_file, "w+")
