@@ -233,9 +233,6 @@ def main(program_file, cpp_file):
 
     #####################################################################
     # analyze lib functions and user-defined scripts
-    neuron_analyzers = process_lib("lib.py")
-    for x in neuron_analyzers:
-        print x, neuron_analyzers[x].fields
     ensembles_info = [ ( x['name'], \
                          x['type'], \
                          x['prev'], \
@@ -246,6 +243,11 @@ def main(program_file, cpp_file):
     for x in ensembles_info: print x
     name2enm = {}
     for x in ensembles_info: name2enm.update({ x[0] : x })
+
+    neuron_analyzers, fp_codes, bp_codes = process_lib("lib.py", ensembles_info)
+    for x in neuron_analyzers: print x, neuron_analyzers[x].fields
+    for x in fp_codes: print x, fp_codes[x]
+    for x in bp_codes: print x, fp_codes[x]
     share_var_analyze (neuron_analyzers)
     #####################################################################
 
