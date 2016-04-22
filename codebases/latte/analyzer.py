@@ -134,6 +134,7 @@ def process_lib(filename):
     for neuron_ast in extract_neuron_classes(filename):
         neuron_analyzers[neuron_ast.name] = NeuronAnalyzer(neuron_ast)
     
-    for name, neuron_analyzer in neuron_analyzers.iteritems():
-        neuron_analyzer.init_fields()
+    # NOTE: we extend Neuron to base class, no need to second pass
+    # for name, neuron_analyzer in neuron_analyzers.iteritems():
+    #    neuron_analyzer.init_fields()
     return neuron_analyzers
