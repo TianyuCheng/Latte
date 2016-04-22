@@ -2,6 +2,8 @@
     Latte Semantic Analyzer
 '''
 import ast
+from ast_matcher import *
+from templates import *
 
 neuron_analyzers = { }
 
@@ -19,14 +21,20 @@ class NeuronAnalyzer(object):
 
     def init_fields(self):
         """ pass in enm_name to generate SoA code"""
-        self.forward_codes = [ ]
-        self.backward_codes = [ ]
-
         # find base class and incorporates its fields
         for base in self.neuron_ast.bases:
             if base.id in neuron_analyzers:
                 for field, field_type in neuron_analyzers[base.id].fields.iteritems():
                     self.fields[field] = field_type
+
+    def analyze(self, enm_info):
+        self.enm_name = enm_info[:1]
+        self.fp_codes = []
+        self.bp_codes = []
+        for function in self.extract_functions():
+            self.process_forward(function)
+            self.process_backward(function)
+        return '\n'.join(self.fp_codes), '\n'.join(self.bp_codes)
 
     def extract_functions(self):
         """
@@ -52,13 +60,47 @@ class NeuronAnalyzer(object):
     def process_forward(self, function_ast):
         if function_ast.name != "forward":
             return
-        for node in ast.walk(function_ast):
-            if isinstance(node, ast.Assign):
-                var_name = self.parse_var_name(node.targets[0])
-                var_value = self.parse_expr(node.value)
-                # ignore data copying (naming convention, ends with 'inputs')
-                if var_name.split('[')[0].endswith("inputs"): continue
-                print "Assignment: %s = %s" % (var_name, var_value)
+        # for node in ast.walk(function_ast):
+        #     if isinstance(node, ast.Assign):
+        #         var_name = self.parse_var_name(node.targets[0])
+        #         var_value = self.parse_expr(node.value)
+        #         # ignore data copying (naming convention, ends with 'inputs')
+        #         if var_name.split('[')[0].endswith("inputs"): continue
+        #         print "Assignment: %s = %s" % (var_name, var_value)
+        print "-----------------------------"
+        for stmt in stmt_walk(function_ast):
+            stmt_code = self.process_stmt(stmt)
+            self.fp_codes.append(stmt_code)
+        self.fp_codes = filter(lambda x: x is not None, self.fp_codes)
+
+    def process_backward(self, function_ast):
+        if function_ast.name != "backward":
+            return
+
+    def process_stmt(self, stmt):
+        if isinstance(stmt, ast.Assert):
+            return
+        if isinstance(stmt, ast.Assign):
+            var_name = self.parse_var_name(stmt.targets[0])
+            var_value = self.parse_expr(stmt.value)
+            return "%s = %s;" % (var_name, var_value)
+        if isinstance(stmt, ast.For):
+            for_stmt = "for (int {i} = {start}; {i} < {stop}; ++{i}) {code}"
+            # try to match for loop by template
+            match_result = None
+            tmpl = template_for("range")
+            print ast.dump(stmt)
+            if tmpl.match(stmt):
+                match_result = tmpl.wildcard
+            # assert match_result is not None
+            if match_result is None:
+                return None
+            # print "==============>", match_result
+            for_index = self.parse_var_name(match_result["i"])
+            for_stop = self.parse_expr(match_result["N"])
+            body = self.process_stmt(match_result["body"])
+            return for_stmt.format(i=for_index, start=0, stop=for_stop, code=body)
+        print "=====> PROCESS STMT: (NO MATCH)", ast.dump(stmt)
 
     def add_field(self, node):
         var_name = self.parse_var_name(node.targets[0])
@@ -75,13 +117,29 @@ class NeuronAnalyzer(object):
             # TODO: try mapping to MLK operations here
             return func + "(" + ', '.join(args) + ")"
         if isinstance(node, ast.BinOp):
-            print ast.dump(node)
+            # print ast.dump(node)
+            if isinstance(node.op, ast.Add):
+                op = " + "
+                return "(" + self.parse_expr(node.left) + op + self.parse_expr(node.right) + ")"
+            elif isinstance(node.op, ast.Sub):
+                op = " - "
+                return "(" + self.parse_expr(node.left) + op + self.parse_expr(node.right) + ")"
+            elif isinstance(node.op, ast.Mult):
+                op = " * "
+                return "(" + self.parse_expr(node.left) + op + self.parse_expr(node.right) + ")"
+            elif isinstance(node.op, ast.Div):
+                op = " / "
+                return "(" + self.parse_expr(node.left) + op + self.parse_expr(node.right) + ")"
+            elif isinstance(node.op, ast.Pow):
+                return "pow(" + self.parse_expr(node.left) + ", " + self.parse_expr(node.right) + ")"
         return self.parse_var_name(node)
     
     def parse_var_name(self, node):
         # simply Name node
+        if isinstance(node, str):
+            return node
         if isinstance(node, ast.Num):
-            return node.n
+            return str(node.n)
         if isinstance(node, ast.Name):
             return node.id
         if isinstance(node, ast.Attribute):
@@ -126,7 +184,7 @@ def extract_neuron_classes(filename):
                     yield node
     return
 
-def process_lib(filename):
+def process_lib(filename, ensemble_info):
     """
     read in a library file parse all neuron types,
     and their associated forward/backward functions
@@ -137,4 +195,14 @@ def process_lib(filename):
     # NOTE: we extend Neuron to base class, no need to second pass
     # for name, neuron_analyzer in neuron_analyzers.iteritems():
     #    neuron_analyzer.init_fields()
-    return neuron_analyzers
+    
+    forward_codes = { }
+    backward_codes = { }
+    for ensemble in ensemble_info:
+        _name, _type, _prev, _dim_x, _dim_y, _neuron_type = ensemble[:6]
+        # print neuron_analyzers
+        analyzer = neuron_analyzers[_neuron_type]
+        fp_code, bp_code = analyzer.analyze(ensemble)
+        forward_codes[_name] = fp_code
+        backward_codes[_name] = bp_code
+    return neuron_analyzers, forward_codes, backward_codes

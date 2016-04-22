@@ -60,7 +60,7 @@ class RewriteName(ast.NodeTransformer):
 
 def stmt_walk(node):
     # if node is a module or a for loop
-    if isinstance(node, ast.Module) or isinstance(node, ast.For):
+    if isinstance(node, ast.Module) or isinstance(node, ast.For) or isinstance(node, ast.FunctionDef):
         for stmt in node.body:
             yield stmt
 

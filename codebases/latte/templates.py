@@ -44,16 +44,16 @@ Templates for computation programming paradigm
 """
 
 @template
-def template_for_range():
-    for _i in range(len(_array)):
+def template_for(range):
+    for _i in range(_N):
         _body
 
 @template
-def template_for_xrange():
-    for _i in xrange(len(_array)):
+def template_for_range(range):
+    for _i in range(len(_array)):
         _body
 
-for_templates = [ template_for_range(), template_for_xrange() ]
+for_templates = [ template_for_range("range"), template_for_range("xrange") ]
 
 @template
 def template_axpy(range):
