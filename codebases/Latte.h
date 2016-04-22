@@ -95,6 +95,21 @@ void free_weights_mats (vector<vector<float*>>& mat) {
         for (int j = 0; j < dim_y; j ++) 
             mkl_free(mat[i][j]);
 }
+
+void evaluate (vector<int>& preds, vector<int>& labels) {
+    assert (preds.size() == labels.size() && "preds and labels has different size.");
+    int numCorrect = 0, totalItems = preds.size();
+    for (int i = 0 ; i < totalItems; i ++) {
+        if (preds[i] == labels[i])
+            numCorrect ++;
+    }
+    float accuracy = 1.0 * numCorrect / totalItems;
+    cout << "numCorrect: " << numCorrect 
+         << ", Accuracy: " << accuracy
+         << endl;
+    return ;
+}
+
 /* Dot product of two matrices (float *) */
 void sgemm (float* C, float* A, float* B, int size) {
     cblas_sgemm ( 
