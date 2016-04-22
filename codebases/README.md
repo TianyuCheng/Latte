@@ -10,9 +10,9 @@ Authors
     + Email: tianyu.cheng@utexas.edu
 
 - Student II
-    + Name: Loc
-    + EID: 
-    + Email: 
+    + Name: Loc Hoang
+    + EID: ldh967
+    + Email: loc@cs.utexas.edu
 
 
 - Student III
@@ -58,4 +58,5 @@ NOTES
 
 Acknowledgements
 -------
-We would like to give many thanks to Prof. Pingali and our Teaching Assistant Mr. Roshan for their teaching and instructions. 
+We would like to give many thanks to Prof. Pingali and our Teaching Assistant 
+Mr. Roshan for their teaching and instructions. 

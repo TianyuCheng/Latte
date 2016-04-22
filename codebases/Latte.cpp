@@ -1,7 +1,9 @@
 #include "Latte.h"
 
-void read_libsvm(vector<vector<float>> &features, vector<int> &labels, string &filename, int n_features, int &n_labels) {
+void read_libsvm(vector<vector<float>> &features, vector<int> &labels, 
+                 string &filename, int n_features, int &n_labels) {
     ifstream in(filename, std::ifstream::in);
+
     // check the validity of the input file
     if (!in.good()) {
         cerr << "Cannot read file: " << filename << endl;
@@ -16,11 +18,15 @@ void read_libsvm(vector<vector<float>> &features, vector<int> &labels, string &f
 
         // split the string and load the data
         size_t start = 0, end = 0;
-        for (n_features = 0; (end = line.find(":", start)) != string::npos; n_features++) {
+        for (n_features = 0; 
+              (end = line.find(":", start)) != string::npos; 
+              n_features++) {
             string str = line.substr(start, end - start);
             start = end + 1;
-            if (n_features == 0) labels.push_back(stoi(str));      // the first integer is label
-            else                 tokens.push_back(stof(str));      // the following are features
+            // the first integer is label
+            if (n_features == 0) labels.push_back(stoi(str));      
+            // the following are features
+            else                 tokens.push_back(stof(str));      
         }
     }
     in.close();
@@ -29,7 +35,8 @@ void read_libsvm(vector<vector<float>> &features, vector<int> &labels, string &f
     return ;
 }
 
-Ensemble* LibsvmDataLayer(Network &net, string train_file, string test_file, int n_features, int &n_labels) {
+Ensemble* LibsvmDataLayer(Network &net, string train_file, string test_file, 
+                          int n_features, int &n_labels) {
     vector<vector<float>> &train_features = net.get_train_features();
     vector<vector<float>> &test_features = net.get_test_features();
     vector<int> &train_labels = net.get_train_labels();
@@ -37,6 +44,7 @@ Ensemble* LibsvmDataLayer(Network &net, string train_file, string test_file, int
 
     read_libsvm(train_features, train_labels, train_file, n_features, n_labels);
     read_libsvm(test_features, test_labels, test_file, n_features, n_labels);
+
     // TODO: this function is not finished yet
     // How do we arrange the data, SoA directly, or AoS -> SoA?
     return nullptr;
