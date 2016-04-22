@@ -40,7 +40,7 @@ def make_newlines(num=1):
 #     return "    " * num
 
 def make_mkl_malloc(mat_name, dim_x, dim_y):
-    return "float* %s = init_mkl_mat (%s, %s);" % (mat_name, dim_x, dim_y)
+    return "float* %s = init_mkl_mat(%s, %s);" % (mat_name, dim_x, dim_y)
 
 def make_mkl_free(mat_name): return "mkl_free(%s);" % (mat_name)
 
@@ -60,11 +60,9 @@ def make_allocate_block(ensembles_info):
     allocate_block.append("")
     for enm in ensembles_info:
         _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
-        if "DataLayer" in _type: continue
+        # if "DataLayer" in _type: continue
         grad_mat_name = _cur+"_grad_value"
-        grad_dim_x    = _dim_x
-        grad_dim_y    = _dim_y
-        grad_malloc_str = make_mkl_malloc(grad_mat_name, grad_dim_x, grad_dim_y)
+        grad_malloc_str = make_mkl_malloc(grad_mat_name, _dim_x, _dim_y)
         allocate_block.append(grad_malloc_str) 
     return allocate_block
 def make_deallocate_block(ensembles_info):
@@ -81,7 +79,7 @@ def make_weights_init_block(ensembles_info, name2enm):
     for enm in ensembles_info:
         _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
         if "DataLayer" in _type: continue
-        declare_str = "vector<vector<float*>> %s (%s, vector<float*>(%s, NULL));" \
+        declare_str = "vector<vector<float*>> %s(%s, vector<float*>(%s, NULL));" \
                 % (_cur+"_weights", _dim_x, _dim_y)
         block.append(declare_str)
     for enm in ensembles_info:
@@ -89,7 +87,7 @@ def make_weights_init_block(ensembles_info, name2enm):
         if "DataLayer" in _type: continue
         prev_dim_x = name2enm[_prev][3]
         prev_dim_y = name2enm[_prev][4]
-        init_str = "init_weights_mats (%s, %d, %d);" % (_cur+"_weights", prev_dim_x, prev_dim_y)
+        init_str = "init_weights_mats(%s, %d, %d);" % (_cur+"_weights", prev_dim_x, prev_dim_y)
         block.append(init_str)
     return block
 def make_weights_deallocate_block(ensembles_info):
@@ -127,7 +125,7 @@ def make_layers(network_info):
             if "DataLayer" in ensemble['type']: prev = "NULL"
             else: prev = "&" + ensemble['prev']
             net_name = ensemble['net']
-            stmt_str = "Ensemble %s (%s, %s, %s); %s.add_ensemble(&%s);" % \
+            stmt_str = "Ensemble %s(%s, %s, %s); %s.add_ensemble(&%s);" % \
                     (name, dim_x, dim_y, prev, net_name, name)
             block.append(stmt_str)
     return block
@@ -145,9 +143,9 @@ def make_solve_block(solver_info, ensembles_info, name2enm):
     for enm in ensembles_info[1:]:
         _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
         # print _cur, _type, _prev, name2enm[_prev][3], name2enm[_prev][4]
-        forward_str += "for (int i = 0; i < %s; i++) {\n" % (_dim_x)
-        forward_str += "\tfor (int j = 0; j < %s; j ++) {\n" % (_dim_y)
-        forward_str += "\t\tgemm(%s+j+i*%s, %s, %s[i][j], %s);\n" % \
+        forward_str += "for (int x = 0; x < %d; x++) {\n" % (_dim_x)
+        forward_str += "\tfor (int y = 0; y < %d; y ++) {\n" % (_dim_y)
+        forward_str += "\t\tgemm(%s+y+x*%s, %s, %s[x][y], %s);\n" % \
                 (_cur+"_value", _dim_y, _prev+"_value", _cur+"_weights", \
                   str(name2enm[_prev][3] * name2enm[_prev][4]))
         forward_str += "\t}\n}\n"
@@ -156,6 +154,7 @@ def make_solve_block(solver_info, ensembles_info, name2enm):
     # TODO: annotate
 
     # TODO: backward propagation
+
 
     solve_block.append("}") # end the iteration loop
     return solve_block
