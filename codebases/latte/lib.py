@@ -69,7 +69,7 @@ def read_libsvm (file_name, fea_dim_x, fea_dim_y):
     fread.close()
     return features, labels
 
-def LibsvmDataLayer(net, train_file, test_file, fea_dim_x, fea_dim_y):
+def LibsvmDataLayer(net, train_file, test_file, fea_dim_x, fea_dim_y, n_classes):
     # read data files
     train_features, train_labels = read_libsvm(train_file, fea_dim_x, fea_dim_y)
     test_features, test_labels  = read_libsvm(test_file, fea_dim_x, fea_dim_y)

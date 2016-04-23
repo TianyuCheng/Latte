@@ -285,6 +285,8 @@ class ASTTemplate(object):
                 value = tgt.id
             elif isinstance(tgt, ast.Num):
                 value = tgt.n
+            elif isinstance(tgt, ast.Str):
+                value = tgt.s
             else:
                 value = tgt
             # check if this wildcard has already been set

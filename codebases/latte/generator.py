@@ -123,6 +123,23 @@ def make_weights_init_block(ensembles_info, name2enm, allocate=True):
         block.append(init_str)   
     return block
 
+def make_load_data(networks2enms):
+    for net, ensembles in networks2enms.iteritems():
+        enm = ensembles[0]
+        assert enm["type"] == "LibsvmDataLayer"
+        load_block = []
+        load_block.append("// load libsvm data")
+        load_block.append("vector<float*> train_features, test_features;");
+        load_block.append("vector<int> train_labels, test_labels");
+        # we need number of features
+        load_block.append("""read_libsvm("%s", train_features, train_labels, %d, %d, %d)""" % (\
+            enm["train"], enm["dim_x"], enm["dim_y"], enm['n_classes']
+        ));
+        load_block.append("""read_libsvm("%s", test_features, test_labels, %d, %d, %d)""" % (\
+            enm["test"], enm["dim_x"], enm["dim_y"], enm['n_classes']
+        ));
+    return load_block
+
 def make_loop_header(v, start, upper, increment):
     """Creates a loop header (note there are no braces)"""
     return "for ( int %s = %s ; %s < %s ; %s = %s + %s ) " % \
@@ -157,14 +174,35 @@ def make_layers(network_info):
             block.append(stmt_str)
     return block
 
+def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
+    test_block = []
+    test_block.append("// test block")
+    step_size = str(solver_info["step"])
+    test_block.append(make_loop_header("data_idx", 0, "test_features.size()", 1) + "{")
+    test_block.append("")
+
+    # load next instance of train data (feature and label)
+    load_label_str = "sgemm_copy (%s, test_features[data_idx], %s*%s);\n" % \
+            (ensembles_info[0][0]+"_output", ensembles_info[0][3], ensembles_info[0][4])
+    load_label_str += "vector<vector<int>> cur_label (%d, vector<int>(%d, 0));\n" % tuple(ensembles_info[-1][3:5])
+    load_label_str += "cur_label[0][%s] = 1;" % "test_labels[data_idx]"
+    test_block.append(load_label_str)
+    
+    # forward propagation
+    for enm in ensembles_info: 
+        test_block.append(fp_codes[enm[0]])
+        test_block.append("")
+
+    test_block.append("}")
+    return test_block
 
 def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     solve_block = []
     iterations = str(solver_info["iter"])
     step_size = str(solver_info["step"])
+    solve_block.append("// solve block")
     solve_block.append(make_loop_header("iter", 0, str(iterations), 1) + "{")
     solve_block.append("")
-
 
     solve_block.append(make_loop_header("data_idx", 0, "train_features.size()", 1) + "{")
     solve_block.append("")
@@ -310,9 +348,15 @@ def main(options, program_file, cpp_file):
     main_body_strs.append(make_allocate_block(ensembles_info, neuron_analyzers))
     main_body_strs.append(make_weights_init_block(ensembles_info, name2enm))
 
+    # load data
+    main_body_strs.append(make_load_data(networks2enms))
+
     # run solver
     #main_body_strs.append([make_init_solver(solver)])
     main_body_strs.append(make_solve_block(solver, ensembles_info, name2enm, bp_codes, fp_codes))
+
+    # run tester
+    main_body_strs.append(make_test_block(solver, ensembles_info, name2enm, fp_codes))
 
     # deallocating block
     main_body_strs.append(make_weights_init_block(ensembles_info, name2enm, False))
