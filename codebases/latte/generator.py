@@ -121,9 +121,10 @@ def make_weights_init_block(ensembles_info, name2enm, allocate=True):
         block.append(init_str)   
     return block
 
-def make_loop_header(v, start, upper):
+def make_loop_header(v, start, upper, increment):
     """Creates a loop header (note there are no braces)"""
-    return "for ( int %s = %s ; %s < %s ; %s ++ ) " % (v, start, v, upper, v)
+    return "for ( int %s = %s ; %s < %s ; %s = %s + %s) " % \
+           (v, start, v, upper, v, v, increment)
 
 def make_init_solver(solver_info):
     assert solver_info is not None
@@ -158,7 +159,7 @@ def make_layers(network_info):
 def make_solve_block(solver_info, ensembles_info, name2enm):
     solve_block = []
     iterations = str(solver_info["iter"])
-    solve_block.append(make_loop_header("iter", str(iterations))+"{")
+    solve_block.append(make_loop_header("iter", 0, str(iterations), 1) + "{")
     solve_block.append("")
     # TODO: load next instance of train data (feature and label)
     
