@@ -125,9 +125,18 @@ class ASTTemplate(object):
                 self.matches.append(self.wildcard)
         return len(self.matches) > 0
 
+    # def startswith(self, tgt):
+    #     if isinstance(self.ast[0], list):
+    #         num_stmts = 1
+    #     else:
+    #         num_stmts = len(self.asts[0])
+    #         num_stmts = len(self.asts[0].body)
+    #     if len(tgt) < num_stmts:
+    #         return False
+    #     return self.match(tgt[:num_stmts])
+
     def match(self, tgt):
         """ match ast with template """
-        tgt = ReorderBinOp().visit(tgt)                 # reorder add/mul in target ast
         for tpl_ast in self.asts:
             self.wildcard = dict()
             if self._match(tpl_ast, tgt):
