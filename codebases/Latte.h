@@ -22,7 +22,7 @@ class Solver;
 class SGDSolver;
 class Connection;
 
-void read_libsvm(vector<vector<float> > &features, vector<int> &labels, string &filename, int n_features, int &n_labels);
+void read_libsvm(string filename, vector<float*> &features, vector<int> &labels, int fea_dim_x, int fea_dim_y, int n_classes);
 void shared_variable_analsyis();
 void add_connection(Network& net, Ensemble& enm1, Ensemble& enm2, Connection &connection);
 
