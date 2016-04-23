@@ -184,7 +184,9 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     # TODO: annotate
 
     # TODO: backward propagation
-    # for enm in ensembles_info: solve_block.append(bp_codes[enm[0]])
+    for enm in ensembles_info: 
+        solve_block.append(bp_codes[enm[0]])
+        solve_block.append("")
 
 
     solve_block.append("}") # end the iteration loop

@@ -182,7 +182,7 @@ class FCNeuron(Neuron):
         # weights update 
         for i in range(self.prev_dim_x):
             for j in range(self.prev_dim_y):
-                self.grad_weights[i][j] += self.grad_output * self.inputs[i][j]
+                self.grad_weights[i][j] = self.grad_weights[i][j] + self.grad_output * self.inputs[i][j]
 
 class InnerProductNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
@@ -278,7 +278,7 @@ class SoftmaxNeuron(Neuron):
         # weights update
         for i in range(self.prev_dim_x):
             for j in range(self.prev_dim_y):
-                self.grad_weights[i][j] += self.grad_output * self.inputs[i][j]
+                self.grad_weights[i][j] = self.grad_weights[i][j] + self.grad_output * self.inputs[i][j]
 
 class Ensemble:
     def __init__(self, N1, N2, TYPE):

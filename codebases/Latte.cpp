@@ -101,6 +101,7 @@ void solve (Network& network, Solver& solver) {
 }
 
 int main (int argn, char** argv) {
+
     float* A = init_mkl_mat(5, 5);
     Xaiver_initialize(A, 25, 30);
     cout << "Mat A: " << endl;
@@ -123,9 +124,19 @@ int main (int argn, char** argv) {
     int m = 1, n = 1, k = 25;
     float alpha = 1.0, beta = 0.0;
     int lda = k, ldb = k, ldc = 1;
-    sgemm (C, A, B, k);
+    sgemm_dp (C, A, B, k);
     cout << "Mat C: " << *C  << endl;
     cout << "Mat C: " << *(C+1)  << endl;
+
+    float scalar = 1.0;
+    sgemm_axpy (B, &scalar, A, 25);
+    cout << "Mat B: " << endl;
+    for (int i = 0; i < 5; i ++) {
+        for (int j = 0; j < 5; j ++) {
+            cout << *(B+5*i+j) << " ";
+        }
+        cout << endl;
+    }
 
     mkl_free(C);
     mkl_free(B);
