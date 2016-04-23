@@ -24,7 +24,7 @@ void read_libsvm(string filename, vector<float*> &features, vector<int> &labels,
 
             // the first token is the label
             if (i == 0) {
-                labels.push_back(stoi(str));
+                labels.push_back(stoi(str)-1);
             }
             else {
                 size_t slice = str.find(":", 0);
@@ -109,6 +109,7 @@ int main (int argn, char** argv) {
     read_libsvm("../datasets/iris-scale-train.libsvm", features, labels, 1, 4, 3);
     cout << "read_libsvm: ../datasets/iris-scale-train.libsvm" << endl;
     for (int data_idx = 0; data_idx < features.size(); data_idx++) {
+        cout << labels[data_idx]  << " ";
         for (int i = 0; i < 1; i ++) {
             for (int j = 0; j < 4; j ++) {
                 cout << *(features[data_idx]+ i*4+j) << " " ;
@@ -138,6 +139,8 @@ int main (int argn, char** argv) {
     sgemm_axpy (B, scalar, A, 25);
     cout << "Mat B: " << endl; sgemm_print(B, 5, 5);
     sgemm_zeros(B, 25);
+    cout << "Mat B: " << endl; sgemm_print(B, 5, 5);
+    sgemm_copy (B, A, 25);
     cout << "Mat B: " << endl; sgemm_print(B, 5, 5);
 
     mkl_free(C);

@@ -153,6 +153,11 @@ void sgemm_zeros (float* C, int size) {
             0.0, C, 1          // beta,  C, ldc
             );   
 }
+void sgemm_copy (float* sink, float* source, int n) {
+    // A, B, C are all rolling into vector in memory
+    float scalar = 0.0;
+    cblas_scopy (n, source, 1, sink, 1);
+}
 void sgemm_print (float* C, int dim_x, int dim_y) {
     for (int i = 0; i < dim_x; i ++) {
         for (int j = 0; j < dim_y; j ++) {

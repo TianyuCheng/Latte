@@ -161,12 +161,19 @@ def make_layers(network_info):
 def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     solve_block = []
     iterations = str(solver_info["iter"])
+    step_size = str(solver_info["step"])
     solve_block.append(make_loop_header("iter", 0, str(iterations), 1) + "{")
     solve_block.append("")
 
-    # TODO: load next instance of train data (feature and label)
-    load_label_str = "vector<vector<int>> cur_label (%d, vector<int>(%d, 0));\n" % tuple(ensembles_info[-1][3:5])
-    load_label_str += "cur_label[0][%s] = 1;" % "XXX"
+
+    solve_block.append(make_loop_header("data_idx", 0, "train_features.size()", 1) + "{")
+    solve_block.append("")
+    
+    #  load next instance of train data (feature and label)
+    load_label_str = "sgemm_copy (%s, train_features[data_idx], %s*%s);\n" % \
+            (ensembles_info[0][0]+"_output", ensembles_info[0][3], ensembles_info[0][4])
+    load_label_str += "vector<vector<int>> cur_label (%d, vector<int>(%d, 0));\n" % tuple(ensembles_info[-1][3:5])
+    load_label_str += "cur_label[0][%s] = 1;" % "train_labels[data_idx]"
     solve_block.append(load_label_str)
     
     # forward propagation
@@ -183,12 +190,23 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
         
     # weights_update
     for enm in ensembles_info[1:]: 
-        weights_update_str = "// weights_update for " + enm[0]
-        weights_update_str += "for (int x = 0; x < %s; x++)" %
-        weights_update_str += "sgemm_axpy(%s[x][y], %s, "
-        solve_block.append(weights_solve)
+        _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
+        weights_update_str = "// weights_update for " + enm[0] + "\n"
+        weights_update_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
+        weights_update_str += "\tfor (int y = 0; y < %s; x++) {\n" % _dim_y
+        weights_update_str += "\t\tsgemm_axpy(%s[x][y], %s, %s[x][y], %s*%s);\n" %\
+                (_cur+"_weights", step_size, _cur+"_grad_weights", \
+                    name2enm[_prev][3], name2enm[_prev][4])
+        weights_update_str += "\t\tsgemm_zeros(%s[x][y], %s*%s);\n" % \
+                (_cur+"_grad_weights", name2enm[_prev][3], name2enm[_prev][4])
+        weights_update_str += "\t\tsgemm_zeros(%s[x][y], %s*%s);\n" % \
+                (_cur+"_grad_output", name2enm[_prev][3], name2enm[_prev][4])
+        weights_update_str += "\t}\n}"
+        solve_block.append(weights_update_str)
+    solve_block.append("")
 
-    solve_block.append("}") # end the iteration loop
+    solve_block.append("} // end of data instances traversal") # end the train data sets loop
+    solve_block.append("} // end of iterative traversal") # end the iteration loop
     return solve_block
 
 def share_var_analyze (neuron_analyzers):
