@@ -81,7 +81,6 @@ class ASTTemplate(object):
         self.ast = ReorderBinOp().visit(self.ast)       # reorder add/mul in template
         self.ast = self.ast.body[0]                     # find wrapper function
         self.num_stmts = len(self.ast.body)
-        print self.num_stmts
         
         # preprocessing: replace arguments
         assert len(args) == len(self.ast.args.args)
