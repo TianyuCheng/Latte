@@ -14,7 +14,6 @@ Authors
     + EID: ldh967
     + Email: loc@cs.utexas.edu
 
-
 - Student III
     + Name: Xin Lin
     + EID: xl5224
@@ -43,6 +42,20 @@ TODO LIST:
 Usage
 -----
 
+To generate code for given latte script, please run
+
+    python generator.py [latte_script(.py)] [out_cpp_file(.cpp)]
+
+Please put the generated cpp file "[out\_cpp\_file(.cpp)]" together with "Latte.h". 
+
+To compile the generated code, enter the root of codebases (where you should place "Latte.h" and generated "[out\_cpp\_file(.cpp)]"), and run
+
+    make 
+    
+Please make sure you have installed MKL library correctly and compile the generated cpp code using flags provided in the MKL compiling advisor. 
+
+
+
 Assumptions
 -----
 
@@ -54,21 +67,32 @@ Assumptions
 
 References
 --------
-We referred to the Latte Paper.
+We primarily referred to the Latte Paper provided in the course CS380C Compilers.
 
 
-- Usage Documentation of Matrix Multiplication of MKL Library:
+- [MKL Library] Documentation of Matrix Multiplication:
 
-   https://software.intel.com/en-us/node/468480
+    https://software.intel.com/en-us/node/468480
 
-- Performance Comparison of Matrix Multiplication of MKL Library:
+- [MKL Library] Performance Comparison of Matrix Multiplication of MKL Library:
 
-   http://www.ics.uci.edu/~paolo/FastMM/FMM-Reference/reference.html
-   
+    http://www.ics.uci.edu/~paolo/FastMM/FMM-Reference/reference.html
+
+- [MKL Library] Intel® Math Kernel Library Link Line Advisor:
+
+    https://software.intel.com/en-us/articles/intel-mkl-link-line-advisor
+
+- [Python] API of Python AST Library (Abstract Syntax Tree): 
+
+	https://docs.python.org/2/library/ast.html
+	
+- [Python] API of Python Parser Library:
+	
+	https://docs.python.org/2/library/parser.html
+
 - Library of Libsvm Datasets:
 
    https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass.html
-
 
 NOTES
 ---------
