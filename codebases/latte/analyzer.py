@@ -265,7 +265,7 @@ def extract_neuron_classes(filename):
     or its subtype
     """
     source = open(filename, "r")
-    AST = ast.parse(source=source.read())
+    AST = ast.parse(source.read())
     source.close()
     for node in ast.walk(AST):
         if isinstance(node, ast.ClassDef):
