@@ -9,11 +9,12 @@ import inspect
 from ast_matcher import *
 from templates import *
 import py_compile
+from optparse import OptionParser
 
-from analyzer import *
-
+from analyzer import * 
 NARGS = 3
 
+'''
 def usage():
     """prints usage info when calling it"""
     usage_str = ""
@@ -21,6 +22,7 @@ def usage():
     usage_str += "\tpython [program_file(.py)] [out_cfile] \n"
     print usage_str
     return
+'''
 
 LATTE_H_PATH = '''"Latte.h"'''
 
@@ -209,7 +211,7 @@ def share_var_analyze (neuron_analyzers):
         for shared_var in shared_vars:
             del neuron_analyzer.fields[shared_var]
 
-def main(program_file, cpp_file):
+def main(options, program_file, cpp_file):
     # Front-end: processing program_file here
     py_compile.compile(program_file)
     AST = ast_parse_file(program_file)  # get AST
@@ -277,7 +279,7 @@ def main(program_file, cpp_file):
     # create the neuron analyzers and also pass in ensemble info in order to create
     # forward and backward propogation code
     neuron_analyzers, fp_codes, bp_codes = \
-            process_lib("lib.py", ensembles_info, name2enm, PM_FLAG=True)
+            process_lib("lib.py", ensembles_info, name2enm, options.MKL_FLAG)
     for x in neuron_analyzers: print x, neuron_analyzers[x].fields
 
     #for x in fp_codes: print x, fp_codes[x]
@@ -318,10 +320,18 @@ def main(program_file, cpp_file):
     return
 
 if __name__ == "__main__":
-    if len(sys.argv) != NARGS:
-        usage()
-        sys.exit(1)
-    else:
-        program_file = sys.argv[1]
-        cpp_file = sys.argv[2]
-        main(program_file, cpp_file)
+    usage = "usage: python generator.py [options] arg1 arg2"
+    parser = OptionParser(usage=usage)
+    parser.add_option("-m", "--mkl", action="store_false", dest="MKL_FLAG", \
+                      default=True, help="option to turn off pattern match for MKL calls.")
+    parser.add_option("-t", "--tiling", action="store_false", dest="TILING_FLAG", \
+                      default=True, help="option to turn off tiling optimization.")
+    parser.add_option("-v", "--verbose", action="store_true", dest="verbose", help="verbose")
+    (options, args) = parser.parse_args()
+    if len(args) != 2: 
+        parser.print_help()
+        parser.error("incorrect number of arguments")
+    program_file = args[0]
+    cpp_file = args[1]
+    main(options, program_file, cpp_file)
+
