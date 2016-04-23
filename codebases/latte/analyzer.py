@@ -145,6 +145,7 @@ class NeuronAnalyzer(object):
 
             tmpl = template_bp_axpy()
             matched = tmpl.match(stmt)
+            print ast.dump(stmt)
             if matched:
                 print map(self.parse_var_name, tmpl.wildcard.values())
                 C, B, di, dj, scalar, dim_x, dim_y = map(self.parse_var_name, tmpl.wildcard.values())

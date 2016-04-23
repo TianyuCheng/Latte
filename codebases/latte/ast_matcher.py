@@ -47,10 +47,6 @@ class ExpandAugAssign(ast.NodeTransformer):
                 right = node.value    \
             )
         )
-        # print node.target
-        # print assign_node.target
-        # # print ast.dump(node)
-        # print ast.dump(assign_node)
         return assign_node
 
 class RewriteName(ast.NodeTransformer):
@@ -80,6 +76,12 @@ def ast_parse_source(src):
     AST = ReorderBinOp().visit(AST)
     return AST
 
+def ast_dump(AST):
+    if isinstance(AST, str):
+        return AST
+    if isinstance(AST, list):
+        return '\n'.join(AST)
+    return ast.dump(AST)
 
 def stmt_walk(node):
     """generator function: grab statements 1 by 1"""
@@ -279,9 +281,16 @@ class ASTTemplate(object):
                 value = tgt
             # check if this wildcard has already been set
             if tpl.id[1:] in self.wildcard:
-                return self.wildcard[tpl.id[1:]] == value
+                # if ast_dump(self.wildcard[tpl.id[1:]]) != ast_dump(value):
+                #     print "-------------------------------------->"
+                #     print ast_dump(self.wildcard[tpl.id[1:]])
+                #     print ast_dump(value)
+                #     print "-------------------------------------->"
+                return ast_dump(self.wildcard[tpl.id[1:]]) == ast_dump(value)
             else:
                 self.wildcard[tpl.id[1:]] = value
                 return True
+            # self.wildcard[tpl.id[1:]] = value
+            # return True
 
         return False
