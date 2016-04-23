@@ -93,12 +93,14 @@ def SoftmaxLossLayer(net, prev_enm, dim_x, nLabels):
     label_enm = Ensemble(1, nLabels, SoftmaxNeuron)
     return FullyConnectedLayer(net, prev_enm, dim_x, nLabels, SoftmaxNeuron)
 
+'''
 def inner_product (A, B):
     dp_result = 0.0
     for i in range(len(A)):
         for j in range(len(A[i])):
             dp_result += A[i][j] * B[i][j]
     return dp_result
+'''
 
 class Neuron:
     def __init__(self, enm, pos_x, pos_y):
@@ -255,7 +257,7 @@ class SoftmaxNeuron(Neuron):
         dp_result = 0.0
         for i in range(self.prev_dim_x):
             for j in range(self.prev_dim_y):
-                dp_result += self.weights[i][j] * self.inputs[i][j]
+                dp_result = dp_result + self.weights[i][j] * self.inputs[i][j]
         self.output = math.exp(dp_result)
 
     # NOTE: remember to invoke this annotate() and before backward

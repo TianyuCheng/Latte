@@ -29,7 +29,7 @@ class NeuronAnalyzer(object):
                     self.fields[field] = field_type
 
     def analyze(self, enm_info, name2enm):
-        self.enm,  = enm_info[:1]
+        self.enm, _, self.enm_prev  = enm_info[:3]
         self.name2enm = name2enm
         self.fp_codes = []
         self.bp_codes = []
@@ -85,16 +85,18 @@ class NeuronAnalyzer(object):
         if isinstance(stmt, ast.Assign):
             var_name = self.parse_var_name(stmt.targets[0])
             var_value = self.parse_expr(stmt.value)
-            return "%s = %s;" % (var_name, var_value)
+            return "float %s = %s;" % (var_name, var_value)
         if isinstance(stmt, ast.For):
             # pattern match found
-            tmpl = template_axpy("range")
+            tmpl = template_dot_product("range")
             matched = tmpl.match(stmt) 
             if matched:
-                for x in tmpl.wildcard:
-                    print x, tmpl.wildcard
+                A, B, i, j, dim_x, dim_y, C = map(self.parse_var_name, tmpl.wildcard.values())
+                pm_str = "float* %s = (float*) mkl_malloc(sizeof(float), 64); \n" % C
+                pm_str = "sgemm(&%s, %s[%s][%s], %s, %s*%s);" % (C, A, i, j, B, dim_x, dim_y)
+                return pm_str
             # pattern match not found
-            for_stmt = "for (int {i} = {start}; {i} < {stop}; ++{i}) {code}"
+            for_stmt = "for (int {i} = {start}; {i} < {stop}; ++{i}) {{\n{code}\n}}"
             # try to match for loop by template
             match_result = None
             tmpl = template_for("range")
@@ -157,10 +159,18 @@ class NeuronAnalyzer(object):
             # translate array of data into SoA in Cpp
             # if var_name in self.fields: and self.fields[var_name].startswith("vector"):
             if self.name2enm is not None:
+                # prev_dim_x and prev_dim_y are built-in variables,
+                # so we hard code it
                 if var_name == "prev_dim_x":
                     return self.name2enm[self.enm][3]
                 if var_name == "prev_dim_y":
                     return self.name2enm[self.enm][4]
+                # inputs does not exists in our c++ code, we need to map
+                # inputs to previous ensemble's output
+                if var_name.endswith("inputs"):
+                    var_name = "%s_output" % self.enm_prev
+                    return var_name
+                # transform the AoS to SoA structure
                 if var_name in self.fields and node.value.id == "self":
                     var_name = "%s_%s" % (self.enm, node.attr)
             return var_name

@@ -57,5 +57,12 @@ for_templates = [ template_for_range("range"), template_for_range("xrange") ]
 
 @template
 def template_axpy(range):
-    for _i in range(len(_array)):
-        _y[_i] = _alpha * _x[_i] + _y[i]
+    for _i in range(_dim_x):
+        for _j in range(_dim_y):
+            _A[_i][_j] = _alpha * _A[_i][_j] 
+
+@template
+def template_dot_product(range):
+    for _i in range(_dim_x):
+        for _j in range(_dim_y):
+            _dp_result = _dp_result + _A[_i][_j] * _B[_i][_j] 

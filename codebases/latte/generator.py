@@ -156,7 +156,7 @@ def make_layers(network_info):
     return block
 
 
-def make_solve_block(solver_info, ensembles_info, name2enm):
+def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     solve_block = []
     iterations = str(solver_info["iter"])
     solve_block.append(make_loop_header("iter", 0, str(iterations), 1) + "{")
@@ -164,6 +164,7 @@ def make_solve_block(solver_info, ensembles_info, name2enm):
     # TODO: load next instance of train data (feature and label)
     
     # TODO: forward propagation
+    '''
     forward_str = "// Forward Propagation block \n"
     for enm in ensembles_info[1:]:
         _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
@@ -175,10 +176,15 @@ def make_solve_block(solver_info, ensembles_info, name2enm):
                   str(name2enm[_prev][3] * name2enm[_prev][4]))
         forward_str += "\t}\n}\n"
     solve_block.append(forward_str)
+    '''
+    for enm in ensembles_info: 
+        solve_block.append(fp_codes[enm[0]])
+        solve_block.append("")
 
     # TODO: annotate
 
     # TODO: backward propagation
+    # for enm in ensembles_info: solve_block.append(bp_codes[enm[0]])
 
 
     solve_block.append("}") # end the iteration loop
@@ -254,8 +260,8 @@ def main(program_file, cpp_file):
 
     neuron_analyzers, fp_codes, bp_codes = process_lib("lib.py", ensembles_info, name2enm)
     for x in neuron_analyzers: print x, neuron_analyzers[x].fields
-    for x in fp_codes: print x, fp_codes[x]
-    for x in bp_codes: print x, fp_codes[x]
+    #for x in fp_codes: print x, fp_codes[x]
+    #for x in bp_codes: print x, fp_codes[x]
     share_var_analyze (neuron_analyzers)
     #####################################################################
 
@@ -272,7 +278,7 @@ def main(program_file, cpp_file):
 
     # run solver
     #main_body_strs.append([make_init_solver(solver)])
-    main_body_strs.append(make_solve_block(solver, ensembles_info, name2enm))
+    main_body_strs.append(make_solve_block(solver, ensembles_info, name2enm, bp_codes, fp_codes))
 
     # deallocating block
     main_body_strs.append(make_weights_init_block(ensembles_info, name2enm, False))
