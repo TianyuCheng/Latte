@@ -32,3 +32,5 @@ bin/
 
 # vim temp
 *~
+#swp files
+*.swp
