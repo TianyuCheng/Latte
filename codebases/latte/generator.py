@@ -15,6 +15,7 @@ from analyzer import *
 NARGS = 3
 
 def usage():
+    """prints usage info when calling it"""
     usage_str = ""
     usage_str += "Usage: \n"
     usage_str += "\tpython [program_file(.py)] [out_cfile] \n"
@@ -24,16 +25,19 @@ def usage():
 LATTE_H_PATH = '''"Latte.h"'''
 
 def make_include_header():
+    """makes the C++ header"""
     header = ""
     header += '''#include ''' + LATTE_H_PATH 
     header += '''\n\n//using namespace std;'''
     return header
 
 def make_main_header():
+    """makes the main header"""
     main_header = "int main (int argn, char** argv) { "
     return main_header
 
 def make_newlines(num=1):
+    """creates new lines based on argument passed it"""
     return "\n" * num
 
 # def make_indent(num=indent):
@@ -65,7 +69,8 @@ def make_allocate_block(ensembles_info, neuron_analyzers, allocate=True):
             _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
             output_mat_name = _cur+ "_" +attr
             if allocate:
-                output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, _dim_y, attributes[attr])
+                output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, 
+                                    _dim_y, attributes[attr])
                 block.append(output_malloc_str) 
             else:
                 block.append(make_mkl_free(output_mat_name)) 
@@ -117,6 +122,7 @@ def make_weights_init_block(ensembles_info, name2enm, allocate=True):
     return block
 
 def make_loop_header(v, upper):
+    """Creates a loop header (note there are no braces)"""
     return "for (int %s = 0; %s < %s; %s ++) " % (v, v, upper, v)
 
 def make_init_solver(solver_info):
@@ -194,6 +200,7 @@ def main(program_file, cpp_file):
     # Front-end: processing program_file here
     py_compile.compile(program_file)
     AST = ast_parse_file(program_file)  # get AST
+
     # managing info
     networks2enms = {}
 
