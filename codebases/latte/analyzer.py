@@ -68,7 +68,6 @@ class NeuronAnalyzer(object):
     def process_forward(self, function_ast, enm_info):
         if function_ast.name != "forward": return
         self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
-        print ast.dump(function_ast)
         statements = list(stmt_walk(function_ast))
         for sid in range(len(statements)):
             self.fp_codes.append(self.process_stmt(statements[sid], statements[sid:sid+2]))
@@ -251,6 +250,7 @@ def process_lib(filename, ensemble_info, name2enm):
     # for name, neuron_analyzer in neuron_analyzers.iteritems():
     #    neuron_analyzer.init_fields()
     
+    print "###########################################"
     forward_codes = { }
     backward_codes = { }
     for ensemble in ensemble_info:

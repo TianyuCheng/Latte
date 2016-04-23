@@ -227,13 +227,14 @@ def main(program_file, cpp_file):
         print patn_layer, "Matched: ", matched
         if matched:
             for layer in patn_layer.matches:
-                print layer
+                # print layer
                 net_name = layer['net']
                 assert net_name in networks2enms
                 if 'prev' not in layer: layer.update({"prev": None})
                 
                 layer['type'] = str(patn_layer).strip("template_")
                 networks2enms[net_name].append(layer)
+    print "###########################################"
 
     # (c) Solvers
     solver = None
@@ -244,6 +245,7 @@ def main(program_file, cpp_file):
         for sgd in patn_solver.matches: 
             print sgd
             solver = sgd
+    print "###########################################"
 
     #####################################################################
     # analyze lib functions and user-defined scripts
@@ -255,6 +257,7 @@ def main(program_file, cpp_file):
                          x['Neuron']) \
                       for x in networks2enms.values()[0] ]
     for x in ensembles_info: print x
+    print "###########################################"
     name2enm = {}
     for x in ensembles_info: name2enm.update({ x[0] : x })
 
