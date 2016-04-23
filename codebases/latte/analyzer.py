@@ -69,7 +69,13 @@ class NeuronAnalyzer(object):
         #         print "Assignment: %s = %s" % (var_name, var_value)
         print "-----------------------------"
         for stmt in stmt_walk(function_ast):
-            stmt_code = self.process_stmt(stmt)
+            matched = False
+            if matched:
+            # TODO: match
+                stmt_code = ""
+                pass
+            else:
+                stmt_code = self.process_stmt(stmt)
             self.fp_codes.append(stmt_code)
         self.fp_codes = filter(lambda x: x is not None, self.fp_codes)
 
