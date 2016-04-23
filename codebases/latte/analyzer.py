@@ -15,6 +15,7 @@ class NeuronAnalyzer(object):
         self.name = neuron_ast.name
         self.neuron_ast = neuron_ast
         self.fields = { }
+        self.name2enm = None
         # AST processing
         for function_ast in self.extract_functions():
             self.process_init(function_ast)
@@ -27,8 +28,9 @@ class NeuronAnalyzer(object):
                 for field, field_type in neuron_analyzers[base.id].fields.iteritems():
                     self.fields[field] = field_type
 
-    def analyze(self, enm_info):
+    def analyze(self, enm_info, name2enm):
         self.enm,  = enm_info[:1]
+        self.name2enm = name2enm
         self.fp_codes = []
         self.bp_codes = []
         for function in self.extract_functions():
@@ -109,7 +111,8 @@ class NeuronAnalyzer(object):
         print "=====> PROCESS STMT: (NO MATCH)", ast.dump(stmt)
 
     def add_field(self, node):
-        var_name = self.parse_var_name(node.targets[0])
+        # var_name = self.parse_var_name(node.targets[0])
+        var_name = node.targets[0].attr
         var_type = self.parse_var_type(node)
         if var_type is None:
             print "ignore %s.%s" % (self.name, var_name)
@@ -152,8 +155,13 @@ class NeuronAnalyzer(object):
             var_name = node.attr
             # translate array of data into SoA in Cpp
             # if var_name in self.fields: and self.fields[var_name].startswith("vector"):
-            if var_name in self.fields and node.value.id == "self":
-                var_name = "%s_%s" % (self.enm, node.attr)
+            if self.name2enm is not None:
+                if var_name == "prev_dim_x":
+                    return self.name2enm[self.enm][3]
+                if var_name == "prev_dim_y":
+                    return self.name2enm[self.enm][4]
+                if var_name in self.fields and node.value.id == "self":
+                    var_name = "%s_%s" % (self.enm, node.attr)
             return var_name
         if isinstance(node, ast.Index):
             return self.parse_var_name(node.value)
@@ -209,7 +217,7 @@ def process_lib(filename, ensemble_info, name2enm):
         _name, _type, _prev, _dim_x, _dim_y, _neuron_type = ensemble[:6]
         # print neuron_analyzers
         analyzer = neuron_analyzers[_neuron_type]
-        fp_code, bp_code = analyzer.analyze(ensemble)
+        fp_code, bp_code = analyzer.analyze(ensemble, name2enm)
         forward_codes[_name] = fp_code
         backward_codes[_name] = bp_code
     return neuron_analyzers, forward_codes, backward_codes
