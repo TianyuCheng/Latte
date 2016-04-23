@@ -93,12 +93,14 @@ def SoftmaxLossLayer(net, prev_enm, dim_x, nLabels):
     label_enm = Ensemble(1, nLabels, SoftmaxNeuron)
     return FullyConnectedLayer(net, prev_enm, dim_x, nLabels, SoftmaxNeuron)
 
+'''
 def inner_product (A, B):
     dp_result = 0.0
     for i in range(len(A)):
         for j in range(len(A[i])):
             dp_result += A[i][j] * B[i][j]
     return dp_result
+'''
 
 class Neuron:
     def __init__(self, enm, pos_x, pos_y):
@@ -158,7 +160,7 @@ class FCNeuron(Neuron):
             for j in range(self.prev_dim_y):
                 dp_result = dp_result + self.weights[i][j] * self.inputs[i][j]
         # activation
-        self.output = np.tanh(dp_result)
+        self.output = np.tanh(dp_result) 
         # preset the gradient for back propagation
         self.grad_activation = (1 - np.tanh(dp_result) ** 2 )
 
@@ -168,6 +170,7 @@ class FCNeuron(Neuron):
 
     def backward(self):
         self.grad_output = self.grad_output * self.grad_activation
+
         # scalar multiplication
         for i in range(self.prev_dim_x):
             for j in range(self.prev_dim_y):
@@ -180,7 +183,7 @@ class FCNeuron(Neuron):
         # weights update 
         for i in range(self.prev_dim_x):
             for j in range(self.prev_dim_y):
-                self.grad_weights[i][j] += self.grad_output * self.inputs[i][j]
+                self.grad_weights[i][j] = self.grad_weights[i][j] + self.grad_output * self.inputs[i][j]
 
 class InnerProductNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
@@ -256,7 +259,7 @@ class SoftmaxNeuron(Neuron):
 
         for i in range(self.prev_dim_x):
             for j in range(self.prev_dim_y):
-                dp_result += self.weights[i][j] * self.inputs[i][j]
+                dp_result = dp_result + self.weights[i][j] * self.inputs[i][j]
 
         self.output = math.exp(dp_result)
 
@@ -278,7 +281,7 @@ class SoftmaxNeuron(Neuron):
         # weights update
         for i in range(self.prev_dim_x):
             for j in range(self.prev_dim_y):
-                self.grad_weights[i][j] += self.grad_output * self.inputs[i][j]
+                self.grad_weights[i][j] = self.grad_weights[i][j] + self.grad_output * self.inputs[i][j]
 
 class Ensemble:
     def __init__(self, N1, N2, TYPE):

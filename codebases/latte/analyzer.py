@@ -30,13 +30,14 @@ class NeuronAnalyzer(object):
                     self.fields[field] = field_type
 
     def analyze(self, enm_info, name2enm):
-        self.enm, _, self.enm_prev  = enm_info[:3]
+        self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
         self.name2enm = name2enm
         self.fp_codes = []
         self.bp_codes = []
         for function in self.extract_functions():
-            self.process_forward(function)
-            self.process_backward(function)
+            self.process_forward(function, enm_info)
+        for function in self.extract_functions():
+            self.process_backward(function, enm_info)
         return '\n'.join(self.fp_codes), '\n'.join(self.bp_codes)
 
     def extract_functions(self):
@@ -60,39 +61,105 @@ class NeuronAnalyzer(object):
                         # we need to record this field
                         self.add_field(node)
 
-    def process_forward(self, function_ast):
-        if function_ast.name != "forward":
-            return
-        # for node in ast.walk(function_ast):
-        #     if isinstance(node, ast.Assign):
-        #         var_name = self.parse_var_name(node.targets[0])
-        #         var_value = self.parse_expr(node.value)
-        #         # ignore data copying (naming convention, ends with 'inputs')
-        #         if var_name.split('[')[0].endswith("inputs"): continue
-        #         print "Assignment: %s = %s" % (var_name, var_value)
-        print "-----------------------------"
-        for stmt in stmt_walk(function_ast):
-            stmt_code = self.process_stmt(stmt)
-            self.fp_codes.append(stmt_code)
+    '''
+       TODO: add pattern match for statment here
+    '''
+    def process_forward(self, function_ast, enm_info):
+        if function_ast.name != "forward": return
+        self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
+        statements = list(stmt_walk(function_ast))
+        for sid in range(len(statements)):
+            self.fp_codes.append(self.process_stmt(statements[sid], statements[sid:sid+2]))
         self.fp_codes = filter(lambda x: x is not None, self.fp_codes)
+        if len(self.fp_codes) == 0: return
+        else: 
+            self.fp_codes = [ "\tfor (int y = 0; y < %d; y ++) {" % _dim_y ] + self.fp_codes
+            self.fp_codes = [ "for (int x = 0; x < %d; x ++) {" % _dim_x ] + self.fp_codes
+            self.fp_codes = [ "// Forward Propagation for " + self.enm ] + self.fp_codes
+            self.fp_codes.append("\t}\n}")
 
-    def process_backward(self, function_ast):
-        if function_ast.name != "backward":
-            return
+    def process_backward(self, function_ast, enm_info):
+        if function_ast.name != "backward": return
+        self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
+        statements = list(stmt_walk(function_ast))
+        for sid in range(len(statements)):
+            self.bp_codes.append(self.process_stmt(statements[sid], statements[sid:sid+2]))
+        self.bp_codes = filter(lambda x: x is not None, self.bp_codes)
+        if len(self.bp_codes) == 0: return
+        else: 
+            self.bp_codes = [ \
+                    "// Backward Propagation for " + self.enm, \
+                    "for (int x = 0; x < %d; x ++) {" % _dim_x, \
+                    "\tfor (int y = 0; y < %d; y ++) {" % _dim_y ] \
+                    + self.bp_codes
+            self.bp_codes.append("\t}\n}")
 
-    def process_stmt(self, stmt):
-        if isinstance(stmt, ast.Assert):
-            return
+    def process_stmt(self, stmt, statements=[]):
+        if isinstance(stmt, ast.Assert): return
         if isinstance(stmt, ast.Assign):
+            tmpl = template_fp_output()
+            matched = tmpl.prefix_of(stmt)
+            if matched:
+                expr = self.parse_expr(tmpl.wildcard['exp'])
+                return "\t"*2 + "%s[x][y] = %s;" % (self.enm+"_output", expr)
+
+            tmpl = template_fp_activation()
+            matched = tmpl.prefix_of(stmt)
+            if matched:
+                expr = self.parse_expr(tmpl.wildcard['exp'])
+                return "\t"*2 + "%s[x][y] = %s;" % (self.enm+"_grad_activation", expr)
+
+            tmpl = template_bp_activation()
+            matched = tmpl.prefix_of(stmt)
+            if matched:
+                expr = self.parse_expr(tmpl.wildcard['exp'])
+                return "\t"*2 + "*(%s+x*%s+y) = %s;" % \
+                        (self.enm+"_grad_output", self.name2enm[self.enm][4], expr)
+            
             var_name = self.parse_var_name(stmt.targets[0])
             var_value = self.parse_expr(stmt.value)
-            return "%s = %s;" % (var_name, var_value)
+            return "\t"*2+ "float %s = %s;" % (var_name, var_value)
+
         if isinstance(stmt, ast.For):
+            # pattern match found
+            tmpl = template_dot_product("range")
+            matched = tmpl.match(stmt) 
+            if matched:
+                A, B, i, j, dim_x, dim_y, C = map(self.parse_var_name, tmpl.wildcard.values())
+                #pm_str = "\t"*2+"float* %s = (float*) mkl_malloc(sizeof(float), 64); \n" % C
+                pm_str = "\t"*2+"sgemm_dp(&%s, %s[x][y], %s, %s*%s);" % (C, A, B, dim_x, dim_y)
+                return pm_str
+
+            tmpl = template_bp_scalar_prod()
+            matched = tmpl.match(stmt)
+            if matched:
+                B, _,  _, dim_x, dim_y, scalar = map(self.parse_var_name, tmpl.wildcard.values())
+                C = self.name2enm[self.enm][2] + "_grad_output"
+                prev = self.name2enm[self.enm][2]
+                prev_dim_x, prev_dim_y = self.name2enm[prev][3:5]
+                pm_str = "\t"*2+"sgemm_axpy(%s, %s, %s[x][y], %s*%s);" % \
+                        (C, scalar, B, prev_dim_x, prev_dim_y)
+                #print "========>", pm_str
+                return pm_str
+
+            tmpl = template_bp_axpy()
+            matched = tmpl.match(stmt)
+            if matched:
+                print map(self.parse_var_name, tmpl.wildcard.values())
+                C, B, di, dj, scalar, dim_x, dim_y = map(self.parse_var_name, tmpl.wildcard.values())
+                prev = self.name2enm[self.enm][2]
+                prev_dim_x, prev_dim_y = self.name2enm[prev][3:5]
+                pm_str = "\t"*2+"sgemm_axpy(%s[x][y], %s, %s, %s*%s);" % \
+                        (C, scalar, B, prev_dim_x, prev_dim_y)
+                #print "========>", pm_str
+                return pm_str
+
+            # pattern match not found
             for_stmt = "for (int {i} = {start}; {i} < {stop}; ++{i}) {{\n{code}\n}}"
             # try to match for loop by template
             match_result = None
             tmpl = template_for("range")
-            print ast.dump(stmt)
+            # print ast.dump(stmt)
             if tmpl.match(stmt):
                 match_result = tmpl.wildcard
             # assert match_result is not None
@@ -101,7 +168,7 @@ class NeuronAnalyzer(object):
             # print "==============>", match_result
             for_index = self.parse_var_name(match_result["i"])
             for_stop = self.parse_expr(match_result["N"])
-            body = self.process_stmt(match_result["body"])
+            body = self.process_stmt(match_result["body"], )
             return for_stmt.format(i=for_index, start=0, stop=for_stop, code=body)
         print "=====> PROCESS STMT: (NO MATCH)", ast.dump(stmt)
 
@@ -118,7 +185,7 @@ class NeuronAnalyzer(object):
         if isinstance(node, ast.Call):
             func = self.parse_var_name(node.func)
             args = map(self.parse_var_name, node.args)
-            # TODO: try mapping to MLK operations here
+            # TODO: try mapping to MKL operations here
             return func + "(" + ', '.join(args) + ")"
         if isinstance(node, ast.BinOp):
             # print ast.dump(node)
@@ -130,7 +197,7 @@ class NeuronAnalyzer(object):
                 return "(" + self.parse_expr(node.left) + op + self.parse_expr(node.right) + ")"
             elif isinstance(node.op, ast.Mult):
                 op = " * "
-                return "(" + self.parse_expr(node.left) + op + self.parse_expr(node.right) + ")"
+                return "((" + self.parse_expr(node.left) + ")"+ op + "(" + self.parse_expr(node.right) + "))"
             elif isinstance(node.op, ast.Div):
                 op = " / "
                 return "(" + self.parse_expr(node.left) + op + self.parse_expr(node.right) + ")"
@@ -157,10 +224,18 @@ class NeuronAnalyzer(object):
                     return self.name2enm[self.enm][3]
                 if var_name == "prev_dim_y":
                     return self.name2enm[self.enm][4]
+                if var_name == "grad_output":
+                    return "*(%s_grad_output+x*%s+y)" % (self.enm,self.name2enm[self.enm][4])
+                if var_name == "grad_activation":
+                    return "*(%s_grad_activation+x*%s+y)" % (self.enm,self.name2enm[self.enm][4])
+                if var_name == "output":
+                    return "*(%s_output+x*%s+y)" % (self.enm,self.name2enm[self.enm][4])
+                if var_name == "label":
+                    return "cur_label[x][y]" 
                 # inputs does not exists in our c++ code, we need to map
                 # inputs to previous ensemble's output
                 if var_name.endswith("inputs"):
-                    var_name = "%s_outputs" % self.enm_prev
+                    var_name = "%s_output" % self.enm_prev
                     return var_name
                 # transform the AoS to SoA structure
                 if var_name in self.fields and node.value.id == "self":
@@ -214,6 +289,7 @@ def process_lib(filename, ensemble_info, name2enm):
     # for name, neuron_analyzer in neuron_analyzers.iteritems():
     #    neuron_analyzer.init_fields()
     
+    print "###########################################"
     forward_codes = { }
     backward_codes = { }
     for ensemble in ensemble_info:

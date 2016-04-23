@@ -111,7 +111,7 @@ void evaluate (vector<int>& preds, vector<int>& labels) {
 }
 
 /* Dot product of two matrices (float *) */
-void sgemm (float* C, float* A, float* B, int size) {
+void sgemm_dp (float* C, float* A, float* B, int size) {
     // A, B, C are all rolling into vector in memory
     // C = alpha * A * B + beta * C
     cblas_sgemm ( 
@@ -122,6 +122,20 @@ void sgemm (float* C, float* A, float* B, int size) {
             1.0, A, size,  // alpha, A, lda
             B, size,       //        B, ldb
             0.0, C, 1      // beta,  C, ldc
+            );   
+}
+/* scalar product of two matrices (float *) */
+void sgemm_axpy (float* C, float scalar, float* B, int size) {
+    // A, B, C are all rolling into vector in memory
+    // C = alpha * scalar * B + beta * C
+    cblas_sgemm ( 
+            CblasColMajor,     // 
+            CblasTrans,        // op(A)
+            CblasNoTrans,      // op(B)
+            1, size, 1,        // m, n, k
+            1.0, &scalar, 1,    // alpha, A, lda
+            B, size,           //        B, ldb
+            1.0, C, 1          // beta,  C, ldc
             );   
 }
 
