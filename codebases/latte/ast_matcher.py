@@ -1,6 +1,12 @@
 from copy import deepcopy
 import ast, inspect
 
+ENABLE_AST_MATCH = True
+
+def set_ast_match(ast_match_flag):
+    global ENABLE_AST_MATCH
+    ENABLE_AST_MATCH = ast_match_flag
+
 class BinOpCounter(ast.NodeVisitor):
     def __init__(self):
         super(BinOpCounter, self).__init__()
@@ -173,6 +179,8 @@ class ASTTemplate(object):
         return self.match(tgt[:self.num_stmts])
 
     def match(self, tgt):
+        if not ENABLE_AST_MATCH:
+            return False
         # explicitly expand target from AugAssign to Assign
         # for semantic matching
         if isinstance(tgt, list):

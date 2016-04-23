@@ -10,8 +10,9 @@ neuron_analyzers = { }
 class NeuronAnalyzer(object):
     """class for neuron specific code generation
     Each neuron type has its own analyzer"""
-    def __init__(self, neuron_ast):
+    def __init__(self, neuron_ast, pattern_match = True):
         super(NeuronAnalyzer, self).__init__()
+        self.enable_pattern_match = pattern_match
         # field variables
         self.name = neuron_ast.name
         self.neuron_ast = neuron_ast
@@ -123,6 +124,8 @@ class NeuronAnalyzer(object):
 
         if isinstance(stmt, ast.For):
             # pattern match found
+            if not self.enable_pattern_match:
+                set_ast_match(False)
             tmpl = template_dot_product("range")
             matched = tmpl.match(stmt) 
             if matched:
@@ -145,7 +148,7 @@ class NeuronAnalyzer(object):
 
             tmpl = template_bp_axpy()
             matched = tmpl.match(stmt)
-            print ast.dump(stmt)
+            # print ast.dump(stmt)
             if matched:
                 print map(self.parse_var_name, tmpl.wildcard.values())
                 C, B, di, dj, scalar, dim_x, dim_y = map(self.parse_var_name, tmpl.wildcard.values())
@@ -155,13 +158,13 @@ class NeuronAnalyzer(object):
                         (C, scalar, B, prev_dim_x, prev_dim_y)
                 #print "========>", pm_str
                 return pm_str
+            set_ast_match(True)
 
             # pattern match not found
             for_stmt = "for (int {i} = {start}; {i} < {stop}; ++{i}) {{\n{code}\n}}"
             # try to match for loop by template
             match_result = None
             tmpl = template_for("range")
-            # print ast.dump(stmt)
             if tmpl.match(stmt):
                 match_result = tmpl.wildcard
             # assert match_result is not None
