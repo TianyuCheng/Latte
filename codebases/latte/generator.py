@@ -169,30 +169,24 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     load_label_str += "cur_label[0][%s] = 1;" % "XXX"
     solve_block.append(load_label_str)
     
-    # TODO: forward propagation
-    '''
-    forward_str = "// Forward Propagation block \n"
-    for enm in ensembles_info[1:]:
-        _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
-        # print _cur, _type, _prev, name2enm[_prev][3], name2enm[_prev][4]
-        forward_str += "for (int x = 0; x < %d; x++) {\n" % (_dim_x)
-        forward_str += "\tfor (int y = 0; y < %d; y ++) {\n" % (_dim_y)
-        forward_str += "\t\tgemm(%s+y+x*%s, %s, %s[x][y], %s);\n" % \
-                (_cur+"_value", _dim_y, _prev+"_value", _cur+"_weights", \
-                  str(name2enm[_prev][3] * name2enm[_prev][4]))
-        forward_str += "\t}\n}\n"
-    solve_block.append(forward_str)
-    '''
+    # forward propagation
     for enm in ensembles_info: 
         solve_block.append(fp_codes[enm[0]])
         solve_block.append("")
 
     # TODO: annotate
 
-    # TODO: backward propagation
+    # backward propagation
     for enm in ensembles_info[::-1]: 
         solve_block.append(bp_codes[enm[0]])
         solve_block.append("")
+        
+    # weights_update
+    for enm in ensembles_info[1:]: 
+        weights_update_str = "// weights_update for " + enm[0]
+        weights_update_str += "for (int x = 0; x < %s; x++)" %
+        weights_update_str += "sgemm_axpy(%s[x][y], %s, "
+        solve_block.append(weights_solve)
 
     solve_block.append("}") # end the iteration loop
     return solve_block

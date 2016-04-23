@@ -1,6 +1,7 @@
 #ifndef LATTE_H
 #define LATTE_H
 #include <string>
+#include <cstring>
 #include <vector>
 #include <map>
 #include <memory>
@@ -8,8 +9,8 @@
 #include <iostream>
 #include <fstream>
 #include <cassert>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <mkl.h>
 
 using namespace std;

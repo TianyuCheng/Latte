@@ -1,7 +1,6 @@
 #include "Latte.h"
 
-void read_libsvm(string filename, 
-        vector<float*> &features, vector<int> &labels, 
+void read_libsvm(string filename, vector<float*> &features, vector<int> &labels, 
         int fea_dim_x, int fea_dim_y, int n_classes) {
 
     // read file and check the validity of the input file
@@ -47,8 +46,8 @@ Ensemble* LibsvmDataLayer(Network &net, string train_file, string test_file,
     vector<int> &train_labels = net.get_train_labels();
     vector<int> &test_labels = net.get_test_labels();
 
-    read_libsvm(train_features, train_labels, train_file, n_features, n_labels);
-    read_libsvm(test_features, test_labels, test_file, n_features, n_labels);
+    //read_libsvm(train_features, train_labels, train_file, n_features, n_labels);
+    //read_libsvm(test_features, test_labels, test_file, n_features, n_labels);
 
     // TODO: this function is not finished yet
     // How do we arrange the data, SoA directly, or AoS -> SoA?
@@ -106,6 +105,17 @@ void solve (Network& network, Solver& solver) {
 }
 
 int main (int argn, char** argv) {
+    vector<float*> features; vector<int> labels;
+    read_libsvm("../datasets/iris-scale-train.libsvm", features, labels, 1, 4, 3);
+    cout << "read_libsvm: ../datasets/iris-scale-train.libsvm" << endl;
+    for (int data_idx = 0; data_idx < features.size(); data_idx++) {
+        for (int i = 0; i < 1; i ++) {
+            for (int j = 0; j < 4; j ++) {
+                cout << *(features[data_idx]+ i*4+j) << " " ;
+            }
+        }
+        cout << endl;
+    }
 
     float* A = init_mkl_mat(5, 5);
     Xaiver_initialize(A, 25, 30);

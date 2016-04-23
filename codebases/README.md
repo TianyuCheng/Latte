@@ -22,7 +22,6 @@ Authors
 TODO LIST:
 ----------
 
-
 - write load\_train\_feature(int data\_index) in Latte.h and generate code
   for this part 
 
