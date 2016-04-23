@@ -80,6 +80,8 @@ class ASTTemplate(object):
         self.ast = ast.parse(source)
         self.ast = ReorderBinOp().visit(self.ast)       # reorder add/mul in template
         self.ast = self.ast.body[0]                     # find wrapper function
+        self.num_stmts = len(self.ast.body)
+        print self.num_stmts
         
         # preprocessing: replace arguments
         assert len(args) == len(self.ast.args.args)
@@ -125,15 +127,19 @@ class ASTTemplate(object):
                 self.matches.append(self.wildcard)
         return len(self.matches) > 0
 
-    # def startswith(self, tgt):
-    #     if isinstance(self.ast[0], list):
-    #         num_stmts = 1
-    #     else:
-    #         num_stmts = len(self.asts[0])
-    #         num_stmts = len(self.asts[0].body)
-    #     if len(tgt) < num_stmts:
-    #         return False
-    #     return self.match(tgt[:num_stmts])
+    def startswith(self, tgt):
+        tgt_num_stmts = 1
+        if isinstance(tgt, list):
+            tgt_num_stmts = len(tgt)
+        elif "body" in tgt._fields:
+            tgt_num_stmts = len(tgt.body)
+            tgt = tgt.body
+        else:
+            tgt_num_stmts = 1
+            tgt = [ tgt ]
+        if tgt_num_stmts < self.num_stmts:
+            return False
+        return self.match(tgt[:self.num_stmts])
 
     def match(self, tgt):
         """ match ast with template """
