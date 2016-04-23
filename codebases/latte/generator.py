@@ -123,7 +123,7 @@ def make_weights_init_block(ensembles_info, name2enm, allocate=True):
 
 def make_loop_header(v, start, upper, increment):
     """Creates a loop header (note there are no braces)"""
-    return "for ( int %s = %s ; %s < %s ; %s = %s + %s) " % \
+    return "for ( int %s = %s ; %s < %s ; %s = %s + %s ) " % \
            (v, start, v, upper, v, v, increment)
 
 def make_init_solver(solver_info):
