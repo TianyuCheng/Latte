@@ -99,28 +99,25 @@ class NeuronAnalyzer(object):
         if isinstance(stmt, ast.Pass): return
         if isinstance(stmt, ast.Assert): return
         if isinstance(stmt, ast.Assign):
-            tmpl = template_fp_output()
-            matched = tmpl.prefix_of(stmt)
-            if matched:
+            tmpl = template_asgn("output")
+            if tmpl.prefix_of(stmt):
                 expr = self.parse_expr(tmpl.wildcard['exp'])
                 return "\t"*2 + "%s[x][y] = %s;" % (self.enm+"_output", expr)
 
-            tmpl = template_fp_activation()
-            matched = tmpl.prefix_of(stmt)
-            if matched:
+            tmpl = template_asgn("grad_activation")
+            if tmpl.prefix_of(stmt):
                 expr = self.parse_expr(tmpl.wildcard['exp'])
                 return "\t"*2 + "%s[x][y] = %s;" % (self.enm+"_grad_activation", expr)
 
-            tmpl = template_bp_activation()
-            matched = tmpl.prefix_of(stmt)
-            if matched:
+            tmpl = template_asgn("grad_output")
+            if tmpl.prefix_of(stmt):
                 expr = self.parse_expr(tmpl.wildcard['exp'])
                 return "\t"*2 + "*(%s+x*%s+y) = %s;" % \
                         (self.enm+"_grad_output", self.name2enm[self.enm][4], expr)
             
             var_name = self.parse_var_name(stmt.targets[0])
             var_value = self.parse_expr(stmt.value)
-            return "\t"*2+ "float %s = %s;" % (var_name, var_value)
+            return "\t"*2+ "%s = %s;" % (var_name, var_value)
 
         if isinstance(stmt, ast.For):
             # pattern match found
@@ -282,13 +279,13 @@ def extract_neuron_classes(filename):
                     yield node
     return
 
-def process_lib(filename, ensemble_info, name2enm):
+def process_lib(filename, ensemble_info, name2enm, PM_FLAG=True):
     """
     read in a library file parse all neuron types,
     and their associated forward/backward functions
     """
     for neuron_ast in extract_neuron_classes(filename):
-        neuron_analyzers[neuron_ast.name] = NeuronAnalyzer(neuron_ast)
+        neuron_analyzers[neuron_ast.name] = NeuronAnalyzer(neuron_ast, PM_FLAG)
     
     # NOTE: we extend Neuron to base class, no need to second pass
     # for name, neuron_analyzer in neuron_analyzers.iteritems():

@@ -70,8 +70,8 @@ void Xaiver_initialize (float* mat, int n_j, int n_jp) {
     float high = sqrt(6.0 / (n_j+n_jp)), low = -1.0 * high;
     random_device rd;
     default_random_engine generator( rd() );
+    // uniform_real_distribution<float> distribution(1.0, 1.0);
     uniform_real_distribution<float> distribution(low, high);
-    // uniform_real_distribution<float> distribution(low, high);
     for (int i = 0; i < n_j; i ++) *(mat+i) = distribution(generator);
 }
 float* init_mkl_mat (int dim_x, int dim_y) {
@@ -131,9 +131,9 @@ void sgemm_axpy (float* C, float scalar, float* B, int size) {
     cblas_sgemm ( 
             CblasColMajor,     // 
             CblasTrans,        // op(A)
-            CblasNoTrans,      // op(B)
+            CblasTrans,        // op(B)
             1, size, 1,        // m, n, k
-            1.0, &scalar, 1,    // alpha, A, lda
+            1.0, &scalar, 1,   // alpha, A, lda
             B, size,           //        B, ldb
             1.0, C, 1          // beta,  C, ldc
             );   

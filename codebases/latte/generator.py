@@ -276,7 +276,8 @@ def main(program_file, cpp_file):
 
     # create the neuron analyzers and also pass in ensemble info in order to create
     # forward and backward propogation code
-    neuron_analyzers, fp_codes, bp_codes = process_lib("lib.py", ensembles_info, name2enm)
+    neuron_analyzers, fp_codes, bp_codes = \
+            process_lib("lib.py", ensembles_info, name2enm, PM_FLAG=True)
     for x in neuron_analyzers: print x, neuron_analyzers[x].fields
 
     #for x in fp_codes: print x, fp_codes[x]

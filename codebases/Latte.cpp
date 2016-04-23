@@ -84,7 +84,7 @@ void solve (Network& network, Solver& solver) {
     // 1. mapping to shared memory region
     // INPUT: network architecture
     // OUTPUT: compact memory allocation of computing neurons 
-    shared_variable_analysis(); 
+    // shared_variable_analysis(); 
     // 2. initialize the connection (weights) parameter of network 
     // 3. 
     for (int iter = 0; iter < ITERATIONS; iter++) {
@@ -128,8 +128,8 @@ int main (int argn, char** argv) {
     cout << "Mat C: " << *C  << endl;
     cout << "Mat C: " << *(C+1)  << endl;
 
-    float scalar = 1.0;
-    sgemm_axpy (B, &scalar, A, 25);
+    float scalar = 5.0;
+    sgemm_axpy (B, scalar, A, 25);
     cout << "Mat B: " << endl;
     for (int i = 0; i < 5; i ++) {
         for (int j = 0; j < 5; j ++) {
