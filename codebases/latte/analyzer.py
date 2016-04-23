@@ -80,16 +80,17 @@ class NeuronAnalyzer(object):
     def process_backward(self, function_ast, enm_info):
         if function_ast.name != "backward": return
         self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
-        self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
         statements = list(stmt_walk(function_ast))
         for sid in range(len(statements)):
             self.bp_codes.append(self.process_stmt(statements[sid], statements[sid:sid+2]))
         self.bp_codes = filter(lambda x: x is not None, self.bp_codes)
         if len(self.bp_codes) == 0: return
         else: 
-            self.bp_codes = [ "\tfor (int y = 0; y < %d; y ++) {" % _dim_y ] + self.bp_codes
-            self.bp_codes = [ "for (int x = 0; x < %d; x ++) {" % _dim_x ] + self.bp_codes
-            self.bp_codes = [ "// Backward Propagation for " + self.enm ] + self.bp_codes
+            self.bp_codes = [ \
+                    "// Backward Propagation for " + self.enm, \
+                    "for (int x = 0; x < %d; x ++) {" % _dim_x, \
+                    "\tfor (int y = 0; y < %d; y ++) {" % _dim_y ] \
+                    + self.bp_codes
             self.bp_codes.append("\t}\n}")
 
     def process_stmt(self, stmt, statements=[]):
@@ -124,33 +125,31 @@ class NeuronAnalyzer(object):
             matched = tmpl.match(stmt) 
             if matched:
                 A, B, i, j, dim_x, dim_y, C = map(self.parse_var_name, tmpl.wildcard.values())
-                pm_str = "\t"*2+"float* %s = (float*) mkl_malloc(sizeof(float), 64); \n" % C
-                pm_str += "\t"*2+"sgemm_dp(&%s, %s[x][y], %s, %s*%s);" % (C, A, B, dim_x, dim_y)
+                #pm_str = "\t"*2+"float* %s = (float*) mkl_malloc(sizeof(float), 64); \n" % C
+                pm_str = "\t"*2+"sgemm_dp(&%s, %s[x][y], %s, %s*%s);" % (C, A, B, dim_x, dim_y)
                 return pm_str
 
-            '''
             tmpl = template_bp_scalar_prod()
             matched = tmpl.match(stmt)
             if matched:
-                print map(self.parse_var_name, tmpl.wildcard.values())
-                _,  _, dim_x, dim_y = map(self.parse_var_name, tmpl.wildcard.values())
-                C = self.enm + "_grad_weights[x][y]"
-                scalar = self.enm + "_grad_output+x*%s+y" % (dim_y) 
-                pm_str = "\t"*2+""
-                pm_str += "\t"*2+"sgemm_axpy(%s, %s, %s, %s*%s);" % \
-                        (C, scalar, B, dim_x, dim_y)
+                B, _,  _, dim_x, dim_y, scalar = map(self.parse_var_name, tmpl.wildcard.values())
+                C = self.name2enm[self.enm][2] + "_grad_output"
+                prev = self.name2enm[self.enm][2]
+                prev_dim_x, prev_dim_y = self.name2enm[prev][3:5]
+                pm_str = "\t"*2+"sgemm_axpy(%s, %s, %s[x][y], %s*%s);" % \
+                        (C, scalar, B, prev_dim_x, prev_dim_y)
                 #print "========>", pm_str
                 return pm_str
-            '''
 
             tmpl = template_bp_axpy()
             matched = tmpl.match(stmt)
             if matched:
                 print map(self.parse_var_name, tmpl.wildcard.values())
                 C, B, di, dj, scalar, dim_x, dim_y = map(self.parse_var_name, tmpl.wildcard.values())
-                scalar =  scalar  
+                prev = self.name2enm[self.enm][2]
+                prev_dim_x, prev_dim_y = self.name2enm[prev][3:5]
                 pm_str = "\t"*2+"sgemm_axpy(%s[x][y], %s, %s, %s*%s);" % \
-                        (C, scalar, B, dim_x, dim_y)
+                        (C, scalar, B, prev_dim_x, prev_dim_y)
                 #print "========>", pm_str
                 return pm_str
 
@@ -228,6 +227,10 @@ class NeuronAnalyzer(object):
                     return "*(%s_grad_output+x*%s+y)" % (self.enm,self.name2enm[self.enm][4])
                 if var_name == "grad_activation":
                     return "*(%s_grad_activation+x*%s+y)" % (self.enm,self.name2enm[self.enm][4])
+                if var_name == "output":
+                    return "*(%s_output+x*%s+y)" % (self.enm,self.name2enm[self.enm][4])
+                if var_name == "label":
+                    return "cur_label[x][y]" 
                 # inputs does not exists in our c++ code, we need to map
                 # inputs to previous ensemble's output
                 if var_name.endswith("inputs"):

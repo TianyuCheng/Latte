@@ -170,6 +170,7 @@ class FCNeuron(Neuron):
 
     def backward(self):
         self.grad_output = self.grad_output * self.grad_activation
+
         # scalar multiplication
         for i in range(self.prev_dim_x):
             for j in range(self.prev_dim_y):

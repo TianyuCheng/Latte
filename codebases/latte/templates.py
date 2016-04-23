@@ -78,18 +78,11 @@ def template_bp_activation():
 def template_bp_scalar_prod():
     for _i in range(_dim_x):
         for _j in range(_dim_y):
-            self.grad_inputs[_i][_j] = self.grad_output * self.weights[_i][_j]
-
-@template
-def template_bp_weights_update():
-    for _i in range(_dim_x):
-        for _j in range(_dim_y):
-            self.grad_weights[_i][_j] = self.grad_weights[_i][_j] + self.grad_output * _B[_i][_j]
+            self.grad_inputs[_i][_j] = _alpha * _B[_i][_j]
 
 @template
 def template_bp_axpy():
     for _i in range(_dim_x):
         for _j in range(_dim_y):
             _C[_i][_j] = _C[_i][_j] + _scalar * _B[_i][_j]
-
 
