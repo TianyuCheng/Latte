@@ -196,6 +196,7 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     return solve_block
 
 def share_var_analyze (neuron_analyzers):
+    # neuron analyzers is a dict that points a name to an analyzer
     for neuron_name, neuron_analyzer in neuron_analyzers.iteritems():
         shared_vars = [ ]
         for field_name in neuron_analyzer.fields.iterkeys():
@@ -220,13 +221,16 @@ def main(program_file, cpp_file):
     # (a) network
     patn_net = template_Network()
     matched = patn_net.matchall(AST)
+
     print "Network Matched: ", matched
+
     if matched:
         for net in patn_net.matches: 
             net_name = net["name"]
             networks2enms.update({net_name:[]})
 
     # (b) Layers
+    # match all layers in AST
     for patn_layer in layer_templates:
         matched = patn_layer.matchall(AST)
         print patn_layer, "Matched: ", matched
@@ -254,6 +258,7 @@ def main(program_file, cpp_file):
 
     #####################################################################
     # analyze lib functions and user-defined scripts
+    # ensemble info is represented as a tuple
     ensembles_info = [ ( x['name'], \
                          x['type'], \
                          x['prev'], \
@@ -261,13 +266,19 @@ def main(program_file, cpp_file):
                          x['dim_y'], 
                          x['Neuron']) \
                       for x in networks2enms.values()[0] ]
+
     for x in ensembles_info: print x
     print "###########################################"
+
+    # given an ensemble name, point it to the information tuple
     name2enm = {}
     for x in ensembles_info: name2enm.update({ x[0] : x })
 
+    # create the neuron analyzers and also pass in ensemble info in order to create
+    # forward and backward propogation code
     neuron_analyzers, fp_codes, bp_codes = process_lib("lib.py", ensembles_info, name2enm)
     for x in neuron_analyzers: print x, neuron_analyzers[x].fields
+
     #for x in fp_codes: print x, fp_codes[x]
     #for x in bp_codes: print x, fp_codes[x]
     share_var_analyze (neuron_analyzers)
