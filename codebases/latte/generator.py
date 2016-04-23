@@ -161,7 +161,11 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     iterations = str(solver_info["iter"])
     solve_block.append(make_loop_header("iter", 0, str(iterations), 1) + "{")
     solve_block.append("")
+
     # TODO: load next instance of train data (feature and label)
+    load_label_str = "vector<vector<int>> cur_label (%d, vector<int>(%d, 0));\n" % tuple(ensembles_info[-1][3:5])
+    load_label_str += "cur_label[0][%s] = 1;" % "XXX"
+    solve_block.append(load_label_str)
     
     # TODO: forward propagation
     '''
@@ -187,7 +191,6 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     for enm in ensembles_info[::-1]: 
         solve_block.append(bp_codes[enm[0]])
         solve_block.append("")
-
 
     solve_block.append("}") # end the iteration loop
     return solve_block

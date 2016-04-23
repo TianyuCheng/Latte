@@ -20,6 +20,26 @@ Authors
     + EID: xl5224
     + Email: jimmylin@utexas.edu
 
+TODO LIST:
+----------
+
+
+- test sgemm\_axpy in Latte.cpp (code provided)
+
+- write load\_train\_feature(int data\_index) in Latte.h and generate code
+  for this part 
+
+- parse annotate() for LossNeuron
+
+- test the existing pattern matching and code generation framework with mlp.py
+
+- develop more felexible and scalable framework of pattern matching
+
+- loop tiling pass 
+
+- loop fusion pass
+
+
 Usage
 -----
 
