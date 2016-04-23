@@ -23,8 +23,6 @@ TODO LIST:
 ----------
 
 
-- test sgemm\_axpy in Latte.cpp (code provided)
-
 - write load\_train\_feature(int data\_index) in Latte.h and generate code
   for this part 
 
