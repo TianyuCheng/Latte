@@ -121,9 +121,9 @@ def make_weights_init_block(ensembles_info, name2enm, allocate=True):
         block.append(init_str)   
     return block
 
-def make_loop_header(v, upper):
+def make_loop_header(v, start, upper):
     """Creates a loop header (note there are no braces)"""
-    return "for (int %s = 0; %s < %s; %s ++) " % (v, v, upper, v)
+    return "for ( int %s = %s ; %s < %s ; %s ++ ) " % (v, start, v, upper, v)
 
 def make_init_solver(solver_info):
     assert solver_info is not None
