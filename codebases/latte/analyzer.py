@@ -59,45 +59,46 @@ class NeuronAnalyzer(object):
                         # we need to record this field
                         self.add_field(node)
 
+    '''
+       TODO: add pattern match for statment here
+    '''
+    
+
     def process_forward(self, function_ast):
         if function_ast.name != "forward":
             return
-        # for node in ast.walk(function_ast):
-        #     if isinstance(node, ast.Assign):
-        #         var_name = self.parse_var_name(node.targets[0])
-        #         var_value = self.parse_expr(node.value)
-        #         # ignore data copying (naming convention, ends with 'inputs')
-        #         if var_name.split('[')[0].endswith("inputs"): continue
-        #         print "Assignment: %s = %s" % (var_name, var_value)
         print "-----------------------------"
         for stmt in stmt_walk(function_ast):
-            matched = False
-            if matched:
-            # TODO: match
-                stmt_code = ""
-                pass
-            else:
-                stmt_code = self.process_stmt(stmt)
-            self.fp_codes.append(stmt_code)
+            self.fp_codes.append(self.process_stmt(stmt))
         self.fp_codes = filter(lambda x: x is not None, self.fp_codes)
 
     def process_backward(self, function_ast):
         if function_ast.name != "backward":
             return
 
+    def pattern_match_stmt (self, stmt):
+        for sb in stmt_walk(stmt):
+            pass
+
     def process_stmt(self, stmt):
-        if isinstance(stmt, ast.Assert):
-            return
+        if isinstance(stmt, ast.Assert): return
         if isinstance(stmt, ast.Assign):
             var_name = self.parse_var_name(stmt.targets[0])
             var_value = self.parse_expr(stmt.value)
             return "%s = %s;" % (var_name, var_value)
         if isinstance(stmt, ast.For):
+            # pattern match found
+            tmpl = template_axpy("range")
+            matched = tmpl.match(stmt) 
+            if matched:
+                for x in tmpl.wildcard:
+                    print x, tmpl.wildcard
+            # pattern match not found
             for_stmt = "for (int {i} = {start}; {i} < {stop}; ++{i}) {code}"
             # try to match for loop by template
             match_result = None
             tmpl = template_for("range")
-            print ast.dump(stmt)
+            # print ast.dump(stmt)
             if tmpl.match(stmt):
                 match_result = tmpl.wildcard
             # assert match_result is not None
