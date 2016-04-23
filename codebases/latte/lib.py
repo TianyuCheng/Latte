@@ -37,6 +37,8 @@ def Xaiver_weights_init (dim_x, dim_y, cur_enm_size):
     return result
 
 def add_connection (net, prev_enm, cur_enm, mappings):
+    #TODO deprecated? will we end up using this?
+
     # update adjacency lists
     for i, indices in mappings.iteritems():
         assert 0 <= i and i < prev_enm.get_size()
@@ -52,14 +54,18 @@ def read_libsvm (file_name, fea_dim_x, fea_dim_y):
     fread = open(file_name, "r")
     features = []
     labels = []
+
     for line in fread:
         fields = line.split()
         fea = [ 0.0 ] * fea_dim_y 
+
         for i in range(1, len(fields)):
             pair = fields[i].split(":")
             fea[int(pair[0])-1] = float(pair[1])
+
         features.append(fea)
         labels.append(int(fields[0]))
+
     fread.close()
     return features, labels
 
@@ -67,6 +73,7 @@ def LibsvmDataLayer(net, train_file, test_file, fea_dim_x, fea_dim_y):
     # read data files
     train_features, train_labels = read_libsvm(train_file, fea_dim_x, fea_dim_y)
     test_features, test_labels  = read_libsvm(test_file, fea_dim_x, fea_dim_y)
+
     # print "test_labels: ", test_labels
     net.set_datasets(train_features, train_labels, test_features, test_labels)
 
@@ -82,6 +89,7 @@ def FullyConnectedLayer(net, prev_enm, N1, N2, TYPE):
     cur_enm.set_backward_adj(prev_enm)
     prev_enm.set_forward_adj(cur_enm)
     cur_enm.set_inputs_dim (prev_enm.dim_x, prev_enm.dim_y)
+
     # enforce connections
     mappings = {}
     for i in range(prev_size): mappings.update({i:[j for j in range(N2)]})
