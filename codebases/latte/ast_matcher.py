@@ -126,7 +126,7 @@ class ASTTemplate(object):
                 self.matches.append(self.wildcard)
         return len(self.matches) > 0
 
-    def startswith(self, tgt):
+    def prefix_of(self, tgt):
         tgt_num_stmts = 1
         if isinstance(tgt, list):
             tgt_num_stmts = len(tgt)
