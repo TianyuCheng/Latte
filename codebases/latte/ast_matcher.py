@@ -47,6 +47,7 @@ class ReorderBinOp(ast.NodeTransformer):
         return node
 
 class RewriteName(ast.NodeTransformer):
+    """change name of a node"""
     def __init__(self, old_name, new_name):
         super(RewriteName, self).__init__()
         self.old_name = old_name
@@ -59,6 +60,7 @@ class RewriteName(ast.NodeTransformer):
         return node
 
 def stmt_walk(node):
+    """generator function: grab statements 1 by 1"""
     # if node is a module or a for loop
     if isinstance(node, ast.Module) or \
        isinstance(node, ast.For) or \
@@ -68,21 +70,25 @@ def stmt_walk(node):
             yield stmt
 
 def template(tmpl_func):
+    """wrapper around templates"""
     def template_wrapper(*args):
         source = inspect.getsource(tmpl_func)
         return ASTTemplate(source, *args)
+
     return template_wrapper
 
 class ASTTemplate(object):
     """ASTTemplate"""
     def __init__(self, source, *args):
         super(ASTTemplate, self).__init__()
+
         self.ast = ast.parse(source)
         self.ast = ReorderBinOp().visit(self.ast)       # reorder add/mul in template
         self.ast = self.ast.body[0]                     # find wrapper function
         
         # preprocessing: replace arguments
         assert len(args) == len(self.ast.args.args)
+
         for i, arg_node in enumerate(self.ast.args.args):
             old_name = arg_node.id
             new_name = str(args[i])
@@ -116,22 +122,30 @@ class ASTTemplate(object):
 
     def matchall(self, tgt):
         self.matches = []
+
         # first try matching tgt as a whole
         if self.match(tgt):
             self.matches.append(self.wildcard)
+
         # then try matching each stmt in tgt
         for stmt in stmt_walk(tgt):
             if self.match(stmt):
                 self.matches.append(self.wildcard)
+
         return len(self.matches) > 0
 
     def match(self, tgt):
         """ match ast with template """
         tgt = ReorderBinOp().visit(tgt)                 # reorder add/mul in target ast
+
         for tpl_ast in self.asts:
+            # see if it matches with any of the possible combinations of
+            # asts
             self.wildcard = dict()
+ 
             if self._match(tpl_ast, tgt):
                 return True
+
         return False
 
     def _match(self, tpl, tgt):
@@ -142,12 +156,15 @@ class ASTTemplate(object):
         if isinstance(tpl, str) and isinstance(tgt, str):
             # direct string comparison
             return tpl == tgt
+
         if isinstance(tpl, bool) and isinstance(tgt, bool):
             # direct boolean comparison
             return tpl == tgt
+
         if isinstance(tpl, int) and isinstance(tgt, int):
             # direct int comparison
             return tpl == tgt
+
         if isinstance(tpl, float) and isinstance(tgt, float):
             # direct float comparison
             return tpl == tgt
@@ -155,8 +172,10 @@ class ASTTemplate(object):
         # deal with wrappers
         if isinstance(tgt, ast.Module):
             tgt = tgt.body
+
         if not isinstance(tgt, list):
             tgt = [ tgt ]
+            
         if not isinstance(tpl, list):
             tpl = [ tpl ]
         
@@ -202,9 +221,11 @@ class ASTTemplate(object):
             tpl.func.id == tgt.func.id and len(tpl.args) != len(tgt.args) and \
             len(tpl.args) == 1 and isinstance(tpl.args[0], ast.Name):
             return self._set_wildcard(tpl.args[0], tgt.args)
+
         # match dangling expression
         if isinstance(tpl, ast.Expr) and isinstance(tpl.value, ast.Name):
             return self._set_wildcard(tpl.value, tgt)
+
         # match wildcard variable
         if isinstance(tpl, ast.Name) and tpl.id.startswith('_') and \
                 len(tpl.id) > 1:
@@ -216,4 +237,5 @@ class ASTTemplate(object):
             else:
                 self.wildcard[tpl.id[1:]] = tgt
             return True
+
         return False

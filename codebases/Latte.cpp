@@ -84,7 +84,7 @@ void solve (Network& network, Solver& solver) {
     // 1. mapping to shared memory region
     // INPUT: network architecture
     // OUTPUT: compact memory allocation of computing neurons 
-    shared_variable_analsyis(); 
+    shared_variable_analysis(); 
     // 2. initialize the connection (weights) parameter of network 
     // 3. 
     for (int iter = 0; iter < ITERATIONS; iter++) {

@@ -8,7 +8,8 @@ from templates import *
 neuron_analyzers = { }
 
 class NeuronAnalyzer(object):
-    """class for neuron specific code generation"""
+    """class for neuron specific code generation
+    Each neuron type has its own analyzer"""
     def __init__(self, neuron_ast):
         super(NeuronAnalyzer, self).__init__()
         # field variables
