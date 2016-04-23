@@ -63,7 +63,14 @@ def template_axpy(range):
 
 @template
 def template_dot_product(range):
-    _dp_result = 0.0
     for _i in range(_dim_x):
         for _j in range(_dim_y):
             _dp_result = _dp_result + _A[_i][_j] * _B[_i][_j] 
+
+@template
+def template_fp_output():
+    self.output = _exp
+
+@template
+def template_fp_activation():
+    self.grad_activation = _exp

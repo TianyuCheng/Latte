@@ -160,7 +160,7 @@ class FCNeuron(Neuron):
             for j in range(self.prev_dim_y):
                 dp_result = dp_result + self.weights[i][j] * self.inputs[i][j]
         # activation
-        self.output = np.tanh(dp_result)
+        self.output = np.tanh(dp_result) 
         # preset the gradient for back propagation
         self.grad_activation = (1 - np.tanh(dp_result) ** 2 )
 

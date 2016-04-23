@@ -29,13 +29,16 @@ class NeuronAnalyzer(object):
                     self.fields[field] = field_type
 
     def analyze(self, enm_info, name2enm):
-        self.enm, _, self.enm_prev  = enm_info[:3]
+        self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
         self.name2enm = name2enm
         self.fp_codes = []
         self.bp_codes = []
+        #self.fp_codes.append("for (int x = 0; x < %d; x ++) {" % _dim_x)
+        #self.fp_codes.append("\tfor (int y = 0; y < %d; x ++) {" % _dim_y)
         for function in self.extract_functions():
-            self.process_forward(function)
-            self.process_backward(function)
+            self.process_forward(function, enm_info)
+        for function in self.extract_functions():
+            self.process_backward(function, enm_info)
         return '\n'.join(self.fp_codes), '\n'.join(self.bp_codes)
 
     def extract_functions(self):
@@ -62,27 +65,53 @@ class NeuronAnalyzer(object):
     '''
        TODO: add pattern match for statment here
     '''
-    
-
-    def process_forward(self, function_ast):
-        if function_ast.name != "forward":
-            return
-        print "-----------------------------"
-        for stmt in stmt_walk(function_ast):
-            self.fp_codes.append(self.process_stmt(stmt))
+    def process_forward(self, function_ast, enm_info):
+        if function_ast.name != "forward": return
+        self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
+        print ast.dump(function_ast)
+        statements = list(stmt_walk(function_ast))
+        for sid in range(len(statements)):
+            self.fp_codes.append(self.process_stmt(statements[sid], statements[sid:sid+2]))
         self.fp_codes = filter(lambda x: x is not None, self.fp_codes)
+        if len(self.fp_codes) == 0: return
+        else: 
+            self.fp_codes = [ "\tfor (int y = 0; y < %d; y ++) {" % _dim_y ] + self.fp_codes
+            self.fp_codes = [ "for (int x = 0; x < %d; x ++) {" % _dim_x ] + self.fp_codes
+            self.fp_codes = [ "// Forward Propagation for " + self.enm ] + self.fp_codes
+            self.fp_codes.append("\t}\n}")
 
-    def process_backward(self, function_ast):
-        if function_ast.name != "backward":
-            return
+    def process_backward(self, function_ast, enm_info):
+        if function_ast.name != "backward": return
+        self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
+        #self.bp_codes.append("// Backward Propagation for " + self.enm)
 
-    def pattern_match_stmt (self, stmt):
-        for sb in stmt_walk(stmt):
-            pass
-
-    def process_stmt(self, stmt):
+    def process_stmt(self, stmt, statements=[]):
         if isinstance(stmt, ast.Assert): return
         if isinstance(stmt, ast.Assign):
+            '''
+            # pattern match found
+            tmpl = template_dot_product("range")
+            if len(statements) > 1:
+                matched = tmpl.prefix_of(statements) 
+            else: matched = False
+            if matched:
+                A, B, i, j, dim_x, dim_y, C = map(self.parse_var_name, tmpl.wildcard.values())
+                pm_str = "float* %s = (float*) mkl_malloc(sizeof(float), 64); \n" % C
+                pm_str = "sgemm(&%s, %s[%s][%s], %s, %s*%s);" % (C, A, i, j, B, dim_x, dim_y)
+                return pm_str
+            '''
+            tmpl = template_fp_output()
+            matched = tmpl.prefix_of(stmt)
+            if matched:
+                expr = self.parse_expr(tmpl.wildcard['exp'])
+                return "%s[x][y] = %s;" % (self.enm+"_output", expr)
+
+            tmpl = template_fp_activation()
+            matched = tmpl.prefix_of(stmt)
+            if matched:
+                expr = self.parse_expr(tmpl.wildcard['exp'])
+                return "%s[x][y] = %s;" % (self.enm+"_grad_activation", expr)
+            
             var_name = self.parse_var_name(stmt.targets[0])
             var_value = self.parse_expr(stmt.value)
             return "float %s = %s;" % (var_name, var_value)
@@ -109,7 +138,7 @@ class NeuronAnalyzer(object):
             # print "==============>", match_result
             for_index = self.parse_var_name(match_result["i"])
             for_stop = self.parse_expr(match_result["N"])
-            body = self.process_stmt(match_result["body"])
+            body = self.process_stmt(match_result["body"], )
             return for_stmt.format(i=for_index, start=0, stop=for_stop, code=body)
         print "=====> PROCESS STMT: (NO MATCH)", ast.dump(stmt)
 
