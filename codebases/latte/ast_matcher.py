@@ -1,16 +1,6 @@
 from copy import deepcopy
 import ast, inspect
 
-def ast_parse_file(filename):
-    f = open(filename, "r")
-    AST = ast.parse(f.read())
-    f.close()
-    return AST
-
-def ast_parse_source(src):
-    AST = ast.parse(src)
-    return AST
-
 class BinOpCounter(ast.NodeVisitor):
     def __init__(self):
         super(BinOpCounter, self).__init__()
@@ -46,6 +36,23 @@ class ReorderBinOp(ast.NodeTransformer):
                 node.left, node.right = node.right, node.left
         return node
 
+class ExpandAugAssign(ast.NodeTransformer):
+    def visit_AugAssign(self, node):
+        self.generic_visit(node)
+        assign_node = ast.Assign( \
+            targets = [ node.target ], \
+            value = ast.BinOp( \
+                left = node.target,   \
+                op = node.op,         \
+                right = node.value    \
+            )
+        )
+        # print node.target
+        # print assign_node.target
+        # # print ast.dump(node)
+        # print ast.dump(assign_node)
+        return assign_node
+
 class RewriteName(ast.NodeTransformer):
     """change name of a node"""
     def __init__(self, old_name, new_name):
@@ -58,6 +65,21 @@ class RewriteName(ast.NodeTransformer):
         if node.id == self.old_name:
             node.id = self.new_name
         return node
+
+def ast_parse_file(filename):
+    f = open(filename, "r")
+    AST = ast.parse(f.read())
+    AST = ExpandAugAssign().visit(AST)
+    AST = ReorderBinOp().visit(AST)
+    f.close()
+    return AST
+
+def ast_parse_source(src):
+    AST = ast.parse(src)
+    AST = ExpandAugAssign().visit(AST)
+    AST = ReorderBinOp().visit(AST)
+    return AST
+
 
 def stmt_walk(node):
     """generator function: grab statements 1 by 1"""
@@ -82,8 +104,7 @@ class ASTTemplate(object):
     def __init__(self, source, *args):
         super(ASTTemplate, self).__init__()
 
-        self.ast = ast.parse(source)
-        self.ast = ReorderBinOp().visit(self.ast)       # reorder add/mul in template
+        self.ast = ast_parse_source(source)
         self.ast = self.ast.body[0]                     # find wrapper function
         self.num_stmts = len(self.ast.body)
         
@@ -150,15 +171,21 @@ class ASTTemplate(object):
         return self.match(tgt[:self.num_stmts])
 
     def match(self, tgt):
+        # explicitly expand target from AugAssign to Assign
+        # for semantic matching
+        if isinstance(tgt, list):
+            for i, t in enumerate(tgt):
+                tgt[i] = ExpandAugAssign().visit(t)
+        else:
+            tgt = ExpandAugAssign().visit(tgt)
+
         """ match ast with template """
         for tpl_ast in self.asts:
             # see if it matches with any of the possible combinations of
             # asts
             self.wildcard = dict()
- 
             if self._match(tpl_ast, tgt):
                 return True
-
         return False
 
     def _match(self, tpl, tgt):
@@ -242,13 +269,19 @@ class ASTTemplate(object):
         # match wildcard variable
         if isinstance(tpl, ast.Name) and tpl.id.startswith('_') and \
                 len(tpl.id) > 1:
+            value = None
             # wildcard matching
             if isinstance(tgt, ast.Name):
-                self.wildcard[tpl.id[1:]] = tgt.id
+                value = tgt.id
             elif isinstance(tgt, ast.Num):
-                self.wildcard[tpl.id[1:]] = tgt.n
+                value = tgt.n
             else:
-                self.wildcard[tpl.id[1:]] = tgt
-            return True
+                value = tgt
+            # check if this wildcard has already been set
+            if tpl.id[1:] in self.wildcard:
+                return self.wildcard[tpl.id[1:]] == value
+            else:
+                self.wildcard[tpl.id[1:]] = value
+                return True
 
         return False

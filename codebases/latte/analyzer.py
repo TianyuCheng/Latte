@@ -95,6 +95,7 @@ class NeuronAnalyzer(object):
             self.bp_codes.append("\t}\n}")
 
     def process_stmt(self, stmt, statements=[]):
+        if isinstance(stmt, ast.Pass): return
         if isinstance(stmt, ast.Assert): return
         if isinstance(stmt, ast.Assign):
             tmpl = template_fp_output()
