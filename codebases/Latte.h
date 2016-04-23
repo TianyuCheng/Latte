@@ -139,6 +139,28 @@ void sgemm_axpy (float* C, float scalar, float* B, int size) {
             1.0, C, 1          // beta,  C, ldc
             );   
 }
+void sgemm_zeros (float* C, int size) {
+    // A, B, C are all rolling into vector in memory
+    // C = [ 0.0 ] * size
+    float scalar = 0.0;
+    cblas_sgemm ( 
+            CblasColMajor,     // 
+            CblasTrans,        // op(A)
+            CblasTrans,        // op(B)
+            1, size, 1,        // m, n, k
+            0.0, &scalar, 1,   // alpha, A, lda
+            &scalar, size,     //        B, ldb
+            0.0, C, 1          // beta,  C, ldc
+            );   
+}
+void sgemm_print (float* C, int dim_x, int dim_y) {
+    for (int i = 0; i < dim_x; i ++) {
+        for (int j = 0; j < dim_y; j ++) {
+            cout << *(C+5*i+j) << " ";
+        }
+        cout << endl;
+    }
+}
 
 typedef struct Index {
     int r = 1;
