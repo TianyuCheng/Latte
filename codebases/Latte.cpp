@@ -1,44 +1,5 @@
 #include "Latte.h"
 
-void read_libsvm(string filename, vector<float*> &features, vector<int> &labels, 
-        int fea_dim_x, int fea_dim_y, int n_classes) {
-
-    // read file and check the validity of the input file
-    ifstream in(filename, std::ifstream::in);
-    if (!in.good()) {
-        cerr << "Error read file: " << filename << endl;
-        exit(EXIT_FAILURE);
-    }
-
-    // read data points from the dataset
-    for (string line; getline(in, line); ) {
-        features.push_back(init_mkl_mat(fea_dim_x, fea_dim_y));
-        float *data_point = features.back();
-
-        // find substring separated by space
-        line += ":";      // avoid hitting stirng::npos
-        size_t start = 0, end = 0, curr = 0, prev = 0;
-        for (int i = 0; (end = line.find(" ", start)) != string::npos;i++) {
-            string str = line.substr(start, end - start);
-            start = end + 1;
-
-            // the first token is the label
-            if (i == 0) {
-                labels.push_back(stoi(str)-1);
-            }
-            else {
-                size_t slice = str.find(":", 0);
-                assert(slice != string::npos && "cannot parse file");
-                curr = stoi(str.substr(0, slice)) - 1;
-                data_point[curr] = stof(str.substr(slice + 1, str.length()));
-
-                if (curr - prev > 1) memset(&data_point[curr], 0, curr-prev);
-                prev = curr;
-            }
-        } // end of single data point processing
-    } // end of all data points processing
-}
-
 Ensemble* LibsvmDataLayer(Network &net, string train_file, string test_file, 
                           int n_features, int &n_labels) {
     vector<vector<float>> &train_features = net.get_train_features();

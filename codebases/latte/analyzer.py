@@ -149,14 +149,17 @@ class NeuronAnalyzer(object):
             matched = tmpl.match(stmt) 
             if matched:
                 A, B, i, j, dim_x, dim_y, C = map(self.parse_var_name, tmpl.wildcard.values())
-                #pm_str = "\t"*2+"float* %s = (float*) mkl_malloc(sizeof(float), 64); \n" % C
-                pm_str = "\t"*2+"sgemm_dp(&%s, %s[x][y], %s, %s*%s);" % (C, A, B, dim_x, dim_y)
+                prev = self.name2enm[self.enm][2]
+                prev_dim_x, prev_dim_y = self.name2enm[prev][3:5]
+                pm_str = "\t"*2+"sgemm_dp(&%s, %s[x][y], %s, %s*%s);" % \
+                        (C, A, B, prev_dim_x, prev_dim_y)
                 return pm_str
 
             tmpl = template_bp_scalar_prod()
             matched = tmpl.match(stmt)
             if matched:
                 B, _,  _, dim_x, dim_y, scalar = map(self.parse_var_name, tmpl.wildcard.values())
+                if "DataLayer" in self.name2enm[self.name2enm[self.enm][2]][1]: return ""
                 C = self.name2enm[self.enm][2] + "_grad_output"
                 prev = self.name2enm[self.enm][2]
                 prev_dim_x, prev_dim_y = self.name2enm[prev][3:5]

@@ -24,6 +24,7 @@ def usage():
     return
 '''
 
+# cout << "iter: " << iter << ", data_idx: " << data_idx << endl;
 LATTE_H_PATH = '''"Latte.h"'''
 
 def make_include_header():
@@ -46,9 +47,17 @@ def make_newlines(num=1):
 #     return "    " * num
 
 def make_mkl_malloc(mat_name, dim_x, dim_y, tp):
-    return "%s %s = init_mkl_mat(%s, %s);" % (tp, mat_name, dim_x, dim_y)
+    if tp == "float*":
+        return "%s %s = init_mkl_mat(%s, %s);" % (tp, mat_name, dim_x, dim_y)
+    elif tp == "vector<vector<float*>>":
+        return "%s %s (%s, vector<float*>(%s, NULL));" % (tp, mat_name, dim_x, dim_y)
+        
 
-def make_mkl_free(mat_name): return "mkl_free(%s);" % (mat_name)
+def make_mkl_free(mat_name, tp): 
+    if tp == "float*":
+        return "mkl_free(%s);" % (mat_name)
+    elif tp == "vector<vector<float*>>":
+        return "free_weights_mats(%s);" % (mat_name)
 
 def make_FC_weights_free(name):
     return "free_weights_mats(%s);" % (name)
@@ -60,23 +69,6 @@ def make_allocate_block(ensembles_info, neuron_analyzers, allocate=True):
     allocate = False --> Does deallocation
     """
     block = []
-    # # allocate for base neuron type
-    # attributes = neuron_analyzers["Neuron"].fields
-    # for attr in attributes: 
-    #     if allocate:
-    #         block.append("// allocating memory for " + attr )
-    #     else:
-    #         block.append("// deallocating memory for " + attr )
-    #     for enm in ensembles_info:
-    #         _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
-    #         output_mat_name = _cur+ "_" +attr
-    #         if allocate:
-    #             output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, 
-    #                                 _dim_y, attributes[attr])
-    #             block.append(output_malloc_str) 
-    #         else:
-    #             block.append(make_mkl_free(output_mat_name)) 
-    #     #block.append("")
     # allocate for subtype of neuron
     for enm in ensembles_info:
         _cur, _type, _prev, _dim_x, _dim_y, _neurontype  = enm[:6]
@@ -92,7 +84,7 @@ def make_allocate_block(ensembles_info, neuron_analyzers, allocate=True):
                 output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, _dim_y, attributes[attr])
                 block.append(output_malloc_str) 
             else:
-                block.append(make_mkl_free(output_mat_name)) 
+                block.append(make_mkl_free(output_mat_name, attributes[attr])) 
         #block.append("")
     return block
 
@@ -130,12 +122,12 @@ def make_load_data(networks2enms):
         load_block = []
         load_block.append("// load libsvm data")
         load_block.append("vector<float*> train_features, test_features;");
-        load_block.append("vector<int> train_labels, test_labels");
+        load_block.append("vector<int> train_labels, test_labels;");
         # we need number of features
-        load_block.append("""read_libsvm("%s", train_features, train_labels, %d, %d, %d)""" % (\
+        load_block.append("""read_libsvm("%s", train_features, train_labels, %d, %d, %d);""" % (\
             enm["train"], enm["dim_x"], enm["dim_y"], enm['n_classes']
         ));
-        load_block.append("""read_libsvm("%s", test_features, test_labels, %d, %d, %d)""" % (\
+        load_block.append("""read_libsvm("%s", test_features, test_labels, %d, %d, %d);""" % (\
             enm["test"], enm["dim_x"], enm["dim_y"], enm['n_classes']
         ));
     return load_block
@@ -180,6 +172,7 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
     step_size = str(solver_info["step"])
     test_block.append("vector<int> preds;")
     test_block.append(make_loop_header("data_idx", 0, "test_features.size()", 1) + "{")
+    test_block.append("float dp_result;")
     test_block.append("")
 
     # load next instance of train data (feature and label)
@@ -206,8 +199,9 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
     test_block.append("}")
     
     # evaluation
-    eval_str = "// evaluate the accuracy performance"
+    eval_str = "// evaluate the accuracy performance\n"
     eval_str += "evaluate(preds, test_labels);"
+    test_block.append(eval_str)
 
     return test_block
 
@@ -226,7 +220,8 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     load_label_str = "sgemm_copy (%s, train_features[data_idx], %s*%s);\n" % \
             (ensembles_info[0][0]+"_output", ensembles_info[0][3], ensembles_info[0][4])
     load_label_str += "vector<vector<int>> cur_label (%d, vector<int>(%d, 0));\n" % tuple(ensembles_info[-1][3:5])
-    load_label_str += "cur_label[0][%s] = 1;" % "train_labels[data_idx]"
+    load_label_str += "cur_label[0][%s] = 1;\n" % "train_labels[data_idx]"
+    load_label_str += "float dp_result;"
     solve_block.append(load_label_str)
     
     # forward propagation
@@ -235,15 +230,15 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
         solve_block.append("")
 
     # annotate
-    _cur, _type, _prev, _dim_x, _dim_y  = ensembles_info[0][:5]
+    _cur, _type, _prev, _dim_x, _dim_y  = ensembles_info[-1][:5]
     annotate_str = "// annotate for loss layer\n"
     annotate_str += "float sumover = 0.0;\n"
     annotate_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
-    annotate_str += "\tfor (int y = 0; y < %s; x++) {\n" % _dim_y
-    annotate_str += "\t\tsumover += *(%s+x*%s+y);\n" % (_cur+"output", _dim_y)
+    annotate_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
+    annotate_str += "\t\tsumover += *(%s+x*%s+y);\n" % (_cur+"_output", _dim_y)
     annotate_str += "\t}\n}\n"
     annotate_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
-    annotate_str += "\tfor (int y = 0; y < %s; x++) {\n" % _dim_y
+    annotate_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
     annotate_str += "\t\t*(%s+x*%s+y) = *(%s+x*%s+y) / sumover;\n" % \
             (_cur+"_output", _dim_y, _cur+"_output", _dim_y)
     annotate_str += "\t}\n}\n"
@@ -259,14 +254,14 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
         _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
         weights_update_str = "// weights_update for " + enm[0] + "\n"
         weights_update_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
-        weights_update_str += "\tfor (int y = 0; y < %s; x++) {\n" % _dim_y
+        weights_update_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
         weights_update_str += "\t\tsgemm_axpy(%s[x][y], %s, %s[x][y], %s*%s);\n" %\
                 (_cur+"_weights", step_size, _cur+"_grad_weights", \
                     name2enm[_prev][3], name2enm[_prev][4])
         weights_update_str += "\t\tsgemm_zeros(%s[x][y], %s*%s);\n" % \
                 (_cur+"_grad_weights", name2enm[_prev][3], name2enm[_prev][4])
-        weights_update_str += "\t\tsgemm_zeros(%s[x][y], %s*%s);\n" % \
-                (_cur+"_grad_output", name2enm[_prev][3], name2enm[_prev][4])
+        weights_update_str += "\t\tsgemm_zeros(%s, %s*%s);\n" % \
+                (_cur+"_grad_output", _dim_x, _dim_y)
         weights_update_str += "\t}\n}"
         solve_block.append(weights_update_str)
     solve_block.append("")
@@ -390,7 +385,7 @@ def main(options, program_file, cpp_file):
     main_body_strs.append(make_test_block(solver, ensembles_info, name2enm, fp_codes))
 
     # deallocating block
-    main_body_strs.append(make_weights_init_block(ensembles_info, name2enm, False))
+    #main_body_strs.append(make_weights_init_block(ensembles_info, name2enm, False))
     main_body_strs.append(make_allocate_block(ensembles_info, neuron_analyzers, False))
 
     # OUTPUT TO CPP FILE
