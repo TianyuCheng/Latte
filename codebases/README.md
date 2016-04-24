@@ -21,9 +21,11 @@ Authors
 
 TODO LIST:
 ----------
+- variable management of neuron types: delete unused variables/fields
 
-- write load\_train\_feature(int data\_index) in Latte.h and generate code
-  for this part 
+- share variable analysis: determine uniform dependency of dimension; monitor data copy
+
+- verbatim translation of forward/backward in SoA form (general form, no optimization)
 
 - parse annotate() for LossNeuron
 
