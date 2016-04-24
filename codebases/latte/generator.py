@@ -326,6 +326,9 @@ def main(options, program_file, cpp_file):
     name2enm = {}
     for x in ensembles_info: name2enm.update({ x[0] : x })
 
+    # parse the add_connection calls in stdlib
+    conn_types = process_add_connection("lib.py")
+
     # create the neuron analyzers and also pass in ensemble info in order to create
     # forward and backward propogation code
     neuron_analyzers, fp_codes, bp_codes = \

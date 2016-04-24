@@ -83,10 +83,12 @@ def ast_parse_source(src):
     return AST
 
 def ast_dump(AST):
+    if AST is None:
+        return "None"
     if isinstance(AST, str):
         return AST
     if isinstance(AST, list):
-        return '\n'.join(AST)
+        return '\n'.join(map(ast_dump, AST))
     return ast.dump(AST)
 
 def stmt_walk(node):
@@ -268,7 +270,7 @@ class ASTTemplate(object):
     def _set_wildcard(self, tpl, tgt):
         # using one wildcard to match a list of argument
         if isinstance(tpl, ast.Call) and isinstance(tgt, ast.Call) and \
-            tpl.func.id == tgt.func.id and len(tpl.args) != len(tgt.args) and \
+            tpl.func == tgt.func and len(tpl.args) != len(tgt.args) and \
             len(tpl.args) == 1 and isinstance(tpl.args[0], ast.Name):
             return self._set_wildcard(tpl.args[0], tgt.args)
 

@@ -4,6 +4,7 @@
 import ast
 from ast_matcher import *
 from templates import *
+from copy import deepcopy
 
 neuron_analyzers = { }
 
@@ -49,7 +50,7 @@ class NeuronAnalyzer(object):
         for field_name in unused_variables:
             if field_name in self.fields:
                 del self.fields[field_name]
-        print unused_variables
+        print "UNUSED FIELDS:", unused_variables
 
     def analyze(self, enm_info, name2enm):
         self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
@@ -300,6 +301,76 @@ def extract_neuron_classes(filename):
                     yield node
     return
 
+def extract_functions(filename):
+    """
+    read in a file and find out all
+    layer function definitions
+    """
+    source = open(filename, "r")
+    AST = ast.parse(source.read())
+    source.close()
+    for node in ast.walk(AST):
+        if isinstance(node, ast.FunctionDef):
+            yield node 
+    return
+
+def process_add_connection_helper(all_functions, function_ast):
+        if function_ast.name.endswith("Layer"):
+            args = list(map(lambda x: x.id, function_ast.args.args))
+            layer_name = function_ast.name
+            tmpl = template_add_connection()
+            if tmpl.matchall(function_ast):
+                # right now we assume there should be only one match
+                # i.e. only one add_connection call in the layer function
+                mapping = tmpl.matches[0]['mappings']
+                return layer_name, args, mapping
+            else:
+                # not finding add_connection call, it must be somewhere
+                # called by some other functions
+                for node in ast.walk(function_ast):
+                    if isinstance(node, ast.Call):
+                        # we only process top level function calls
+                        # no attributes is allowed, e.g. self.Layer()
+                        if isinstance(node.func, ast.Name):
+                            if node.func.id in all_functions:
+                                call_args = list(map(lambda x: x.id, node.args))
+                                callee_function = all_functions[node.func.id]
+                                sublayer, callee_args, mappings = process_add_connection_helper(\
+                                        all_functions, callee_function)
+                                if sublayer is not None:
+                                    # rename arguments
+                                    mappings = deepcopy(mappings)
+                                    for new_name, old_name in zip(call_args, callee_args):
+                                        mappings = RewriteName(old_name, new_name).visit(mappings)
+                                    # return layer_name, args, mapping
+                                    return layer_name, args, mappings
+                print layer_name, "NO MATCH FOR ADD_CONNECTION"
+        return None, None, None
+
+def process_add_connection(filename):
+    """TODO: Docstring for process_add_connection.
+    :returns: TODO
+
+    """
+    conn_types = { }
+
+    print "ADD CONNECTION ----------------------------"
+    all_functions = dict(map(lambda x: (x.name, x), extract_functions(filename)))
+    for function_ast in all_functions.itervalues():
+        layer_name, args, mapping = \
+                process_add_connection_helper(all_functions, function_ast)
+        if layer_name is not None:
+            conn_types[layer_name] = (args, mapping)
+
+    # review the mapping functions for layer connections
+    for layer, (args, mappings) in conn_types.iteritems():
+        print ""
+        print "layer:", layer
+        print "args: ", args
+        print "conn: ", ast_dump(mappings)
+    print "ADD CONNECTION ---------------------------"
+    return conn_types
+
 def process_lib(filename, ensemble_info, name2enm, PM_FLAG=True):
     """
     read in a library file parse all neuron types,
@@ -314,8 +385,10 @@ def process_lib(filename, ensemble_info, name2enm, PM_FLAG=True):
        neuron_analyzer.init_fields()
 
     # delete unused variables
+    print "+++++++++++++++++++++++++++++++++++++++++++"
     for name, neuron_analyzer in neuron_analyzers.iteritems():
        neuron_analyzer.delete_unused_fields()
+    print "+++++++++++++++++++++++++++++++++++++++++++"
     
     print "###########################################"
     forward_codes = { }

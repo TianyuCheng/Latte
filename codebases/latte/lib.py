@@ -84,16 +84,16 @@ def LibsvmDataLayer(net, train_file, test_file, fea_dim_x, fea_dim_y, n_classes)
 
 def FullyConnectedLayer(net, prev_enm, N1, N2, TYPE):
     # construct a new ensemble
-    prev_size = prev_enm.get_size()
+    # prev_size = prev_enm.get_size()
     cur_enm = Ensemble(N1, N2, TYPE)
     cur_enm.set_backward_adj(prev_enm)
     prev_enm.set_forward_adj(cur_enm)
     cur_enm.set_inputs_dim (prev_enm.dim_x, prev_enm.dim_y)
 
     # enforce connections
-    mappings = {}
-    for i in range(prev_size): mappings.update({i:[j for j in range(N2)]})
-    add_connection (net, prev_enm, cur_enm, mappings)
+    # mappings = {}
+    # for i in range(prev_size): mappings.update({i:[j for j in range(N2)]})
+    add_connection(net, prev_enm, cur_enm, lambda _: [ j for j in range(N2) ])
     net.add_ensemble (cur_enm)
     return cur_enm
 
