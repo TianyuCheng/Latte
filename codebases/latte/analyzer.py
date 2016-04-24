@@ -7,6 +7,13 @@ from templates import *
 
 neuron_analyzers = { }
 
+field_blacklist = set([\
+    "prev_dim_x",
+    "prev_dim_y",
+    "forward_adj",          # not sure we want to allocate
+    "backward_adj",         # memory for forward and backward adj
+])
+
 class NeuronAnalyzer(object):
     """class for neuron specific code generation
     Each neuron type has its own analyzer"""
@@ -29,6 +36,20 @@ class NeuronAnalyzer(object):
             if base.id in neuron_analyzers:
                 for field, field_type in neuron_analyzers[base.id].fields.iteritems():
                     self.fields[field] = field_type
+
+    def delete_unused_fields(self):
+        used_variables = set()
+        for function in self.extract_functions():
+            if function.name == "forward" or function.name == "backward":
+                for node in ast.walk(function):
+                    if isinstance(node, ast.Attribute):
+                        used_variables.add(node.attr)
+        unused_variables = set(self.fields.keys()) - used_variables
+        # delete all unused variables from fields
+        for field_name in unused_variables:
+            if field_name in self.fields:
+                del self.fields[field_name]
+        print unused_variables
 
     def analyze(self, enm_info, name2enm):
         self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
@@ -178,7 +199,7 @@ class NeuronAnalyzer(object):
         # var_name = self.parse_var_name(node.targets[0])
         var_name = node.targets[0].attr
         var_type = self.parse_var_type(node)
-        if var_type is None:
+        if var_type is None or var_name in field_blacklist:
             print "ignore %s.%s" % (self.name, var_name)
         else:
             self.fields[var_name] = var_type
@@ -284,12 +305,17 @@ def process_lib(filename, ensemble_info, name2enm, PM_FLAG=True):
     read in a library file parse all neuron types,
     and their associated forward/backward functions
     """
+    # create neuron analyzer for each neuron subtype
     for neuron_ast in extract_neuron_classes(filename):
         neuron_analyzers[neuron_ast.name] = NeuronAnalyzer(neuron_ast, PM_FLAG)
     
-    # NOTE: we extend Neuron to base class, no need to second pass
-    # for name, neuron_analyzer in neuron_analyzers.iteritems():
-    #    neuron_analyzer.init_fields()
+    # process the fields of the neuron base types
+    for name, neuron_analyzer in neuron_analyzers.iteritems():
+       neuron_analyzer.init_fields()
+
+    # delete unused variables
+    for name, neuron_analyzer in neuron_analyzers.iteritems():
+       neuron_analyzer.delete_unused_fields()
     
     print "###########################################"
     forward_codes = { }

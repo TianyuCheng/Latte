@@ -59,24 +59,24 @@ def make_allocate_block(ensembles_info, neuron_analyzers, allocate=True):
     allocate = True -->  Does allocation
     allocate = False --> Does deallocation
     """
-    # allocate for base neuron type
-    attributes = neuron_analyzers["Neuron"].fields
     block = []
-    for attr in attributes: 
-        if allocate:
-            block.append("// allocating memory for " + attr )
-        else:
-            block.append("// deallocating memory for " + attr )
-        for enm in ensembles_info:
-            _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
-            output_mat_name = _cur+ "_" +attr
-            if allocate:
-                output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, 
-                                    _dim_y, attributes[attr])
-                block.append(output_malloc_str) 
-            else:
-                block.append(make_mkl_free(output_mat_name)) 
-        #block.append("")
+    # # allocate for base neuron type
+    # attributes = neuron_analyzers["Neuron"].fields
+    # for attr in attributes: 
+    #     if allocate:
+    #         block.append("// allocating memory for " + attr )
+    #     else:
+    #         block.append("// deallocating memory for " + attr )
+    #     for enm in ensembles_info:
+    #         _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
+    #         output_mat_name = _cur+ "_" +attr
+    #         if allocate:
+    #             output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, 
+    #                                 _dim_y, attributes[attr])
+    #             block.append(output_malloc_str) 
+    #         else:
+    #             block.append(make_mkl_free(output_mat_name)) 
+    #     #block.append("")
     # allocate for subtype of neuron
     for enm in ensembles_info:
         _cur, _type, _prev, _dim_x, _dim_y, _neurontype  = enm[:6]
@@ -247,7 +247,7 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     solve_block.append("} // end of iterative traversal") # end the iteration loop
     return solve_block
 
-def share_var_analyze (neuron_analyzers):
+def share_var_analyze(neuron_analyzers):
     # neuron analyzers is a dict that points a name to an analyzer
     for neuron_name, neuron_analyzer in neuron_analyzers.iteritems():
         shared_vars = [ ]
@@ -330,7 +330,7 @@ def main(options, program_file, cpp_file):
     # forward and backward propogation code
     neuron_analyzers, fp_codes, bp_codes = \
             process_lib("lib.py", ensembles_info, name2enm, options.MKL_FLAG)
-    for x in neuron_analyzers: print x, neuron_analyzers[x].fields
+    # for x in neuron_analyzers: print x, neuron_analyzers[x].fields
 
     #for x in fp_codes: print x, fp_codes[x]
     #for x in bp_codes: print x, fp_codes[x]
@@ -390,4 +390,3 @@ if __name__ == "__main__":
     program_file = args[0]
     cpp_file = args[1]
     main(options, program_file, cpp_file)
-
