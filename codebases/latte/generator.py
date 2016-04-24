@@ -178,6 +178,7 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
     test_block = []
     test_block.append("// test block")
     step_size = str(solver_info["step"])
+    test_block.append("vector<int> preds;")
     test_block.append(make_loop_header("data_idx", 0, "test_features.size()", 1) + "{")
     test_block.append("")
 
@@ -193,7 +194,21 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
         test_block.append(fp_codes[enm[0]])
         test_block.append("")
 
+    # annotate
+    _cur, _type, _prev, _dim_x, _dim_y  = ensembles_info[-1][:5]
+    loss_layer_output = _cur+"_output"
+    annotate_str = "// annotate for loss layer in testing stage\n"
+    annotate_str += "int pred = argmax (%s, %s*%s);\n" % \
+            (loss_layer_output, _dim_x, _dim_y)
+    annotate_str += "preds.push_back(pred);\n"
+    test_block.append(annotate_str)
+
     test_block.append("}")
+    
+    # evaluation
+    eval_str = "// evaluate the accuracy performance"
+    eval_str += "evaluate(preds, test_labels);"
+
     return test_block
 
 def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
@@ -219,7 +234,20 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
         solve_block.append(fp_codes[enm[0]])
         solve_block.append("")
 
-    # TODO: annotate
+    # annotate
+    _cur, _type, _prev, _dim_x, _dim_y  = ensembles_info[0][:5]
+    annotate_str = "// annotate for loss layer\n"
+    annotate_str += "float sumover = 0.0;\n"
+    annotate_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
+    annotate_str += "\tfor (int y = 0; y < %s; x++) {\n" % _dim_y
+    annotate_str += "\t\tsumover += *(%s+x*%s+y);\n" % (_cur+"output", _dim_y)
+    annotate_str += "\t}\n}\n"
+    annotate_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
+    annotate_str += "\tfor (int y = 0; y < %s; x++) {\n" % _dim_y
+    annotate_str += "\t\t*(%s+x*%s+y) = *(%s+x*%s+y) / sumover;\n" % \
+            (_cur+"_output", _dim_y, _cur+"_output", _dim_y)
+    annotate_str += "\t}\n}\n"
+    solve_block.append(annotate_str)
 
     # backward propagation
     for enm in ensembles_info[::-1]: 

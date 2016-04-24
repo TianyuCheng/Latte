@@ -56,14 +56,14 @@ int argmin (vector<float> vec) {
         }
     return min_index;
 }
-int argmax (vector<float> vec) {
-    assert(vec.size() > 0 && "empty vector input.");
+int argmax (float* vec, int size) {
+    assert(size > 0 && "empty vector input.");
     int max_index = 0;
-    float max_value = vec[0];
-    for (int i = 1; i < vec.size(); i++) 
-        if (vec[i] > max_value) {
+    float max_value = *vec;
+    for (int i = 1; i < size; i++) 
+        if (*(vec+i) > max_value) {
             max_index = i;
-            max_value = vec[i];
+            max_value = *(vec+i);
         }
     return max_index;
 }
