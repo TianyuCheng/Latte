@@ -23,7 +23,6 @@ class Solver;
 class SGDSolver;
 class Connection;
 
-void read_libsvm(string filename, vector<float*> &features, vector<int> &labels, int fea_dim_x, int fea_dim_y, int n_classes);
 void shared_variable_analsyis();
 void add_connection(Network& net, Ensemble& enm1, Ensemble& enm2, Connection &connection);
 
@@ -38,13 +37,15 @@ float min (vector<float> vec) {
         if (vec[i] < min_value) min_value = vec[i];
     return min_value;
 }
-float max (vector<float> vec) {
-    assert(vec.size() > 0 && "empty vector input.");
-    float max_value = vec[0];
-    for (int i = 1; i < vec.size(); i++) 
-        if (vec[i] > max_value) max_value = vec[i];
+float max (float* vec, int size) {
+    assert(size > 0 && "empty vector input.");
+    float max_value = *vec;
+    for (int i = 1; i < size; i++) 
+        if (*(vec+i) > max_value) 
+            max_value = *(vec+i);
     return max_value;
 }
+
 int argmin (vector<float> vec) {
     assert(vec.size() > 0 && "empty vector input.");
     int min_index = 0;
@@ -56,14 +57,14 @@ int argmin (vector<float> vec) {
         }
     return min_index;
 }
-int argmax (vector<float> vec) {
-    assert(vec.size() > 0 && "empty vector input.");
+int argmax (float* vec, int size) {
+    assert(size > 0 && "empty vector input.");
     int max_index = 0;
-    float max_value = vec[0];
-    for (int i = 1; i < vec.size(); i++) 
-        if (vec[i] > max_value) {
+    float max_value = *vec;
+    for (int i = 1; i < size; i++) 
+        if (*(vec+i) > max_value) {
             max_index = i;
-            max_value = vec[i];
+            max_value = *(vec+i);
         }
     return max_index;
 }
@@ -99,12 +100,16 @@ void free_weights_mats (vector<vector<float*>>& mat) {
 
 void evaluate (vector<int>& preds, vector<int>& labels) {
     assert (preds.size() == labels.size() && "preds and labels has different size.");
-    int numCorrect = 0, totalItems = preds.size();
-    for (int i = 0 ; i < totalItems; i ++) {
-        if (preds[i] == labels[i])
+    int numCorrect = 0, numTotalItems = preds.size();
+    for (int i = 0 ; i < numTotalItems; i ++) {
+        if (preds[i] == labels[i]) {
             numCorrect ++;
+            cout << "[T]" ;
+        } else 
+            cout << "[F]";
+        cout << " Pred: " << preds[i] << ", target: " << labels[i] << endl;
     }
-    float accuracy = 1.0 * numCorrect / totalItems;
+    float accuracy = 1.0 * numCorrect / numTotalItems;
     cout << "numCorrect: " << numCorrect 
          << ", Accuracy: " << accuracy
          << endl;
@@ -166,6 +171,46 @@ void sgemm_print (float* C, int dim_x, int dim_y) {
         cout << endl;
     }
 }
+
+void read_libsvm(string filename, vector<float*> &features, vector<int> &labels, 
+        int fea_dim_x, int fea_dim_y, int n_classes) {
+
+    // read file and check the validity of the input file
+    ifstream in(filename, std::ifstream::in);
+    if (!in.good()) {
+        cerr << "Error read file: " << filename << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    // read data points from the dataset
+    for (string line; getline(in, line); ) {
+        features.push_back(init_mkl_mat(fea_dim_x, fea_dim_y));
+        float *data_point = features.back();
+
+        // find substring separated by space
+        line += ":";      // avoid hitting stirng::npos
+        size_t start = 0, end = 0, curr = 0, prev = 0;
+        for (int i = 0; (end = line.find(" ", start)) != string::npos;i++) {
+            string str = line.substr(start, end - start);
+            start = end + 1;
+
+            // the first token is the label
+            if (i == 0) {
+                labels.push_back(stoi(str)-1);
+            }
+            else {
+                size_t slice = str.find(":", 0);
+                assert(slice != string::npos && "cannot parse file");
+                curr = stoi(str.substr(0, slice)) - 1;
+                data_point[curr] = stof(str.substr(slice + 1, str.length()));
+
+                if (curr - prev > 1) memset(&data_point[curr], 0, curr-prev);
+                prev = curr;
+            }
+        } // end of single data point processing
+    } // end of all data points processing
+}
+
 
 typedef struct Index {
     int r = 1;
