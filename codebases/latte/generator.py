@@ -272,19 +272,19 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     solve_block.append("} // end of iterative traversal") # end the iteration loop
     return solve_block
 
-def share_var_analyze(neuron_analyzers):
-    # neuron analyzers is a dict that points a name to an analyzer
-    for neuron_name, neuron_analyzer in neuron_analyzers.iteritems():
-        shared_vars = [ ]
-        for field_name in neuron_analyzer.fields.iterkeys():
-            # ignore all inputs
-            if field_name.endswith("inputs"):
-                shared_vars.append(field_name)
-            if field_name.endswith("adj"):
-                shared_vars.append(field_name)
-        # delete all shared variables
-        for shared_var in shared_vars:
-            del neuron_analyzer.fields[shared_var]
+# def share_var_analyze(neuron_analyzers):
+#     # neuron analyzers is a dict that points a name to an analyzer
+#     for neuron_name, neuron_analyzer in neuron_analyzers.iteritems():
+#         shared_vars = [ ]
+#         for field_name in neuron_analyzer.fields.iterkeys():
+#             # ignore all inputs
+#             if field_name.endswith("inputs"):
+#                 shared_vars.append(field_name)
+#             if field_name.endswith("adj"):
+#                 shared_vars.append(field_name)
+#         # delete all shared variables
+#         for shared_var in shared_vars:
+#             del neuron_analyzer.fields[shared_var]
 
 def main(options, program_file, cpp_file):
     # Front-end: processing program_file here
@@ -316,9 +316,16 @@ def main(options, program_file, cpp_file):
                 # print layer
                 net_name = layer['net']
                 assert net_name in networks2enms
-                if 'prev' not in layer: layer.update({"prev": None})
-                
                 layer['type'] = str(patn_layer).strip("template_")
+
+                if 'prev' not in layer: layer.update({"prev": None})
+                if 'Neuron' not in layer: 
+                    if layer['type'] == 'LibsvmDataLayer':
+                        layer['Neuron'] = 'DataNeuron'
+                    elif layer['type'] == 'SoftmaxLossLayer':
+                        layer['Neuron'] = 'SoftmaxNeuron'
+                    else:
+                        assert False
                 networks2enms[net_name].append(layer)
     print "###########################################"
 
@@ -352,7 +359,14 @@ def main(options, program_file, cpp_file):
     for x in ensembles_info: name2enm.update({ x[0] : x })
 
     # parse the add_connection calls in stdlib
+    # and perform the shared variable analysis
     conn_types = process_add_connection("lib.py")
+    for net, ensembles in networks2enms.iteritems():
+        for ensemble in ensembles:
+            layer_type = ensemble['type']
+            if layer_type in conn_types:
+                args, mapping = conn_types[layer_type]
+                print "Layer %s uniform dependency?" % layer_type, check_uniform_dependency(args, mapping, ensemble)
 
     # create the neuron analyzers and also pass in ensemble info in order to create
     # forward and backward propogation code
@@ -362,7 +376,7 @@ def main(options, program_file, cpp_file):
 
     #for x in fp_codes: print x, fp_codes[x]
     #for x in bp_codes: print x, fp_codes[x]
-    share_var_analyze (neuron_analyzers)
+    # share_var_analyze (neuron_analyzers)
     #####################################################################
 
     # CODE GENERATION:

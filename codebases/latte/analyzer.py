@@ -350,6 +350,43 @@ def process_add_connection_helper(all_functions, function_ast):
                 print layer_name, "NO MATCH FOR ADD_CONNECTION"
         return None, None, None
 
+def ast2lambda(mapping, args, ensemble):
+    mapping = ast.Module(\
+        body = [\
+            ast.Assign(\
+                targets = [ast.Name(id="func", ctx=ast.Store())],\
+                value = mapping
+            )
+        ]
+    )
+    for arg in args:
+        if arg in ensemble:
+            mapping = SubstituteNameToNum(arg, ensemble[arg]).visit(mapping)
+    mapping = ast.fix_missing_locations(mapping)
+    # print ast.dump(mapping)
+    codeobj = compile(mapping, '<string>', 'exec')
+    exec(codeobj)
+    return func
+
+def check_uniform_dependency(args, mapping, ensemble_info):
+    mapping = ast2lambda(mapping, args, ensemble_info)
+    dim_x, dim_y = ensemble_info['dim_x'], ensemble_info['dim_y']
+    dim = 1 if dim_x == 1 else 2
+    mapped_indices = sorted(mapping(tuple([ 0 for i in range(dim) ])))
+    # print mapped_indices
+    for d in range(dim):
+        for i in range(dim_x):
+            for j in range(dim_y):
+                if dim_x == 1:
+                    # single dimension
+                    if sorted(mapping(j)) != mapped_indices:
+                        return False
+                else:
+                    # double dimension
+                    if sorted(mapping(i, j)) != mapped_indices:
+                        return False
+    return True
+
 def process_add_connection(filename):
     """TODO: Docstring for process_add_connection.
     :returns: TODO
@@ -371,7 +408,7 @@ def process_add_connection(filename):
         print "layer:", layer
         print "args: ", args
         print "conn: ", ast_dump(mappings)
-    print "ADD CONNECTION ---------------------------"
+    print "------------------------------------------"
     return conn_types
 
 def process_lib(filename, ensemble_info, name2enm, PM_FLAG=True):

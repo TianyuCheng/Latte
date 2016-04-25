@@ -69,10 +69,10 @@ def read_libsvm (file_name, fea_dim_x, fea_dim_y):
     fread.close()
     return features, labels
 
-def LibsvmDataLayer(net, train_file, test_file, fea_dim_x, fea_dim_y, n_classes):
+def LibsvmDataLayer(net, train_file, test_file, dim_x, dim_y, n_classes):
     # read data files
-    train_features, train_labels = read_libsvm(train_file, fea_dim_x, fea_dim_y)
-    test_features, test_labels  = read_libsvm(test_file, fea_dim_x, fea_dim_y)
+    train_features, train_labels = read_libsvm(train_file, dim_x, fea_dim_y)
+    test_features, test_labels  = read_libsvm(test_file, dim_x, fea_dim_y)
 
     # print "test_labels: ", test_labels
     net.set_datasets(train_features, train_labels, test_features, test_labels)
@@ -82,24 +82,24 @@ def LibsvmDataLayer(net, train_file, test_file, fea_dim_x, fea_dim_y, n_classes)
     net.set_data_ensemble(data_enm)
     return data_enm
 
-def FullyConnectedLayer(net, prev_enm, N1, N2, TYPE):
+def FullyConnectedLayer(net, prev, dim_x, dim_y, TYPE):
     # construct a new ensemble
-    # prev_size = prev_enm.get_size()
-    cur_enm = Ensemble(N1, N2, TYPE)
-    cur_enm.set_backward_adj(prev_enm)
-    prev_enm.set_forward_adj(cur_enm)
-    cur_enm.set_inputs_dim (prev_enm.dim_x, prev_enm.dim_y)
+    # prev_size = prev.get_size()
+    cur_enm = Ensemble(dim_x, dim_y, TYPE)
+    cur_enm.set_backward_adj(prev)
+    prev.set_forward_adj(cur_enm)
+    cur_enm.set_inputs_dim (prev.dim_x, prev.dim_y)
 
     # enforce connections
     # mappings = {}
-    # for i in range(prev_size): mappings.update({i:[j for j in range(N2)]})
-    add_connection(net, prev_enm, cur_enm, lambda _: [ j for j in range(N2) ])
+    # for i in range(prev_size): mappings.update({i:[j for j in range(dim_y)]})
+    add_connection(net, prev, cur_enm, lambda _: [ j for j in range(dim_y) ])
     net.add_ensemble (cur_enm)
     return cur_enm
 
-def SoftmaxLossLayer(net, prev_enm, dim_x, nLabels):
+def SoftmaxLossLayer(net, prev, dim_x, dim_y):
     label_enm = Ensemble(1, nLabels, SoftmaxNeuron)
-    return FullyConnectedLayer(net, prev_enm, dim_x, nLabels, SoftmaxNeuron)
+    return FullyConnectedLayer(net, prev, dim_x, dim_y, SoftmaxNeuron)
 
 '''
 def inner_product (A, B):

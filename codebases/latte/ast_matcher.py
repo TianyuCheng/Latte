@@ -68,6 +68,20 @@ class RewriteName(ast.NodeTransformer):
             node.id = self.new_name
         return node
 
+class SubstituteNameToNum(ast.NodeTransformer):
+    """change name of a node"""
+    def __init__(self, old_name, new_name):
+        super(SubstituteNameToNum, self).__init__()
+        self.old_name = old_name
+        self.new_name = new_name
+
+    def visit_Name(self, node):
+        self.generic_visit(node)
+        if node.id == self.old_name:
+            node = ast.Num(self.new_name)
+            return node
+        return node
+
 def ast_parse_file(filename):
     f = open(filename, "r")
     AST = ast.parse(f.read())
