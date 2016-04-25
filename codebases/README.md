@@ -19,6 +19,23 @@ Authors
     + EID: xl5224
     + Email: jimmylin@utexas.edu
 
+Installation (Stampede)
+-----------------------
+
+To run this program, one must have intel MKL and boost installed. On TACC Stampede nodes, 
+one needs to load intel icc and boost using the following commands:
+
+```
+module load intel/15.0.2
+module load boost/1.55.0
+```
+
+After loading intel icc and boost, type:
+
+```
+make mlp
+```
+
 TODO LIST:
 ----------
 
