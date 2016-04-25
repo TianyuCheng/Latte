@@ -34,14 +34,14 @@ void add_connection(Network& net, Ensemble& enm1, Ensemble& enm2, Connection &co
 // Ensemble* FullyConnectedLayer(Network &net, Ensemble &prev_ensemble, int N);
 // Ensemble* SoftmaxLossLayer(Network &net, Ensemble &prev_ensemble, int n_labels);
 
-float min (vector<float> vec) {
+inline float min (vector<float> vec) {
     assert(vec.size() > 0 && "empty vector input.");
     float min_value = vec[0];
     for (int i = 1; i < vec.size(); i++) 
         if (vec[i] < min_value) min_value = vec[i];
     return min_value;
 }
-float max (float* vec, int size) {
+inline float max (float* vec, int size) {
     assert(size > 0 && "empty vector input.");
     float max_value = *vec;
     for (int i = 1; i < size; i++) 
@@ -50,7 +50,7 @@ float max (float* vec, int size) {
     return max_value;
 }
 
-int argmin (vector<float> vec) {
+inline int argmin (vector<float> vec) {
     assert(vec.size() > 0 && "empty vector input.");
     int min_index = 0;
     float min_value = vec[0];
@@ -61,7 +61,7 @@ int argmin (vector<float> vec) {
         }
     return min_index;
 }
-int argmax (float* vec, int size) {
+inline int argmax (float* vec, int size) {
     assert(size > 0 && "empty vector input.");
     int max_index = 0;
     float max_value = *vec;
@@ -119,7 +119,7 @@ void evaluate (vector<int>& preds, vector<int>& labels) {
 }
 
 /* Dot product of two matrices (float *) */
-void sgemm_dp (float* C, float* A, float* B, int size) {
+inline void sgemm_dp (float* C, float* A, float* B, int size) {
     // A, B, C are all rolling into vector in memory
     // C = alpha * A * B + beta * C
     cblas_sgemm ( 
@@ -133,7 +133,7 @@ void sgemm_dp (float* C, float* A, float* B, int size) {
             );   
 }
 /* scalar product of two matrices (float *) */
-void sgemm_axpy (float* C, float scalar, float* B, int size) {
+inline void sgemm_axpy (float* C, float scalar, float* B, int size) {
     // A, B, C are all rolling into vector in memory
     // C = alpha * scalar * B + beta * C
     cblas_sgemm ( 
@@ -146,7 +146,7 @@ void sgemm_axpy (float* C, float scalar, float* B, int size) {
             1.0, C, 1          // beta,  C, ldc
             );   
 }
-void sgemm_zeros (float* C, int size) {
+inline void sgemm_zeros (float* C, int size) {
     // A, B, C are all rolling into vector in memory
     // C = [ 0.0 ] * size
     float scalar = 0.0;
@@ -160,12 +160,12 @@ void sgemm_zeros (float* C, int size) {
             0.0, C, 1          // beta,  C, ldc
             );   
 }
-void sgemm_copy (float* sink, float* source, int n) {
+inline void sgemm_copy (float* sink, float* source, int n) {
     // A, B, C are all rolling into vector in memory
     float scalar = 0.0;
     cblas_scopy (n, source, 1, sink, 1);
 }
-void sgemm_print (float* C, int dim_x, int dim_y) {
+inline void sgemm_print (float* C, int dim_x, int dim_y) {
     for (int i = 0; i < dim_x; i ++) {
         for (int j = 0; j < dim_y; j ++) {
             cout << *(C+5*i+j) << " ";
