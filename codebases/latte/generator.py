@@ -125,11 +125,13 @@ def make_load_data(networks2enms):
         load_block.append("vector<int> train_labels, test_labels;");
         # we need number of features
         load_block.append("""read_libsvm("%s", train_features, train_labels, %d, %d, %d);""" % (\
-            enm["train"], enm["dim_x"], enm["dim_y"], enm['n_classes']
-        ));
+            enm["train"], enm["dim_x"], enm["dim_y"], enm['n_classes']))
         load_block.append("""read_libsvm("%s", test_features, test_labels, %d, %d, %d);""" % (\
-            enm["test"], enm["dim_x"], enm["dim_y"], enm['n_classes']
-        ));
+            enm["test"], enm["dim_x"], enm["dim_y"], enm['n_classes']))
+        load_block.append("assert (train_features.size() == train_labels.size());")
+        load_block.append("assert (test_features.size() == test_labels.size());")
+        load_block.append("vector<int> shuffle_index;" )
+        load_block.append("generate_shuffle_index(shuffle_index, train_features.size());" )
     return load_block
 
 def make_loop_header(v, start, upper, increment):
@@ -169,7 +171,6 @@ def make_layers(network_info):
 def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
     test_block = []
     test_block.append("// test block")
-    step_size = str(solver_info["step"])
     test_block.append("vector<int> preds;")
     test_block.append(make_loop_header("data_idx", 0, "test_features.size()", 1) + "{")
     test_block.append("float dp_result;")
@@ -208,16 +209,17 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
 def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     solve_block = []
     iterations = str(solver_info["iter"])
-    step_size = str(solver_info["step"])
+    if solver_info["step"] > 0: step_size = str(solver_info["step"] * -1.0)
     solve_block.append("// solve block")
     solve_block.append(make_loop_header("iter", 0, str(iterations), 1) + "{")
     solve_block.append("")
 
-    solve_block.append(make_loop_header("data_idx", 0, "train_features.size()", 1) + "{")
+    solve_block.append(make_loop_header("si", 0, "train_features.size()", 1) + "{")
     solve_block.append("")
     
     #  load next instance of train data (feature and label)
-    load_label_str = "sgemm_copy (%s, train_features[data_idx], %s*%s);\n" % \
+    load_label_str = "int data_idx = shuffle_index[si];"
+    load_label_str += "sgemm_copy (%s, train_features[data_idx], %s*%s);\n" % \
             (ensembles_info[0][0]+"_output", ensembles_info[0][3], ensembles_info[0][4])
     load_label_str += "vector<vector<int>> cur_label (%d, vector<int>(%d, 0));\n" % tuple(ensembles_info[-1][3:5])
     load_label_str += "cur_label[0][%s] = 1;\n" % "train_labels[data_idx]"

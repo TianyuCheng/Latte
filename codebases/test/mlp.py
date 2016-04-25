@@ -14,5 +14,5 @@ ip1_enm = FullyConnectedLayer(net, data_enm, 1, 20, FCNeuron)
 ip2_enm = FullyConnectedLayer(net, ip1_enm, 1, 10, FCNeuron)
 label_enm = SoftmaxLossLayer(net, ip2_enm, 1, 3, SoftmaxNeuron)
 
-sgd = SGD(10, 0.1)
+sgd = SGD(100, 0.1)
 solve(sgd, net)

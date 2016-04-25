@@ -11,6 +11,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <algorithm>    // std::random_shuffle
 #include <mkl.h>
 
 using namespace std;
@@ -209,6 +210,19 @@ void read_libsvm(string filename, vector<float*> &features, vector<int> &labels,
             }
         } // end of single data point processing
     } // end of all data points processing
+}
+
+
+void generate_shuffle_index(vector<int> &shuffle_index, int size) {
+    for (int i = 0; i < size; i ++) 
+        shuffle_index.push_back(i);
+
+    random_shuffle ( shuffle_index.begin(), shuffle_index.end() );
+
+    /*
+        for (int i = 0; i < train_features.size(); i ++) 
+            cout << "shuffle_index: " << shuffle_index[i] << endl;
+            */
 }
 
 
