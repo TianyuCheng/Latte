@@ -96,6 +96,7 @@ class NeuronAnalyzer(object):
         self.fp_codes = filter(lambda x: x is not None, self.fp_codes)
         if len(self.fp_codes) == 0: return
         else: 
+            # TODO: change the universal for-loop to use shared variable analysis
             self.fp_codes = [ "\tfor (int y = 0; y < %d; y ++) {" % _dim_y ] + self.fp_codes
             self.fp_codes = [ "for (int x = 0; x < %d; x ++) {" % _dim_x ] + self.fp_codes
             self.fp_codes = [ "// Forward Propagation for " + self.enm ] + self.fp_codes
