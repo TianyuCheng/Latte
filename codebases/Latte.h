@@ -14,6 +14,9 @@
 #include <algorithm>    // std::random_shuffle
 #include <mkl.h>
 
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_real_distribution.hpp>
+
 using namespace std;
 
 // forward declaration for Latte classes
@@ -71,10 +74,8 @@ int argmax (float* vec, int size) {
 }
 void Xaiver_initialize (float* mat, int n_j, int n_jp) {
     float high = sqrt(6.0 / (n_j+n_jp)), low = -1.0 * high;
-    random_device rd;
-    default_random_engine generator( rd() );
-    // uniform_real_distribution<float> distribution(1.0, 1.0);
-    uniform_real_distribution<float> distribution(low, high);
+    boost::random::mt19937 generator;
+    boost::random::uniform_real_distribution<float> distribution(low, high);
     for (int i = 0; i < n_j; i ++) *(mat+i) = distribution(generator);
 }
 float* init_mkl_mat (int dim_x, int dim_y) {
@@ -284,13 +285,13 @@ public:
     Ensemble(Dim s) : size(s) {
         neurons.resize(size.r * size.c);
         // all neurons constructions are independent
-        #pragma omp parallel for
+        // #pragma omp parallel for
         for (int i = 0; i < neurons.size(); ++i)
             neurons[i] = new Neuron(*this, i / s.r, i % s.c);
     }
     virtual ~Ensemble() {
         // all neurons destructions are independent
-        #pragma omp parallel for
+        // #pragma omp parallel for
         for (int i = 0; i < neurons.size(); ++i)
             delete neurons[i];
     }
