@@ -125,9 +125,9 @@ def make_load_data(networks2enms):
         load_block.append("vector<int> train_labels, test_labels;");
         # we need number of features
         load_block.append("""read_libsvm("%s", train_features, train_labels, %d, %d, %d);""" % (\
-            enm["train"], enm["dim_x"], enm["dim_y"], enm['n_classes']))
+            enm["train_file"], enm["dim_x"], enm["dim_y"], enm['nLabels']))
         load_block.append("""read_libsvm("%s", test_features, test_labels, %d, %d, %d);""" % (\
-            enm["test"], enm["dim_x"], enm["dim_y"], enm['n_classes']))
+            enm["test_file"], enm["dim_x"], enm["dim_y"], enm['nLabels']))
         load_block.append("assert (train_features.size() == train_labels.size());")
         load_block.append("assert (test_features.size() == test_labels.size());")
         load_block.append("vector<int> shuffle_index;" )
