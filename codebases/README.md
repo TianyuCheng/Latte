@@ -21,13 +21,10 @@ Authors
 
 TODO LIST:
 ----------
-- variable management of neuron types: delete unused variables/fields
 
 - share variable analysis: determine uniform dependency of dimension; monitor data copy
 
 - verbatim translation of forward/backward in SoA form (general form, no optimization)
-
-- parse annotate() for LossNeuron
 
 - test the existing pattern matching and code generation framework with mlp.py
 
