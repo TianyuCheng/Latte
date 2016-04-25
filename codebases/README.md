@@ -206,6 +206,8 @@ Assumptions
 
 - Assume the Function name for a loss layer contains "LossLayer"
 
+- The function you use for add\_connection must be defined as a lambda function.
+
 References
 --------
 We primarily referred to the Latte Paper provided in the course CS380C Compilers.
