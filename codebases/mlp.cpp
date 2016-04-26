@@ -74,8 +74,8 @@ int main (int argn, char** argv) {
                 for (int y = 0; y < 20; y++) {
                     dp_result = 0.0;
                     for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 20; ++j) {
-                            dp_result = (dp_result + ((*(ip1_enm_weights[x][y]+i*20+j)) * (*(data_enm_output+i*20+j))));
+                        for (int j = 0; j < 4; ++j) {
+                            dp_result = (dp_result + ((*(ip1_enm_weights[x][y]+i*4+j)) * (*(data_enm_output+i*4+j))));
                         }
                     }
                     *(ip1_enm_output+x*20+y) = tanh(dp_result);
@@ -88,8 +88,8 @@ int main (int argn, char** argv) {
                 for (int y = 0; y < 10; y++) {
                     dp_result = 0.0;
                     for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 10; ++j) {
-                            dp_result = (dp_result + ((*(ip2_enm_weights[x][y]+i*10+j)) * (*(ip1_enm_output+i*10+j))));
+                        for (int j = 0; j < 20; ++j) {
+                            dp_result = (dp_result + ((*(ip2_enm_weights[x][y]+i*20+j)) * (*(ip1_enm_output+i*20+j))));
                         }
                     }
                     *(ip2_enm_output+x*10+y) = tanh(dp_result);
@@ -102,8 +102,8 @@ int main (int argn, char** argv) {
                 for (int y = 0; y < 3; y++) {
                     dp_result = 0.0;
                     for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 3; ++j) {
-                            dp_result = (dp_result + ((*(label_enm_weights[x][y]+i*3+j)) * (*(ip2_enm_output+i*3+j))));
+                        for (int j = 0; j < 10; ++j) {
+                            dp_result = (dp_result + ((*(label_enm_weights[x][y]+i*10+j)) * (*(ip2_enm_output+i*10+j))));
                         }
                     }
                     *(label_enm_output+x*3+y) = exp(dp_result);
@@ -128,13 +128,13 @@ int main (int argn, char** argv) {
                 for (int y = 0; y < 3; y ++) {
                     *(label_enm_grad_output+x*3+y) = (*(label_enm_output+x*3+y) - cur_label[x][y]);
                     for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 3; ++j) {
-                            *(ip2_enm_output+i*3+j) = ((*(label_enm_grad_output+x*3+y)) * (*(label_enm_weights[x][y]+i*3+j)));
+                        for (int j = 0; j < 10; ++j) {
+                            *(ip2_enm_output+i*10+j) = ((*(label_enm_grad_output+x*3+y)) * (*(label_enm_weights[x][y]+i*10+j)));
                         }
                     }
                     for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 3; ++j) {
-                            *(label_enm_grad_weights[x][y]+i*3+j) = (*(label_enm_grad_weights[x][y]+i*3+j) + ((*(label_enm_grad_output+x*3+y)) * (*(ip2_enm_output+i*3+j))));
+                        for (int j = 0; j < 10; ++j) {
+                            *(label_enm_grad_weights[x][y]+i*10+j) = (*(label_enm_grad_weights[x][y]+i*10+j) + ((*(label_enm_grad_output+x*3+y)) * (*(ip2_enm_output+i*10+j))));
                         }
                     }
                 }
@@ -145,13 +145,13 @@ int main (int argn, char** argv) {
                 for (int y = 0; y < 10; y ++) {
                     *(ip2_enm_grad_output+x*10+y) = ((*(ip2_enm_grad_output+x*10+y)) * (*(ip2_enm_grad_activation+x*10+y)));
                     for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 10; ++j) {
-                            *(ip1_enm_output+i*10+j) = ((*(ip2_enm_grad_output+x*10+y)) * (*(ip2_enm_weights[x][y]+i*10+j)));
+                        for (int j = 0; j < 20; ++j) {
+                            *(ip1_enm_output+i*20+j) = ((*(ip2_enm_grad_output+x*10+y)) * (*(ip2_enm_weights[x][y]+i*20+j)));
                         }
                     }
                     for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 10; ++j) {
-                            *(ip2_enm_grad_weights[x][y]+i*10+j) = (*(ip2_enm_grad_weights[x][y]+i*10+j) + ((*(ip2_enm_grad_output+x*10+y)) * (*(ip1_enm_output+i*10+j))));
+                        for (int j = 0; j < 20; ++j) {
+                            *(ip2_enm_grad_weights[x][y]+i*20+j) = (*(ip2_enm_grad_weights[x][y]+i*20+j) + ((*(ip2_enm_grad_output+x*10+y)) * (*(ip1_enm_output+i*20+j))));
                         }
                     }
                 }
@@ -162,13 +162,13 @@ int main (int argn, char** argv) {
                 for (int y = 0; y < 20; y ++) {
                     *(ip1_enm_grad_output+x*20+y) = ((*(ip1_enm_grad_output+x*20+y)) * (*(ip1_enm_grad_activation+x*20+y)));
                     for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 20; ++j) {
-                            *(data_enm_output+i*20+j) = ((*(ip1_enm_grad_output+x*20+y)) * (*(ip1_enm_weights[x][y]+i*20+j)));
+                        for (int j = 0; j < 4; ++j) {
+                            *(data_enm_output+i*4+j) = ((*(ip1_enm_grad_output+x*20+y)) * (*(ip1_enm_weights[x][y]+i*4+j)));
                         }
                     }
                     for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 20; ++j) {
-                            *(ip1_enm_grad_weights[x][y]+i*20+j) = (*(ip1_enm_grad_weights[x][y]+i*20+j) + ((*(ip1_enm_grad_output+x*20+y)) * (*(data_enm_output+i*20+j))));
+                        for (int j = 0; j < 4; ++j) {
+                            *(ip1_enm_grad_weights[x][y]+i*4+j) = (*(ip1_enm_grad_weights[x][y]+i*4+j) + ((*(ip1_enm_grad_output+x*20+y)) * (*(data_enm_output+i*4+j))));
                         }
                     }
                 }
@@ -219,8 +219,8 @@ int main (int argn, char** argv) {
             for (int y = 0; y < 20; y++) {
                 dp_result = 0.0;
                 for (int i = 0; i < 1; ++i) {
-                    for (int j = 0; j < 20; ++j) {
-                        dp_result = (dp_result + ((*(ip1_enm_weights[x][y]+i*20+j)) * (*(data_enm_output+i*20+j))));
+                    for (int j = 0; j < 4; ++j) {
+                        dp_result = (dp_result + ((*(ip1_enm_weights[x][y]+i*4+j)) * (*(data_enm_output+i*4+j))));
                     }
                 }
                 *(ip1_enm_output+x*20+y) = tanh(dp_result);
@@ -233,8 +233,8 @@ int main (int argn, char** argv) {
             for (int y = 0; y < 10; y++) {
                 dp_result = 0.0;
                 for (int i = 0; i < 1; ++i) {
-                    for (int j = 0; j < 10; ++j) {
-                        dp_result = (dp_result + ((*(ip2_enm_weights[x][y]+i*10+j)) * (*(ip1_enm_output+i*10+j))));
+                    for (int j = 0; j < 20; ++j) {
+                        dp_result = (dp_result + ((*(ip2_enm_weights[x][y]+i*20+j)) * (*(ip1_enm_output+i*20+j))));
                     }
                 }
                 *(ip2_enm_output+x*10+y) = tanh(dp_result);
@@ -247,8 +247,8 @@ int main (int argn, char** argv) {
             for (int y = 0; y < 3; y++) {
                 dp_result = 0.0;
                 for (int i = 0; i < 1; ++i) {
-                    for (int j = 0; j < 3; ++j) {
-                        dp_result = (dp_result + ((*(label_enm_weights[x][y]+i*3+j)) * (*(ip2_enm_output+i*3+j))));
+                    for (int j = 0; j < 10; ++j) {
+                        dp_result = (dp_result + ((*(label_enm_weights[x][y]+i*10+j)) * (*(ip2_enm_output+i*10+j))));
                     }
                 }
                 *(label_enm_output+x*3+y) = exp(dp_result);

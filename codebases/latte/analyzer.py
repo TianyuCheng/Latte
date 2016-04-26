@@ -196,7 +196,7 @@ class NeuronAnalyzer(object):
             # print "==============>", match_result
             for_index = self.parse_var_name(match_result["i"])
             for_stop = self.parse_expr(match_result["N"])
-            body = self.process_stmt(match_result["body"], )
+            body = self.process_stmt(match_result["body"])
             return for_stmt.format(i=for_index, start=0, stop=for_stop, code=body)
         print "=====> PROCESS STMT: (NO MATCH)", ast.dump(stmt)
 
@@ -249,8 +249,12 @@ class NeuronAnalyzer(object):
                 # prev_dim_x and prev_dim_y are built-in variables,
                 # so we hard code it
                 if var_name == "prev_dim_x":
-                    return self.name2enm[self.enm][3]
+                    return self.name2enm[self.enm_prev][3]
                 if var_name == "prev_dim_y":
+                    return self.name2enm[self.enm_prev][4]
+                if var_name == "dim_x":
+                    return self.name2enm[self.enm][3]
+                if var_name == "dim_y":
                     return self.name2enm[self.enm][4]
                 if var_name == "grad_output":
                     return "*(%s_grad_output+x*%s+y)" % (self.enm,self.name2enm[self.enm][4])
@@ -290,9 +294,9 @@ class NeuronAnalyzer(object):
                 # double dimension array index
                 if field_type == "vector<vector<float*>>":
                    return "*(%s[x][y]+%s*%s+%s)" % (var_name, index_i,\
-                           self.name2enm[self.enm][4], index_j)
+                           self.name2enm[self.enm_prev][4], index_j)
                 else:
-                    return "*(%s+%s*%s+%s)" % (var_name, index_i, self.name2enm[self.enm][4], index_j)
+                    return "*(%s+%s*%s+%s)" % (var_name, index_i, self.name2enm[self.enm_prev][4], index_j)
 
     def parse_var_type(self, node):
         field_type = node.value
