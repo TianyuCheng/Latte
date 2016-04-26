@@ -57,13 +57,9 @@ class Node(object):
     
 
 class ForNode(Node):
+    """Holds information for a for loop"""
     def __init__(self, initial, initial_name, loop_bound, increment):
-        # the super call doesn't work for some reason, so I'm reconstruting
-        # the Node constructor (not very large anyways)
         super(ForNode, self).__init__()
-        self.parent = None
-        self.child_number = -1
-        self.children = []
 
         # save initial variables
         self.initial = initial
@@ -112,28 +108,77 @@ class ForNode(Node):
 
         return to_return
 
-class ReadWriteNode(Node):
-    """To be extended by other nodes: provides an interface to determine what 
-    is being read by a node and what is being altered (i.e. written) by a node."""
-    def __init__(self):
-        #TODO this breaks for some reason
-        super(ReadWriteNode, self).__init__()
 
-        # holds var names that are 
-        self.reads = []
-        self.writes = []
+class ConstantNode(Node):
+    """Holds a constant, whether it be a number or a variable name"""
+    def __init__(self, constant):
+        super(ConstantNode, self).__init__()
 
-class StatementNode:
-    def __init__(self):
-        super(StatementNode, self).__init__()
-        pass
+        # holds the constant
+        self.constant = constant
 
-    pass
+    def get_constant(self):
+        return self.constant
 
-class ExpressionNode:
-    def __init__(self):
+    #def is_used(self, use, use_list):
+    #    """Adds our constant to a use list if the use is equal to what is
+    #    being asked about"""
+    #    if use == self.constant:
+    #        use_list.append(use)
+
+    def __str__(self):
+        return str(self.constant)
+
+
+class AssignmentNode(Node):
+    """Top level: holds an assignment statement: needs a left and a right"""
+    def __init__(self, left, right):
+        super(AssignmentNode, self).__init__()
+
+        # left and right are nodes
+        self.left = left
+        self.right = right
+
+    def __str__(self):
+        to_return = self.left.__str__() + " = " + self.right.__str__()
+        return to_return
+
+
+class ExpressionNode(Node):
+    """Holds an expression (i.e. binary op): a left expression, and operand, then the right
+    expression"""
+    def __init__(self, left, right, operand):
         super(ExpressionNode, self).__init__()
-        pass
 
+        # a node
+        self.left = left
+        # NOTE operand should be a + or a *
+        self.operand = operand
+        # a node
+        self.right = right
+
+    def __str__(self):
+        to_return = "(" + self.left.__str__() + operand + self.right.__str__() + ")"
+        return to_return
+
+
+class ArrayNode(Node):
+    #TODO
     pass
 
+
+class DereferenceNode(Node):
+    #TODO
+    pass
+
+
+class IndexNode(Node):
+    """Purpose of this is to store pointer arithmetic expressions, i.e. i*10 + j.
+    Works for 2D pointer arithmetic at most"""
+    #TODO
+
+
+class CallNode(Node):
+    """Represents calls to functions. May have multiple arguments. Should also
+    specify which arguments are read from/written to"""
+    #TODO
