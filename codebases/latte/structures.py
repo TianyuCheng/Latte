@@ -1,5 +1,4 @@
 """Tree representation of for loops for analysis/tiling/fusion purposes"""
-
 class Node:
     def __init__(self):
         # should be extended from
@@ -111,7 +110,18 @@ class ForNode(Node):
         to_return = to_return + "}\n"
 
         return to_return
-        
+
+class ReadWriteNode(Node):
+    """To be extended by other nodes: provides an interface to determine what 
+    is being read by a node and what is being altered (i.e. written) by a node."""
+    def __init__(self):
+        #TODO this breaks for some reason
+        super(ReadWriteNode, self).__init__()
+
+        # holds var names that are 
+        self.reads = []
+        self.writes = []
+
 class StatementNode:
     def __init__(self):
         pass
