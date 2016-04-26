@@ -285,8 +285,8 @@ class NeuronAnalyzer(object):
             if not isinstance(node.value, ast.Subscript):
                 return self.parse_var_name(node.value)
             else:
-                index_i = self.parse_var_name(node.slice)
-                index_j = self.parse_var_name(node.value.slice)
+                index_j = self.parse_var_name(node.slice)
+                index_i = self.parse_var_name(node.value.slice)
                 # double dimension array index
                 if field_type == "vector<vector<float*>>":
                    return "*(%s[x][y]+%s*%s+%s)" % (var_name, index_i,\
