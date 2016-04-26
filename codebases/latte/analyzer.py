@@ -97,8 +97,8 @@ class NeuronAnalyzer(object):
         if len(self.fp_codes) == 0: return
         else: 
             # TODO: change the universal for-loop to use shared variable analysis
-            self.fp_codes = [ "\tfor (int y = 0; y < %d; y ++) {" % _dim_y ] + self.fp_codes
-            self.fp_codes = [ "for (int x = 0; x < %d; x ++) {" % _dim_x ] + self.fp_codes
+            self.fp_codes = [ "\tfor (int y = 0; y < %d; y++) {" % _dim_y ] + self.fp_codes
+            self.fp_codes = [ "for (int x = 0; x < %d; x++) {" % _dim_x ] + self.fp_codes
             self.fp_codes = [ "// Forward Propagation for " + self.enm ] + self.fp_codes
             self.fp_codes.append("\t}\n}")
 
@@ -272,7 +272,27 @@ class NeuronAnalyzer(object):
         if isinstance(node, ast.Index):
             return self.parse_var_name(node.value)
         if isinstance(node, ast.Subscript):
-            return self.parse_var_name(node.value) + "[%s]" % self.parse_var_name(node.slice)
+            # find node name and determine whether the variable is a field
+            var_name = self.parse_var_name(node.value)
+            field_name = var_name.strip(self.enm + "_")
+            field_type = "float*"
+            if field_name.find('[') >= 0:
+                field_name = field_name[:field_name.find('[')]
+            if field_name in self.fields:
+                field_type = self.fields[field_name]
+
+            # check it is 1d or 2d array index
+            if not isinstance(node.value, ast.Subscript):
+                return self.parse_var_name(node.value)
+            else:
+                index_i = self.parse_var_name(node.slice)
+                index_j = self.parse_var_name(node.value.slice)
+                # double dimension array index
+                if field_type == "vector<vector<float*>>":
+                   return "*(%s[x][y]+%s*%s+%s)" % (var_name, index_i,\
+                           self.name2enm[self.enm][4], index_j)
+                else:
+                    return "*(%s+%s*%s+%s)" % (var_name, index_i, self.name2enm[self.enm][4], index_j)
 
     def parse_var_type(self, node):
         field_type = node.value
