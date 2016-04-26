@@ -1,5 +1,5 @@
 """Tree representation of for loops for analysis/tiling/fusion purposes"""
-class Node:
+class Node(object):
     def __init__(self):
         # should be extended from
         self.parent = None
@@ -60,6 +60,7 @@ class ForNode(Node):
     def __init__(self, initial, initial_name, loop_bound, increment):
         # the super call doesn't work for some reason, so I'm reconstruting
         # the Node constructor (not very large anyways)
+        super(ForNode, self).__init__()
         self.parent = None
         self.child_number = -1
         self.children = []
@@ -124,12 +125,14 @@ class ReadWriteNode(Node):
 
 class StatementNode:
     def __init__(self):
+        super(StatementNode, self).__init__()
         pass
 
     pass
 
 class ExpressionNode:
     def __init__(self):
+        super(ExpressionNode, self).__init__()
         pass
 
     pass
