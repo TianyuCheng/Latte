@@ -256,6 +256,16 @@ class ConvolutionNeuron(Neuron):
     def backward(self):
         pass 
 
+class MeanPoolingNeuron(Neuron):
+    def __init__(self, enm, pos_x, pos_y):
+        Neuron.__init__(self, enm, pos_x, pos_y)
+
+    def forward(self):
+        pass
+
+    def backward(self):
+        pass 
+
 
 class DataNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
