@@ -1,4 +1,4 @@
-Latte Project
+PyLatte Project
 =============
 
 Authors
@@ -19,6 +19,56 @@ Authors
     + EID: xl5224
     + Email: jimmylin@utexas.edu
 
+Finish Status
+----------
+
+- [DONE] User Description of Network
+    
+    - [DONE] PyLatte Programming Model: mlp.py,  and more ..
+
+    - [DONE] Neuron Specification (fields, forward, backward): FCNeuron, and more ..
+    
+- [DONE] Internal Representation
+
+    - [DONE] Implicit adjacency lists: lambda representation of functions
+
+- [] Share Variable Analysis
+
+    - [DONE] Determine uniform dependency of dimension
+
+    - [] Monitor data copy
+
+- [DONE] Synthesis
+
+    - [DONE] Data Flow: traversing dataflow graph by ensemble partitioning
+
+    - [DONE] Compute: convert AoS to SoA form
+
+- [] Optimization
+
+    - [DONE] Library Kernel Pattern Matching
+
+    - [] Loop Tiling pass 
+
+    - [] Loop Fusion pass
+
+    - [] Data Parallelization: Parallel in Batch Items
+
+
+Performance Evaluation
+-----------------------
+
+| Optimization \ Network   | FC+FC+Softmax | FC+ReLU+FC+Softmax | FC+ReLU+MeanPool+Softmax | Conv+FC+ReLU+Softmax | Conv+ReLU+MeanPool+Softmax |
+|--------------------------|---------------|--------------------|--------------------------|----------------------|----------------------------|
+| None                     |               |                    |                          |                      |                            |
+| MKL-SGEMM                |               |                    |                          |                      |                            |
+| MKL-SGEMM + Tiling       |               |                    |                          |                      |                            |
+| MKL-SGEMM+ Tiling+Fusion |               |                    |                          |                      |                            |
+| MKL-SGEMM+ Tiling+Fusion |               |                    |                          |                      |                            |
+| MKL-SGEMM+BatchPara      |               |                    |                          |                      |                            |
+| All Above                |               |                    |                          |                      |                            |
+
+
 Installation (Stampede)
 -----------------------
 
@@ -35,22 +85,6 @@ After loading intel icc and boost, type:
 ```
 make mlp
 ```
-
-TODO LIST:
-----------
-
-- share variable analysis: determine uniform dependency of dimension; monitor data copy
-
-- verbatim translation of forward/backward in SoA form (general form, no optimization)
-
-- test the existing pattern matching and code generation framework with mlp.py
-
-- develop more felexible and scalable framework of pattern matching
-
-- loop tiling pass 
-
-- loop fusion pass
-
 
 Usage
 -----
@@ -240,11 +274,6 @@ We primarily referred to the Latte Paper provided in the course CS380C Compilers
 - [Other] Markdown
 
    https://guides.github.com/features/mastering-markdown/
-
-NOTES
----------
-1. 
-    
 
 
 Acknowledgements
