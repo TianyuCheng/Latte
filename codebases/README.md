@@ -178,8 +178,6 @@ ASTs that are extracted from a Latte-Python description of a neural network.
 Each template for has "wildcards" that are eventually replaced by data from a
 the AST that each template is matching against.
 
-TODO check if the following statement is right
-
 By doing so ths system is able to have a some kind of uniformity when examining ASTs
 since all ASTs will be matched to some template if they are valid.
 
