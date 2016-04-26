@@ -273,6 +273,10 @@ We primarily referred to the Latte Paper provided in the course CS380C Compilers
 
    https://guides.github.com/features/mastering-markdown/
 
+- [Other] Markdown Table Generator
+
+   http://www.tablesgenerator.com/markdown\_tables
+
 
 Acknowledgements
 -------

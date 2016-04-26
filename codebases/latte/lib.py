@@ -213,10 +213,38 @@ class ReLUNeuron(Neuron):
         Neuron.__init__(self, enm, pos_x, pos_y)
 
     def forward(self):
-        pass
+        # innder product of inputs and weights
+        assert len(self.forward_adj) > 0, "No forward adjacency element. "
+        dp_result = 0.0
+        for i in range(self.prev_dim_x):
+            for j in range(self.prev_dim_y):
+                dp_result = dp_result + self.weights[i][j] * self.inputs[i][j]
+        # activation
+        
+        self.output = np.log(np.exp(dp_result) + 1) # softplus function
+        # preset the gradient for back propagation
+        self.grad_activation = 1.0 / (1 + np.exp(-1.0*dp_result))  # logistic
+
+        # Data Copy: put output value to the inputs of next layer
+        for next_neuron in self.forward_adj:
+            next_neuron.inputs[self.pos_x][self.pos_y] = self.output
 
     def backward(self):
-        pass 
+        self.grad_output = self.grad_output * self.grad_activation
+
+        # scalar multiplication
+        for i in range(self.prev_dim_x):
+            for j in range(self.prev_dim_y):
+                self.grad_inputs[i][j] = self.grad_output * self.weights[i][j]
+                
+        # backpropagate error
+        for prev in self.backward_adj:
+            prev.grad_output += self.grad_inputs[prev.pos_x][prev.pos_y] 
+
+        # weights update 
+        for i in range(self.prev_dim_x):
+            for j in range(self.prev_dim_y):
+                self.grad_weights[i][j] = self.grad_weights[i][j] + self.grad_output * self.inputs[i][j]
 
 class ConvolutionNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
