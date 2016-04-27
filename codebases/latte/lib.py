@@ -7,25 +7,6 @@ import math
 import random 
 import time
 
-ensemble_id_counter = 0
-neuron_id_counter = 0
-network_id_counter = 0
-def allocate_neuron_id ():
-    global neuron_id_counter
-    assigned_id = neuron_id_counter
-    neuron_id_counter += 1
-    return assigned_id
-def allocate_ensemble_id ():
-    global ensemble_id_counter
-    assigned_id = ensemble_id_counter
-    ensemble_id_counter += 1
-    return assigned_id
-def allocate_network_id ():
-    global network_id_counter
-    assigned_id = network_id_counter
-    network_id_counter += 1
-    return assigned_id
-
 def Xaiver_weights_init (dim_x, dim_y, cur_enm_size):
     prev_enm_size = dim_x * dim_y;
     high = np.sqrt( 6.0 / (prev_enm_size + cur_enm_size) )
@@ -113,7 +94,6 @@ def inner_product (A, B):
 class Neuron:
     def __init__(self, enm, pos_x, pos_y):
         # management info
-        self.neuron_id = allocate_ensemble_id()
         self.pos_x = pos_x
         self.pos_y = pos_y
         self.prev_dim_x = 0
@@ -220,7 +200,6 @@ class ReLUNeuron(Neuron):
             for j in range(self.prev_dim_y):
                 dp_result = dp_result + self.weights[i][j] * self.inputs[i][j]
         # activation
-        
         self.output = np.log(np.exp(dp_result) + 1) # softplus function
         # preset the gradient for back propagation
         self.grad_activation = 1.0 / (1 + np.exp(-1.0*dp_result))  # logistic
@@ -259,9 +238,18 @@ class ConvolutionNeuron(Neuron):
 class MeanPoolingNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
         Neuron.__init__(self, enm, pos_x, pos_y)
+        self.pool_dim_x
+        self.pool_dim_y 
 
     def forward(self):
-        pass
+        dp_result = 0.0
+        for prev in self.backward_adj:
+            dp_result = dp_result + self.weights[i][j] * self.inputs[i][j]
+        dp_result = dp_result / self.pool_dim_x
+        # activation
+        self.output = np.log(np.exp(dp_result) + 1) # softplus function
+        # preset the gradient for back propagation
+        self.grad_activation = 1.0 / (1 + np.exp(-1.0*dp_result))  # logistic
 
     def backward(self):
         pass 
@@ -302,7 +290,6 @@ class SoftmaxNeuron(Neuron):
     
     def forward(self):
         dp_result = 0.0
-
         for i in range(self.prev_dim_x):
             for j in range(self.prev_dim_y):
                 dp_result = dp_result + self.weights[i][j] * self.inputs[i][j]
@@ -331,7 +318,6 @@ class SoftmaxNeuron(Neuron):
 
 class Ensemble:
     def __init__(self, N1, N2, TYPE):
-        self.ensemble_id = allocate_ensemble_id()
         self.dim_x = N1
         self.dim_y = N2
         self.size = N1 * N2
@@ -367,7 +353,6 @@ class Ensemble:
 
 class Network:
     def __init__(self):
-        self.network_id = allocate_network_id()
         self.ensembles = []
         self.train_features = None
         self.train_labels = None
