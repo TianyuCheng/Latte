@@ -66,21 +66,34 @@ def LibsvmDataLayer(net, train_file, test_file, dim_x, dim_y, n_classes):
 def FullyConnectedLayer(net, prev, dim_x, dim_y, TYPE):
     # construct a new ensemble
     cur_enm = Ensemble(dim_x, dim_y, TYPE)
-    cur_enm.set_backward_adj(prev)
-    prev.set_forward_adj(cur_enm)
-    cur_enm.set_inputs_dim (prev.dim_x, prev.dim_y)
-
-    # enforce connections
-    add_connection(net, prev, cur_enm, lambda _: [ j for j in range(dim_y) ])
+    add_connection(net, prev, cur_enm, lambda x, y: \
+         [ (i,j) for i in range(prev.dim_x)) for j in range(prev.dim_y)) ])
     net.add_ensemble (cur_enm)
     return cur_enm
 
-def ConvolutionLayer():
-    
-    pass
+def ConvolutionLayer(net, prev, dim_x, dim_y, TYPE, ker_dim_x, ker_dim_y):
+    '''
+        assert dim_x + ker_dim_x == prev_dim_x 
+        assert dim_y + ker_dim_y == prev_dim_y
+    '''
+    cur_enm = Ensemble(dim_x, dim_y, TYPE, share_weights=True)
+    add_connection(net, prev, cur_enm, lambda x, y: \
+         [ (i,j) for i in range(x, x+ker_dim_x) \
+                 for j in range(y, y+ker_dim_y) ])
+    net.add_ensemble (cur_enm)
 
-def PoolingLayer():
-    pass
+def PoolingLayer(net, prev, dim_x, dim_y, TYPE, pool_dim_x, pool_dim_y):
+    '''
+        assert prev_dim_x % pool_dim_x == 0
+        assert prev_dim_y % pool_dim_y == 0
+        assert prev_dim_x / pool_dim_x == dim_x
+        assert prev_dim_y / pool_dim_y == dim_y
+    '''
+    cur_enm = Ensemble(dim_x, dim_y, TYPE)
+    add_connection(net, prev, cur_enm, lambda x, y: \
+         [ (i,j) for i in range(x*pool_dim_x, (x+1)*pool_dim_x) \
+                 for j in range(y*pool_dim_y, (y+1)*pool_dim_y) ])
+    net.add_ensemble (cur_enm)
 
 def SoftmaxLossLayer(net, prev, dim_x, dim_y):
     label_enm = Ensemble(1, nLabels, SoftmaxNeuron)
@@ -255,9 +268,7 @@ class DataNeuron(Neuron):
     def forward(self):
         # remember to load input feature to data neuron before forward propa
         assert len(self.forward_adj) > 0, "No forward adjacency element. "
-        for next_neuron in self.forward_adj:
-            #print self.pos_x, self.pos_y, len(next_neuron.inputs), len(next_neuron.inputs[0])
-            next_neuron.inputs[self.pos_x][self.pos_y] = self.output
+        pass
 
     def backward(self):
         pass # no backward propagation for data neuron
@@ -310,7 +321,7 @@ class SoftmaxNeuron(Neuron):
                 self.grad_weights[i][j] = self.grad_weights[i][j] + self.grad_output * self.inputs[i][j]
 
 class Ensemble:
-    def __init__(self, N1, N2, TYPE, share_weights=True):
+    def __init__(self, N1, N2, TYPE, share_weights=False):
         self.dim_x = N1
         self.dim_y = N2
         self.size = N1 * N2
