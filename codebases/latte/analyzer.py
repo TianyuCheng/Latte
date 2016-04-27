@@ -90,11 +90,19 @@ class NeuronAnalyzer(object):
         curr_enm_info = self.name2enm[self.enm]
         return tuple(curr_enm_info[3:5])
 
+    def curr_enm_type(self):
+        curr_enm_info = self.name2enm[self.enm]
+        return curr_enm_info[2]
+
     def prev_enm_dim(self):
         if self.enm_prev not in self.name2enm:
             return (-1, -1)     # some dummy value, likely not to be used
         prev_enm_info = self.name2enm[self.enm_prev]
         return tuple(prev_enm_info[3:5])
+
+    def prev_enm_type(self):
+        prev_enm_info = self.name2enm[self.enm_prev]
+        return prev_enm_info[2]
 
     '''
        TODO: add pattern match for statment here

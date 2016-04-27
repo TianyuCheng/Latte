@@ -97,11 +97,13 @@ class Translator(object):
             matched = tmpl.match(node) 
             if matched:
                 B, _,  _, dim_x, dim_y, scalar = map(self.process_node, tmpl.wildcard.values())
-                if self.prev_enm == "DataLayer": return None
+                prev_type = self.neuron_analyzer.prev_enm_type()
+                if prev_type is None or prev_type.endswith("DataLayer"):
+                    return None
                 C = ConstantNode(self.prev_enm + "_grad_output")
                 call = CallNode("sgemm_axpy")
                 call.add_arg(C, 1, 1)
-                call.add_arg(scalar, 1, 0)
+                call.add_arg(DereferenceNode(scalar), 1, 0)
                 call.add_arg(B, 1, 0)
                 call.add_arg(ConstantNode(self.prev_enm_dim[0] * self.prev_enm_dim[1]), 1, 0)
                 return call
@@ -113,7 +115,7 @@ class Translator(object):
                 C, B, di, dj, scalar, dim_x, dim_y = map(self.process_node, tmpl.wildcard.values())
                 call = CallNode("sgemm_axpy")
                 call.add_arg(C, 1, 1)
-                call.add_arg(scalar, 1, 0)
+                call.add_arg(DereferenceNode(scalar), 1, 0)
                 call.add_arg(B, 1, 0)
                 call.add_arg(ConstantNode(self.prev_enm_dim[0] * self.prev_enm_dim[1]), 1, 0)
                 return call
@@ -181,17 +183,8 @@ class Translator(object):
     def process_subscript(self, node):
         array_name = self._find_array_name(node)
         array_idx = self._find_array_index(node)
-        return IndexNode(array_name, array_idx, self.prev_enm_dim[1])
-
-        # # TODO: change input to output, when we have input copy, we have to change it back
-        # array_name = array_name.replace("inputs", "output")
-        #
-        # field_type = self.neuron_analyzer.get_field_type(array_name)
-        # if field_type is None:
-        # elif field_type == "vector<vector<float*>>":
-        #     return translated_name
-        # else:
-        #     return IndexNode(translated_name, array_idx, self.prev_enm_dim[1])
+        # return IndexNode(array_name, array_idx, self.prev_enm_dim[1])
+        return IndexNode(array_name, array_idx, self.curr_enm_dim[1])
 
     def _find_array_name(self, node):
         if isinstance(node, ast.Name):
@@ -249,6 +242,9 @@ class Translator(object):
                 return ConstantNode(var_name)
             #############################################
 
+            if attr.endswith("label"):
+                return ArrayNode(ConstantNode("cur_label"), ['x', 'y'])
+
             # analyze field type
             field_type = self.neuron_analyzer.get_field_type(attr)
             if field_type is None:
@@ -264,7 +260,7 @@ class Translator(object):
                 var_name = "%s_%s" % (self.curr_enm, attr)
                 return IndexNode(\
                         ConstantNode(var_name), ['x', 'y'], \
-                        self.prev_enm_dim[1])
+                        self.curr_enm_dim[1])
         else:
             # calls like np.tanh, suffice to only return the attr
             return ConstantNode(node.attr)
