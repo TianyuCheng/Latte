@@ -76,6 +76,7 @@ def FullyConnectedLayer(net, prev, dim_x, dim_y, TYPE):
     return cur_enm
 
 def ConvolutionLayer():
+    
     pass
 
 def PoolingLayer():
@@ -127,7 +128,7 @@ class Neuron:
         # clean up grad_output
         self.grad_output = 0.0
 
-class tanhNeuron(Neuron):
+class FCNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
         Neuron.__init__(self, enm, pos_x, pos_y)
         self.weights      = [[]]
@@ -137,35 +138,29 @@ class tanhNeuron(Neuron):
     def forward(self):
         # innder product of inputs and weights
         assert len(self.forward_adj) > 0, "No forward adjacency element. "
-        dp_result = 0.0
-        for i in range(self.prev_dim_x):
-            for j in range(self.prev_dim_y):
-                dp_result = dp_result + self.weights[i][j] * self.inputs[i][j]
-        # activation
+        self.output = 0.0 
+        for prev in self.backward_adj:
+            pi = prev.pos_x
+            pj = prev.pos_y
+            self.output += self.weights[pi][pj] * self.inputs[pi][pj]
+       # activation
         self.output = np.tanh(dp_result) 
         # preset the gradient for back propagation
         self.grad_activation = (1 - np.tanh(dp_result) ** 2 )
 
-        # Data Copy: put output value to the inputs of next layer
-        for next_neuron in self.forward_adj:
-            next_neuron.inputs[self.pos_x][self.pos_y] = self.output
-
     def backward(self):
         self.grad_output = self.grad_output * self.grad_activation
-
-        # scalar multiplication
-        for i in range(self.prev_dim_x):
-            for j in range(self.prev_dim_y):
-                self.grad_inputs[i][j] = self.grad_output * self.weights[i][j]
-                
         # backpropagate error
         for prev in self.backward_adj:
-            prev.grad_output += self.grad_inputs[prev.pos_x][prev.pos_y] 
+            pi = prev.pos_x
+            pj = prev.pos_y
+            prev.grad_output += self.grad_output * self.weights[pi][pj]
+        # weights to update
+        for prev in self.backward_adj:
+            pi = prev.pos_x
+            pj = prev.pos_y
+            self.grad_weights[pi][pj] += self.grad_output * self.inputs[pi][pj]
 
-        # weights update 
-        for i in range(self.prev_dim_x):
-            for j in range(self.prev_dim_y):
-                self.grad_weights[i][j] = self.grad_weights[i][j] + self.grad_output * self.inputs[i][j]
 
 class WeightedNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
