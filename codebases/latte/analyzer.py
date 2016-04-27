@@ -5,6 +5,7 @@ import ast
 from ast_matcher import *
 from templates import *
 from copy import deepcopy
+from translator import *
 
 neuron_analyzers = { }
 
@@ -53,8 +54,8 @@ class NeuronAnalyzer(object):
         print "UNUSED FIELDS:", unused_variables
 
     def analyze(self, enm_info, name2enm):
-        self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
         self.name2enm = name2enm
+        self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
         self.fp_codes = []
         self.bp_codes = []
         for function in self.extract_functions():
@@ -83,6 +84,16 @@ class NeuronAnalyzer(object):
                     if node.targets[0].value.id == "self":
                         # we need to record this field
                         self.add_field(node)
+
+    def curr_enm_dim(self):
+        curr_enm_info = self.name2enm[self.enm]
+        return tuple(curr_enm_info[3:5])
+
+    def prev_enm_dim(self):
+        if self.enm_prev not in self.name2enm:
+            return (-1, -1)     # some dummy value, likely not to be used
+        prev_enm_info = self.name2enm[self.enm_prev]
+        return tuple(prev_enm_info[3:5])
 
     '''
        TODO: add pattern match for statment here
@@ -137,7 +148,7 @@ class NeuronAnalyzer(object):
                 expr = self.parse_expr(tmpl.wildcard['exp'])
                 return "\t"*2 + "*(%s+x*%s+y) = %s;" % \
                         (self.enm+"_grad_output", self.name2enm[self.enm][4], expr)
-            
+
             var_name = self.parse_var_name(stmt.targets[0])
             var_value = self.parse_expr(stmt.value)
             return "\t"*2+ "%s = %s;" % (var_name, var_value)
@@ -201,7 +212,6 @@ class NeuronAnalyzer(object):
         print "=====> PROCESS STMT: (NO MATCH)", ast.dump(stmt)
 
     def add_field(self, node):
-        # var_name = self.parse_var_name(node.targets[0])
         var_name = node.targets[0].attr
         var_type = self.parse_var_type(node)
         if var_type is None or var_name in field_blacklist:
