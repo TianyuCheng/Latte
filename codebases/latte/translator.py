@@ -25,7 +25,7 @@ class Translator(object):
     self-defined structure, since Python AST
     is complicated to manipulate
     """
-    def __init__(self, neuron_analyzer, curr_enm, prev_enm):
+    def __init__(self, neuron_analyzer, curr_enm, prev_enm, pattern_match=True):
         super(Translator, self).__init__()
         self.neuron_analyzer = neuron_analyzer
         self.curr_enm = curr_enm
@@ -34,6 +34,8 @@ class Translator(object):
         # getting the dimension from analyzer for constant replacement
         self.curr_enm_dim = neuron_analyzer.curr_enm_dim()
         self.prev_enm_dim = neuron_analyzer.prev_enm_dim()
+        # set pattern match flag
+        self.pattern_match = pattern_match
 
     def process_stmt(self, stmt):
         # ignore the stmts for syntax and debug
@@ -41,33 +43,101 @@ class Translator(object):
         if isinstance(stmt, ast.Assert): return
         # process stmt of each type
         if isinstance(stmt, ast.Assign):
-            # assign node
-            var_name = self.process_node(stmt.targets[0])
-            var_value = self.process_node(stmt.value)
-            return AssignmentNode(var_name, var_value)
+            return self.process_assign(stmt)
         if isinstance(stmt, ast.For):
-            # for node
-            result = match_forloop(stmt)
-            if result is None:
-                term.dump("PROCESS FOR STMT(ERROR): %s" % ast.dump(stmt), term.FAIL)
-                return
-            # extract information from forloop
-            initial_name = self.process_node(result['i'])
-            initial = ConstantNode(0)
-            loop_bound = self.process_node(result['N'])
-            increment = ConstantNode(1)
-            # print loop_bound
-            # print result['N']
-            for_node = ForNode(initial_name, initial, loop_bound, increment)
-            # append the inner codes to the loop
-            codes = result['body']
-            if not isinstance(codes, list):
-                codes = [ codes ]
-            for stmt in codes:
-                for_node.add_child(self.process_stmt(stmt))
-            return for_node
+            return self.process_for(stmt)
         # We cannot process this statement, so we print it for debug
         term.dump("PROCESS STMT(NO MATCH): %s" % ast.dump(stmt), term.WARNING)
+
+    def process_assign(self, node):
+        # pattern match
+        if self.pattern_match:
+            # try pattern match a bunch of different patterns
+            tmpl = template_asgn("output")
+            if tmpl.prefix_of(node):
+                expr = self.process_node(tmpl.wildcard['exp'])
+                return AssignmentNode(ArrayNode(\
+                        ConstantNode(self.curr_enm+"_output"), ['x', 'y']), \
+                        expr)
+
+            tmpl = template_asgn("grad_activation")
+            if tmpl.prefix_of(node):
+                expr = self.process_node(tmpl.wildcard['exp'])
+                return AssignmentNode(ArrayNode(\
+                        ConstantNode(self.curr_enm+"_grad_activation"), ['x', 'y']), \
+                        expr)
+
+            tmpl = template_asgn("grad_output")
+            if tmpl.prefix_of(node):
+                expr = self.process_node(tmpl.wildcard['exp'])
+                return AssignmentNode(ArrayNode(\
+                        ConstantNode(self.curr_enm+"_grad_output"), ['x', 'y']), \
+                        expr)
+
+        # assign node
+        var_name = self.process_node(node.targets[0])
+        var_value = self.process_node(node.value)
+        return AssignmentNode(var_name, var_value)
+
+    def process_for(self, node):
+        # pattern match
+        if self.pattern_match:
+            tmpl = template_dot_product("range")
+            matched = tmpl.match(node) 
+            if matched:
+                A, B, i, j, dim_x, dim_y, C = map(self.process_node, tmpl.wildcard.values())
+                call = CallNode("sgemm_dp")
+                call.add_arg(GetPointerNode(C), 1, 1)
+                call.add_arg(A, 1, 0)
+                call.add_arg(B, 1, 0)
+                call.add_arg(ConstantNode(self.prev_enm_dim[0] * self.prev_enm_dim[1]), 1, 0)
+                return call
+
+            tmpl = template_bp_scalar_prod()
+            matched = tmpl.match(node) 
+            if matched:
+                B, _,  _, dim_x, dim_y, scalar = map(self.process_node, tmpl.wildcard.values())
+                if self.prev_enm == "DataLayer": return None
+                C = ConstantNode(self.prev_enm + "_grad_output")
+                call = CallNode("sgemm_axpy")
+                call.add_arg(C, 1, 1)
+                call.add_arg(scalar, 1, 0)
+                call.add_arg(B, 1, 0)
+                call.add_arg(ConstantNode(self.prev_enm_dim[0] * self.prev_enm_dim[1]), 1, 0)
+                return call
+
+            tmpl = template_bp_axpy()
+            matched = tmpl.match(node)
+            # print ast.dump(node)
+            if matched:
+                C, B, di, dj, scalar, dim_x, dim_y = map(self.process_node, tmpl.wildcard.values())
+                call = CallNode("sgemm_axpy")
+                call.add_arg(C, 1, 1)
+                call.add_arg(scalar, 1, 0)
+                call.add_arg(B, 1, 0)
+                call.add_arg(ConstantNode(self.prev_enm_dim[0] * self.prev_enm_dim[1]), 1, 0)
+                return call
+
+        # direct translation
+        result = match_forloop(node)
+        if result is None:
+            term.dump("PROCESS FOR STMT(ERROR): %s" % ast.dump(node), term.FAIL)
+            return
+        # extract information from forloop
+        initial_name = self.process_node(result['i'])
+        initial = ConstantNode(0)
+        loop_bound = self.process_node(result['N'])
+        increment = ConstantNode(1)
+        # print loop_bound
+        # print result['N']
+        for_node = ForNode(initial_name, initial, loop_bound, increment)
+        # append the inner codes to the loop
+        codes = result['body']
+        if not isinstance(codes, list):
+            codes = [ codes ]
+        for stmt in codes:
+            for_node.add_child(self.process_stmt(stmt))
+        return for_node
 
     def process_node(self, node):
         # parse the variable name, and create structure
@@ -111,35 +181,25 @@ class Translator(object):
     def process_subscript(self, node):
         array_name = self._find_array_name(node)
         array_idx = self._find_array_index(node)
-        translated_name = self._find_translated_name(node)
+        return IndexNode(array_name, array_idx, self.prev_enm_dim[1])
 
-        # TODO: change input to output, when we have input copy, we have to change it back
-        array_name = array_name.replace("inputs", "output")
-
-        field_type = self.neuron_analyzer.get_field_type(array_name)
-        if field_type is None:
-            return DereferenceNode(IndexNode(translated_name, array_idx, self.prev_enm_dim[1]))
-        elif field_type == "vector<vector<float*>>":
-            return DereferenceNode(IndexNode(\
-                    ArrayNode(translated_name, [ 'x', 'y' ]), array_idx, self.prev_enm_dim[1]))
-        else:
-            return DereferenceNode(IndexNode(translated_name, array_idx, self.prev_enm_dim[1]))
+        # # TODO: change input to output, when we have input copy, we have to change it back
+        # array_name = array_name.replace("inputs", "output")
+        #
+        # field_type = self.neuron_analyzer.get_field_type(array_name)
+        # if field_type is None:
+        # elif field_type == "vector<vector<float*>>":
+        #     return translated_name
+        # else:
+        #     return IndexNode(translated_name, array_idx, self.prev_enm_dim[1])
 
     def _find_array_name(self, node):
-        if isinstance(node, ast.Name):
-            return node.id
-        if isinstance(node, ast.Attribute):
-            return node.attr
-        assert isinstance(node, ast.Subscript)
-        return self._find_array_name(node.value)
-
-    def _find_translated_name(self, node):
         if isinstance(node, ast.Name):
             return ConstantNode(node.id)
         if isinstance(node, ast.Attribute):
             return self.process_attribute(node)
         assert isinstance(node, ast.Subscript)
-        return self._find_translated_name(node.value)
+        return self._find_array_name(node.value)
 
     def _find_array_index(self, node):
         if isinstance(node, ast.Name):
@@ -178,6 +238,7 @@ class Translator(object):
             if attr == "dim_y":
                 return ConstantNode(self.curr_enm_dim[1])
 
+            #############################################
             # replace inputs with outputs from last layer
             # this is done to fit the current design
             # we might want to follow the paper and do
@@ -185,15 +246,25 @@ class Translator(object):
             # are not shared
             if attr.endswith("inputs"):
                 var_name = "%s_output" % self.prev_enm
-                return DereferenceNode(IndexNode(\
-                        ConstantNode(var_name), ['x', 'y'], \
-                        self.prev_enm_dim[1]))
+                return ConstantNode(var_name)
+            #############################################
 
-            # transform to SoA form
-            var_name = "%s_%s" % (self.curr_enm, attr)
-            return DereferenceNode(IndexNode(\
-                    ConstantNode(var_name), ['x', 'y'], \
-                    self.prev_enm_dim[1]))
+            # analyze field type
+            field_type = self.neuron_analyzer.get_field_type(attr)
+            if field_type is None:
+                return ConstantNode(self.curr_enm + "_" + attr)
+            elif field_type == "vector<vector<float*>>":
+                # 2D fields
+                var_name = "%s_%s" % (self.curr_enm, attr)
+                return ArrayNode(\
+                        ConstantNode(var_name), ['x', 'y'])
+            else:
+                # 1D fields
+                # transform to SoA form
+                var_name = "%s_%s" % (self.curr_enm, attr)
+                return IndexNode(\
+                        ConstantNode(var_name), ['x', 'y'], \
+                        self.prev_enm_dim[1])
         else:
             # calls like np.tanh, suffice to only return the attr
             return ConstantNode(node.attr)

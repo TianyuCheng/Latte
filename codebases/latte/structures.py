@@ -133,6 +133,11 @@ class AssignmentNode(Node):
         self.left = left
         self.right = right
 
+        if isinstance(self.left, IndexNode):
+            self.left = DereferenceNode(self.left)
+        if isinstance(self.right, IndexNode):
+            self.right = DereferenceNode(self.right)
+
     def __str__(self):
         return "%s = %s;" % (str(self.left), str(self.right))
 
@@ -149,6 +154,11 @@ class ExpressionNode(Node):
         self.operator = operator
         # a node
         self.right = right
+
+        if isinstance(self.left, IndexNode):
+            self.left = DereferenceNode(self.left)
+        if isinstance(self.right, IndexNode):
+            self.right = DereferenceNode(self.right)
 
     def __str__(self):
         if self.operator == "pow":
@@ -192,9 +202,9 @@ class IndexNode(Node):
     def __str__(self):
         if len(self.indices) == 1:
             # single dimension pointer arithmetic
-            return "%s+%s" % (self.base_addr, str(self.indices[0]))
+            return "(%s+%s)" % (self.base_addr, str(self.indices[0]))
         else:
-            return "%s+%s*%d+%s" % (self.base_addr, \
+            return "(%s+%s*%d+%s)" % (self.base_addr, \
                     str(self.indices[0]), self.stride, str(self.indices[1]))
 
 
@@ -204,7 +214,15 @@ class DereferenceNode(Node):
         self.add_child(node)
 
     def __str__(self):
-        return "*(%s)" % str(self.children[0])
+        return "*%s" % str(self.children[0])
+
+class GetPointerNode(Node):
+    def __init__(self, node):
+        super(GetPointerNode, self).__init__()
+        self.add_child(node)
+
+    def __str__(self):
+        return "&%s" % str(self.children[0])
         
 
 class CallNode(Node):
@@ -226,4 +244,6 @@ class CallNode(Node):
 
     def __str__(self):
         args = ', '.join(map(str, self.children))
+        if isinstance(self.parent, ForNode):
+            return "%s(%s);" % (self.func, args)
         return "%s(%s)" % (self.func, args)

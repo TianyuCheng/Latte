@@ -48,9 +48,6 @@ int main (int argn, char** argv) {
     init_weights_mats(ip2_enm_grad_weights, 1, 20); 
     init_weights_mats(label_enm_grad_weights, 1, 10); 
 
-
-
-
     // load libsvm data
     vector<float*> train_features, test_features;
     vector<int> train_labels, test_labels;
@@ -62,77 +59,46 @@ int main (int argn, char** argv) {
     generate_shuffle_index(shuffle_index, train_features.size());
 
     // solve block
-    for ( int iter = 0 ; iter < 10 ; iter = iter + 1 ) {
-        cout << "iter = " << iter << endl;
+    for ( int iter = 0 ; iter < 100 ; iter = iter + 1 ) {
 
         for ( int si = 0 ; si < train_features.size() ; si = si + 1 ) {
 
-    cout << "ip1_enm_weights[0][0]: " << endl;
-    sgemm_print (ip1_enm_weights[0][0], 1, 4);
-    sgemm_print (ip1_enm_weights[0][1], 1, 4);
-    sgemm_print (ip1_enm_weights[0][2], 1, 4);
-    sgemm_print (ip1_enm_weights[0][3], 1, 4);
-    cout << "ip2_enm_weights[0][0]: " << endl;
-    sgemm_print (ip2_enm_weights[0][0], 1, 20);
-    sgemm_print (ip2_enm_weights[0][1], 1, 20);
-    sgemm_print (ip2_enm_weights[0][2], 1, 20);
-    sgemm_print (ip2_enm_weights[0][3], 1, 20);
-    cout << "label_enm_weights[0][0]: " << endl;
-    sgemm_print (label_enm_weights[0][0], 1, 10);
-    sgemm_print (label_enm_weights[0][1], 1, 10);
-    sgemm_print (label_enm_weights[0][2], 1, 10);
-
-            int data_idx = shuffle_index[si];
-            sgemm_copy (data_enm_output, train_features[data_idx], 1*4);
+            int data_idx = shuffle_index[si];sgemm_copy (data_enm_output, train_features[data_idx], 1*4);
             vector<vector<int>> cur_label (1, vector<int>(3, 0));
             cur_label[0][train_labels[data_idx]] = 1;
             float dp_result;
 
 
-            // Forward Propagation for ip1_enm
-            for (int x = 0; x < 1; x++) {
-                for (int y = 0; y < 20; y++) {
+
+            for (int x = 0; x < 1; x += 1) {
+                for (int y = 0; y < 20; y += 1) {
                     dp_result = 0.0;
-                    for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 4; ++j) {
-                            dp_result = (dp_result + ((*(ip1_enm_weights[x][y]+i*4+j)) * (*(data_enm_output+i*4+j))));
-                        }
-                    }
-                    *(ip1_enm_output+x*20+y) = tanh(dp_result);
-                    *(ip1_enm_grad_activation+x*20+y) = (1 - pow(tanh(dp_result), 2));
+                    sgemm_dp(&dp_result, ip1_enm_weights[x][y], data_enm_output, 4);
+                    *(ip1_enm_output+x*4+y) = tanh(dp_result);
+                    *(ip1_enm_grad_activation+x*4+y) = (1 - pow(tanh(dp_result), 2));
                 }
             }
 
-            // Forward Propagation for ip2_enm
-            for (int x = 0; x < 1; x++) {
-                for (int y = 0; y < 10; y++) {
+
+            for (int x = 0; x < 1; x += 1) {
+                for (int y = 0; y < 10; y += 1) {
                     dp_result = 0.0;
-                    for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 20; ++j) {
-                            dp_result = (dp_result + ((*(ip2_enm_weights[x][y]+i*20+j)) * (*(ip1_enm_output+i*20+j))));
-                        }
-                    }
-                    *(ip2_enm_output+x*10+y) = tanh(dp_result);
-                    *(ip2_enm_grad_activation+x*10+y) = (1 - pow(tanh(dp_result), 2));
+                    sgemm_dp(&dp_result, ip2_enm_weights[x][y], ip1_enm_output, 20);
+                    *(ip2_enm_output+x*20+y) = tanh(dp_result);
+                    *(ip2_enm_grad_activation+x*20+y) = (1 - pow(tanh(dp_result), 2));
                 }
             }
 
-            // Forward Propagation for label_enm
-            for (int x = 0; x < 1; x++) {
-                for (int y = 0; y < 3; y++) {
+
+            for (int x = 0; x < 1; x += 1) {
+                for (int y = 0; y < 3; y += 1) {
                     dp_result = 0.0;
-                    for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 10; ++j) {
-                            dp_result = (dp_result + ((*(label_enm_weights[x][y]+i*10+j)) * (*(ip2_enm_output+i*10+j))));
-                        }
-                    }
-                    cout << "dp_result: " << dp_result << endl;
-                    *(label_enm_output+x*3+y) = exp(dp_result);
+                    sgemm_dp(&dp_result, label_enm_weights[x][y], ip2_enm_output, 10);
+                    *(label_enm_output+x*10+y) = exp(dp_result);
                 }
             }
 
-            cout << "before annotate: label_enm_output:" << endl;
-            sgemm_print (label_enm_output, 1, 3);
+
             // annotate for loss layer
             float sumover = 0.0;
             for (int x = 0; x < 1; x++) {
@@ -145,59 +111,36 @@ int main (int argn, char** argv) {
                     *(label_enm_output+x*3+y) = *(label_enm_output+x*3+y) / sumover;
                 }
             }
-            cout << "after annotate: label_enm_output:" << endl;
-            sgemm_print (label_enm_output, 1, 3);
 
-            // Backward Propagation for label_enm
-            for (int x = 0; x < 1; x ++) {
-                for (int y = 0; y < 3; y ++) {
-                    *(label_enm_grad_output+x*3+y) = (*(label_enm_output+x*3+y) - cur_label[x][y]);
-                    for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 10; ++j) {
-                            *(ip2_enm_output+i*10+j) = *(ip2_enm_output+i*10+j) + ((*(label_enm_grad_output+x*3+y)) * (*(label_enm_weights[x][y]+i*10+j)));
-                        }
-                    }
-                    for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 10; ++j) {
-                            *(label_enm_grad_weights[x][y]+i*10+j) = (*(label_enm_grad_weights[x][y]+i*10+j) + ((*(label_enm_grad_output+x*3+y)) * (*(ip2_enm_output+i*10+j))));
-                        }
-                    }
+            for (int x = 0; x < 1; x += 1) {
+                for (int y = 0; y < 3; y += 1) {
+                    *(label_enm_grad_output+x*10+y) = (*(label_enm_output+x*10+y) - label_enm_label);
+                    sgemm_axpy(ip2_enm_grad_output, (label_enm_grad_output+x*10+y), label_enm_weights[x][y], 10);
+                    sgemm_axpy(label_enm_grad_weights[x][y], (label_enm_grad_output+x*10+y), ip2_enm_output, 10);
                 }
             }
 
-            // Backward Propagation for ip2_enm
-            for (int x = 0; x < 1; x ++) {
-                for (int y = 0; y < 10; y ++) {
-                    *(ip2_enm_grad_output+x*10+y) = ((*(ip2_enm_grad_output+x*10+y)) * (*(ip2_enm_grad_activation+x*10+y)));
-                    for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 20; ++j) {
-                            *(ip1_enm_output+i*20+j) = *(ip1_enm_output+i*20+j) + ((*(ip2_enm_grad_output+x*10+y)) * (*(ip2_enm_weights[x][y]+i*20+j)));
-                        }
-                    }
-                    for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 20; ++j) {
-                            *(ip2_enm_grad_weights[x][y]+i*20+j) = (*(ip2_enm_grad_weights[x][y]+i*20+j) + ((*(ip2_enm_grad_output+x*10+y)) * (*(ip1_enm_output+i*20+j))));
-                        }
-                    }
+
+            for (int x = 0; x < 1; x += 1) {
+                for (int y = 0; y < 10; y += 1) {
+                    *(ip2_enm_grad_output+x*20+y) = (*(ip2_enm_grad_output+x*20+y) * *(ip2_enm_grad_activation+x*20+y));
+                    sgemm_axpy(ip1_enm_grad_output, (ip2_enm_grad_output+x*20+y), ip2_enm_weights[x][y], 20);
+                    sgemm_axpy(ip2_enm_grad_weights[x][y], (ip2_enm_grad_output+x*20+y), ip1_enm_output, 20);
                 }
             }
 
-            // Backward Propagation for ip1_enm
-            for (int x = 0; x < 1; x ++) {
-                for (int y = 0; y < 20; y ++) {
-                    *(ip1_enm_grad_output+x*20+y) = ((*(ip1_enm_grad_output+x*20+y)) * (*(ip1_enm_grad_activation+x*20+y)));
-                    for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 4; ++j) {
-                            *(data_enm_output+i*4+j) = *(data_enm_output+i*4+j) + ((*(ip1_enm_grad_output+x*20+y)) * (*(ip1_enm_weights[x][y]+i*4+j)));
-                        }
-                    }
-                    for (int i = 0; i < 1; ++i) {
-                        for (int j = 0; j < 4; ++j) {
-                            *(ip1_enm_grad_weights[x][y]+i*4+j) = (*(ip1_enm_grad_weights[x][y]+i*4+j) + ((*(ip1_enm_grad_output+x*20+y)) * (*(data_enm_output+i*4+j))));
-                        }
-                    }
+
+            for (int x = 0; x < 1; x += 1) {
+                for (int y = 0; y < 20; y += 1) {
+                    *(ip1_enm_grad_output+x*4+y) = (*(ip1_enm_grad_output+x*4+y) * *(ip1_enm_grad_activation+x*4+y));
+                    sgemm_axpy(data_enm_grad_output, (ip1_enm_grad_output+x*4+y), ip1_enm_weights[x][y], 4);
+                    sgemm_axpy(ip1_enm_grad_weights[x][y], (ip1_enm_grad_output+x*4+y), data_enm_output, 4);
                 }
             }
+
+
+
+
 
             // weights_update for ip1_enm
             for (int x = 0; x < 1; x++) {
@@ -237,46 +180,35 @@ int main (int argn, char** argv) {
         cur_label[0][test_labels[data_idx]] = 1;
 
 
-        // Forward Propagation for ip1_enm
-        for (int x = 0; x < 1; x++) {
-            for (int y = 0; y < 20; y++) {
+
+        for (int x = 0; x < 1; x += 1) {
+            for (int y = 0; y < 20; y += 1) {
                 dp_result = 0.0;
-                for (int i = 0; i < 1; ++i) {
-                    for (int j = 0; j < 4; ++j) {
-                        dp_result = (dp_result + ((*(ip1_enm_weights[x][y]+i*4+j)) * (*(data_enm_output+i*4+j))));
-                    }
-                }
-                *(ip1_enm_output+x*20+y) = tanh(dp_result);
-                *(ip1_enm_grad_activation+x*20+y) = (1 - pow(tanh(dp_result), 2));
+                sgemm_dp(&dp_result, ip1_enm_weights[x][y], data_enm_output, 4);
+                *(ip1_enm_output+x*4+y) = tanh(dp_result);
+                *(ip1_enm_grad_activation+x*4+y) = (1 - pow(tanh(dp_result), 2));
             }
         }
 
-        // Forward Propagation for ip2_enm
-        for (int x = 0; x < 1; x++) {
-            for (int y = 0; y < 10; y++) {
+
+        for (int x = 0; x < 1; x += 1) {
+            for (int y = 0; y < 10; y += 1) {
                 dp_result = 0.0;
-                for (int i = 0; i < 1; ++i) {
-                    for (int j = 0; j < 20; ++j) {
-                        dp_result = (dp_result + ((*(ip2_enm_weights[x][y]+i*20+j)) * (*(ip1_enm_output+i*20+j))));
-                    }
-                }
-                *(ip2_enm_output+x*10+y) = tanh(dp_result);
-                *(ip2_enm_grad_activation+x*10+y) = (1 - pow(tanh(dp_result), 2));
+                sgemm_dp(&dp_result, ip2_enm_weights[x][y], ip1_enm_output, 20);
+                *(ip2_enm_output+x*20+y) = tanh(dp_result);
+                *(ip2_enm_grad_activation+x*20+y) = (1 - pow(tanh(dp_result), 2));
             }
         }
 
-        // Forward Propagation for label_enm
-        for (int x = 0; x < 1; x++) {
-            for (int y = 0; y < 3; y++) {
+
+        for (int x = 0; x < 1; x += 1) {
+            for (int y = 0; y < 3; y += 1) {
                 dp_result = 0.0;
-                for (int i = 0; i < 1; ++i) {
-                    for (int j = 0; j < 10; ++j) {
-                        dp_result = (dp_result + ((*(label_enm_weights[x][y]+i*10+j)) * (*(ip2_enm_output+i*10+j))));
-                    }
-                }
-                *(label_enm_output+x*3+y) = exp(dp_result);
+                sgemm_dp(&dp_result, label_enm_weights[x][y], ip2_enm_output, 10);
+                *(label_enm_output+x*10+y) = exp(dp_result);
             }
         }
+
 
         // annotate for loss layer in testing stage
         int pred = argmax (label_enm_output, 1*3);

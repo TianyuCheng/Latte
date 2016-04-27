@@ -62,8 +62,8 @@ class NeuronAnalyzer(object):
             self.process_forward(function, enm_info)
         for function in self.extract_functions():
             self.process_backward(function, enm_info)
-        return '\n'.join(map(str, self.fp_codes)), \
-               '\n'.join(map(str, self.bp_codes))
+        return ';\n'.join(map(str, self.fp_codes)) + "\n", \
+               ';\n'.join(map(str, self.bp_codes)) + "\n"
 
     def extract_functions(self):
         """
@@ -116,14 +116,20 @@ class NeuronAnalyzer(object):
 
         #######################################################
         curr_enm, prev_enm = enm_info[0], enm_info[2]
-        trans = Translator(self, curr_enm, prev_enm)
-        for stmt in stmt_walk(function_ast):
-            self.fp_codes.append(trans.process_stmt(stmt))
-        self.fp_codes = filter(lambda x: x is not None, self.fp_codes)
+        curr_dim = self.curr_enm_dim()
+        for_node_x = ForNode(ConstantNode("x"), ConstantNode(0), ConstantNode(curr_dim[0]), ConstantNode(1))
+        for_node_y = ForNode(ConstantNode("y"), ConstantNode(0), ConstantNode(curr_dim[1]), ConstantNode(1))
 
-        # # debug code
-        # for stmt in self.fp_codes:
-        #     print stmt
+        self.fp_codes.append(for_node_x)
+        for_node_x.add_child(for_node_y)
+
+        trans = Translator(self, curr_enm, prev_enm, self.enable_pattern_match)
+        for stmt in stmt_walk(function_ast):
+            for_node_y.add_child(trans.process_stmt(stmt))
+
+        # remove the double nested forloop if nothing is inside
+        if len(for_node_y.children) == 0:
+            self.fp_codes = []
         #######################################################
 
     def process_backward(self, function_ast, enm_info):
@@ -143,14 +149,20 @@ class NeuronAnalyzer(object):
         #     self.bp_codes.append("\t}\n}")
         #######################################################
         curr_enm, prev_enm = enm_info[0], enm_info[2]
-        trans = Translator(self, curr_enm, prev_enm)
-        for stmt in stmt_walk(function_ast):
-            self.bp_codes.append(trans.process_stmt(stmt))
-        self.bp_codes = filter(lambda x: x is not None, self.bp_codes)
+        curr_dim = self.curr_enm_dim()
+        for_node_x = ForNode(ConstantNode("x"), ConstantNode(0), ConstantNode(curr_dim[0]), ConstantNode(1))
+        for_node_y = ForNode(ConstantNode("y"), ConstantNode(0), ConstantNode(curr_dim[1]), ConstantNode(1))
 
-        # # debug code
-        # for stmt in self.bp_codes:
-        #     print stmt
+        self.bp_codes.append(for_node_x)
+        for_node_x.add_child(for_node_y)
+
+        trans = Translator(self, curr_enm, prev_enm, self.enable_pattern_match)
+        for stmt in stmt_walk(function_ast):
+            for_node_y.add_child(trans.process_stmt(stmt))
+
+        # remove the double nested forloop if nothing is inside
+        if len(for_node_y.children) == 0:
+            self.bp_codes = []
         #######################################################
 
     def add_field(self, node):
