@@ -57,6 +57,10 @@ class Node(object):
         # set child number and parent of new child
         new_child.set_child_number(child_number)
         new_child.set_parent(self)
+
+    def get_children(self):
+        """return list of children"""
+        return self.children
     
 
 class ForNode(Node):
