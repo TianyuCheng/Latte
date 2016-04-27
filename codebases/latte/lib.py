@@ -255,9 +255,12 @@ class DataNeuron(Neuron):
     def forward(self):
         # remember to load input feature to data neuron before forward propa
         assert len(self.forward_adj) > 0, "No forward adjacency element. "
+        '''
         for next_neuron in self.forward_adj:
             #print self.pos_x, self.pos_y, len(next_neuron.inputs), len(next_neuron.inputs[0])
             next_neuron.inputs[self.pos_x][self.pos_y] = self.output
+        '''
+        pass
 
     def backward(self):
         pass # no backward propagation for data neuron
