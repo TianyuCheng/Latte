@@ -36,7 +36,6 @@ Finish Status
 
     - [DONE] Determine uniform dependency of dimension
 
-    - [] Monitor data copy
 
 - [DONE] Synthesis
 
@@ -54,6 +53,8 @@ Finish Status
 
     - [] Data Parallelization: Parallel in Batch Items
 
+
+- [DONE] Code Generation
 
 Performance Evaluation
 -----------------------
