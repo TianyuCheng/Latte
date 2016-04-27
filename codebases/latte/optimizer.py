@@ -36,7 +36,7 @@ class TilingOptimizer(Optimizer):
             # if the current node now has a parent i.e. it was tiled,
             # move up the tree until we get to the root
             new_root = current_node;
-            while not current_node.get_parent() == -1:
+            while not new_root.get_parent() == None:
                 new_root = current_node.get_parent()
 
             # replace with new root
@@ -55,7 +55,7 @@ class TilingOptimizer(Optimizer):
 
         # add an outer for loop and change "this" for loop to deal
         # with the new tile
-        tile_node = structures.ForLoop(tile_var_name, for_node.get_initial, 
+        tile_node = structures.ForNode(tile_var_name, for_node.get_initial(), 
                                        loop_bound, self.tile_size)
 
         # replace the new node in whatever place the for node we are
@@ -64,17 +64,16 @@ class TilingOptimizer(Optimizer):
 
         # change the initial for loop to work with our new tiling of it
         for_node.set_initial(tile_var_name)
-        for_node.set_loop_bound(tile_var_name + " + "  str(self.tile_size))
+        for_node.set_loop_bound(tile_var_name + " + " + str(self.tile_size))
 
         remainder = loop_bound % self.tile_size
 
         # if no remaider, no clean up code required, else we do need cleanup
         # code
         if not remainder == 0:
+            # TODO
             #TODO
             pass
-
-
 
 class FusionOptimizer(Optimizer):
     def __init__(self, dict_of_tress, ensemble_order):
