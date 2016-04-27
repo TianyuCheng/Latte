@@ -8,6 +8,9 @@ class Node(object):
 
     def add_child(self, child):
         """Add a child to this node"""
+        if child is None:
+            return
+
         child_number = len(self.children)
         self.children.append(child)
 
@@ -58,12 +61,12 @@ class Node(object):
 
 class ForNode(Node):
     """Holds information for a for loop"""
-    def __init__(self, initial, initial_name, loop_bound, increment):
+    def __init__(self, initial_name, initial, loop_bound, increment):
         super(ForNode, self).__init__()
 
         # save initial variables
-        self.initial = initial
         self.initial_name = initial_name
+        self.initial = initial
         self.loop_bound = loop_bound
         self.increment = increment
 
@@ -93,20 +96,12 @@ class ForNode(Node):
 
     def __str__(self):
         """Prints the ENTIRE loop including its children"""
-        to_return = "for (int " + self.initial_name + " = "
-        to_return = to_return + str(self.initial) + "; "
-        to_return = to_return + self.initial_name + " < "
-        to_return = to_return + str(self.loop_bound) + "; "
-        to_return = to_return + self.initial_name + " = "
-        to_return = to_return + self.initial_name + " + "
-        to_return = to_return + str(self.increment) + ") {\n"
-
-        for node in self.children:
-            to_return = to_return + node.__str__()
-
-        to_return = to_return + "}\n"
-
-        return to_return
+        for_fmt = "for (int {i} = {initial}; {i} < {bound}; {i} += {increment}) {{\n{code}\n}}"
+        return for_fmt.format(i=self.initial_name, \
+                              initial=str(self.initial), \
+                              bound=str(self.loop_bound), \
+                              increment=str(self.increment), \
+                              code='\n'.join(map(str, self.children)))
 
 
 class ConstantNode(Node):
@@ -140,26 +135,26 @@ class AssignmentNode(Node):
         self.right = right
 
     def __str__(self):
-        to_return = self.left.__str__() + " = " + self.right.__str__()
-        return to_return
+        return "%s = %s;" % (str(self.left), str(self.right))
 
 
 class ExpressionNode(Node):
-    """Holds an expression (i.e. binary op): a left expression, and operand, then the right
+    """Holds an expression (i.e. binary op): a left expression, and operator, then the right
     expression"""
-    def __init__(self, left, right, operand):
+    def __init__(self, left, right, operator):
         super(ExpressionNode, self).__init__()
 
         # a node
         self.left = left
-        # NOTE operand should be a + or a *
-        self.operand = operand
+        # NOTE operator should be a + or a *
+        self.operator = operator
         # a node
         self.right = right
 
     def __str__(self):
-        to_return = "(" + self.left.__str__() + operand + self.right.__str__() + ")"
-        return to_return
+        if self.operator == "pow":
+            return "%s(%s, %s)" % (self.operator, str(self.left), str(self.right))
+        return "(%s %s %s)" % (str(self.left), self.operator, str(self.right))
 
 
 class ArrayNode(Node):
