@@ -65,15 +65,12 @@ def LibsvmDataLayer(net, train_file, test_file, dim_x, dim_y, n_classes):
 
 def FullyConnectedLayer(net, prev, dim_x, dim_y, TYPE):
     # construct a new ensemble
-    # prev_size = prev.get_size()
     cur_enm = Ensemble(dim_x, dim_y, TYPE)
     cur_enm.set_backward_adj(prev)
     prev.set_forward_adj(cur_enm)
     cur_enm.set_inputs_dim (prev.dim_x, prev.dim_y)
 
     # enforce connections
-    # mappings = {}
-    # for i in range(prev_size): mappings.update({i:[j for j in range(dim_y)]})
     add_connection(net, prev, cur_enm, lambda _: [ j for j in range(dim_y) ])
     net.add_ensemble (cur_enm)
     return cur_enm
@@ -226,34 +223,43 @@ class ReLUNeuron(Neuron):
                 self.grad_weights[i][j] = self.grad_weights[i][j] + self.grad_output * self.inputs[i][j]
 
 class ConvolutionNeuron(Neuron):
-    def __init__(self, enm, pos_x, pos_y):
+    def __init__(self, enm, pos_x, pos_y, conv_dim_x, conv_dim_y):
         Neuron.__init__(self, enm, pos_x, pos_y)
 
     def forward(self):
-        pass
+        self.conv_dim_x 
 
     def backward(self):
         pass 
 
 class MeanPoolingNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
-        Neuron.__init__(self, enm, pos_x, pos_y)
-        self.pool_dim_x
-        self.pool_dim_y 
+        Neuron.__init__(self, enm, pos_x, pos_y, pool_dim_x, pool_dim_y)
+        self.pool_dim_x = pool_dim_x
+        self.pool_dim_y = pool_dim_y
 
     def forward(self):
-        dp_result = 0.0
+        self.output = 0.0
         for prev in self.backward_adj:
-            dp_result = dp_result + self.weights[i][j] * self.inputs[i][j]
-        dp_result = dp_result / self.pool_dim_x
-        # activation
-        self.output = np.log(np.exp(dp_result) + 1) # softplus function
+            pi = prev.pos_x
+            pj = prev.pos_y
+            self.output += self.weights[pi][pj] * self.inputs[pi][pj]
+        self.output = self.output / (self.pool_dim_x * self.pool_dim_y) 
         # preset the gradient for back propagation
-        self.grad_activation = 1.0 / (1 + np.exp(-1.0*dp_result))  # logistic
+        self.grad_activation = 1.0 / (self.pool_dim_x * self.pool_dim_y) 
 
     def backward(self):
-        pass 
-
+        self.grad_output = self.grad_output * self.grad_activation
+        # backpropagate error
+        for prev in self.backward_adj:
+            pi = prev.pos_x
+            pj = prev.pos_y
+            prev.grad_output += self.grad_output * self.weights[pi][pj]
+        # weights to update
+        for prev in self.backward_adj:
+            pi = prev.pos_x
+            pj = prev.pos_y
+            self.grad_weights[pi][pj] += self.grad_output * self.inputs[pi][pj]
 
 class DataNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
