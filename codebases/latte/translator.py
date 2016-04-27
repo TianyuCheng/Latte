@@ -5,6 +5,13 @@ from copy import deepcopy
 from term import *
 from structures import *
 
+function_args = {
+    "sgemm_dp": [ 3, 1, 1, 1 ],
+    "sgemm_axpy": [ 3, 1, 1, 1 ],
+    "sgemm_copy": [ 3, 1, 1 ],
+    "sgemm_zeros": [ 3, 1 ]
+}
+
 def match_forloop(stmt):
     tmpls = [ template_for("range"), template_for("xrange") ]
     for tmpl in tmpls:
@@ -66,11 +73,11 @@ class Translator(object):
         # parse the variable name, and create structure
         if isinstance(node, str) or isinstance(node, int) or \
            isinstance(node, float):
-            return node
+            return ConstantNode(node)
         if isinstance(node, ast.Num):
             return ConstantNode(node.n)
         if isinstance(node, ast.Name):
-            return node.id
+            return ConstantNode(node.id)
         if isinstance(node, ast.BinOp):
             l = self.process_node(node.left)
             r = self.process_node(node.right)
@@ -89,13 +96,34 @@ class Translator(object):
     def process_call(self, node):
         func_name = self.process_node(node.func)
         func_args = map(self.process_node, node.args)
-        # node = CallNode()
-        return "call"
+        node = CallNode(func_name)
+        # default all arguments are read only
+        arg_flags = [ 1 ] * len(func_args)
+        # check if the function falls in our special functions: sgemm
+        if func_name in function_args:
+            arg_flags = function_args[func_name]
+            assert len(arg_flags) == len(func_args)
+        # fill the CallNode with arguments
+        for arg, flag in zip(func_args, arg_flags):
+            node.add_arg(arg, flag&0x1, flag&0x2)
+        return node
 
     def process_subscript(self, node):
         array_name = self._find_array_name(node)
         array_idx = self._find_array_index(node)
-        return "subscript"
+        translated_name = self._find_translated_name(node)
+
+        # TODO: change input to output, when we have input copy, we have to change it back
+        array_name = array_name.replace("inputs", "output")
+
+        field_type = self.neuron_analyzer.get_field_type(array_name)
+        if field_type is None:
+            return DereferenceNode(IndexNode(translated_name, array_idx, self.prev_enm_dim[1]))
+        elif field_type == "vector<vector<float*>>":
+            return DereferenceNode(IndexNode(\
+                    ArrayNode(translated_name, [ 'x', 'y' ]), array_idx, self.prev_enm_dim[1]))
+        else:
+            return DereferenceNode(IndexNode(translated_name, array_idx, self.prev_enm_dim[1]))
 
     def _find_array_name(self, node):
         if isinstance(node, ast.Name):
@@ -104,6 +132,14 @@ class Translator(object):
             return node.attr
         assert isinstance(node, ast.Subscript)
         return self._find_array_name(node.value)
+
+    def _find_translated_name(self, node):
+        if isinstance(node, ast.Name):
+            return ConstantNode(node.id)
+        if isinstance(node, ast.Attribute):
+            return self.process_attribute(node)
+        assert isinstance(node, ast.Subscript)
+        return self._find_translated_name(node.value)
 
     def _find_array_index(self, node):
         if isinstance(node, ast.Name):
@@ -131,7 +167,7 @@ class Translator(object):
     def process_attribute(self, node):
         owner = self.process_node(node.value)
         attr = node.attr
-        if owner == "self":
+        if str(owner) == "self":
             # built-in dimension analysis
             if attr == "prev_dim_x":
                 return ConstantNode(self.prev_enm_dim[0])
@@ -149,11 +185,15 @@ class Translator(object):
             # are not shared
             if attr.endswith("inputs"):
                 var_name = "%s_output" % self.prev_enm
-                return var_name
+                return DereferenceNode(IndexNode(\
+                        ConstantNode(var_name), ['x', 'y'], \
+                        self.prev_enm_dim[1]))
 
             # transform to SoA form
             var_name = "%s_%s" % (self.curr_enm, attr)
-            return var_name
+            return DereferenceNode(IndexNode(\
+                    ConstantNode(var_name), ['x', 'y'], \
+                    self.prev_enm_dim[1]))
         else:
             # calls like np.tanh, suffice to only return the attr
-            return node.attr
+            return ConstantNode(node.attr)

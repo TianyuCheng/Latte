@@ -103,7 +103,6 @@ class ForNode(Node):
                               increment=str(self.increment), \
                               code='\n'.join(map(str, self.children)))
 
-
 class ConstantNode(Node):
     """Holds a constant, whether it be a number or a variable name"""
     def __init__(self, constant):
@@ -158,22 +157,73 @@ class ExpressionNode(Node):
 
 
 class ArrayNode(Node):
-    #TODO
-    pass
+    def __init__(self, base_addr, indices):
+        super(ArrayNode, self).__init__()
+        self.base_addr = base_addr
+        # indices could be multiple dimensions
+        # they are stored in a list in the natural order,
+        # e.g. [ i, j ]
+        if isinstance(indices, list):
+            self.indices = indices
+        else:
+            self.indices = [ indices ]
 
-
-class DereferenceNode(Node):
-    #TODO
-    pass
+    def __str__(self):
+        indices = ''.join(map(lambda x: "[%s]" % str(x), self.indices))
+        return "%s%s" % (self.base_addr, indices)
 
 
 class IndexNode(Node):
     """Purpose of this is to store pointer arithmetic expressions, i.e. i*10 + j.
     Works for 2D pointer arithmetic at most"""
-    #TODO
+    def __init__(self, base_addr, indices, stride=1):
+        super(IndexNode, self).__init__()
+        # indices could be multiple dimensions
+        # they are stored in a list in the natural order,
+        # e.g. [ i, j ]
+        self.base_addr = base_addr
+        self.stride = stride
+        if isinstance(indices, list):
+            self.indices = indices
+        else:
+            self.indices = [ indices ]
+        assert len(self.indices) <= 2
 
+    def __str__(self):
+        if len(self.indices) == 1:
+            # single dimension pointer arithmetic
+            return "%s+%s" % (self.base_addr, str(self.indices[0]))
+        else:
+            return "%s+%s*%d+%s" % (self.base_addr, \
+                    str(self.indices[0]), self.stride, str(self.indices[1]))
+
+
+class DereferenceNode(Node):
+    def __init__(self, node):
+        super(DereferenceNode, self).__init__()
+        self.add_child(node)
+
+    def __str__(self):
+        return "*(%s)" % str(self.children[0])
+        
 
 class CallNode(Node):
     """Represents calls to functions. May have multiple arguments. Should also
     specify which arguments are read from/written to"""
-    #TODO
+    def __init__(self, func):
+        super(CallNode, self).__init__()
+        # call attributes
+        self.func = func
+        self.args_rw = []
+
+    def add_arg(self, arg, read, write):
+        self.add_child(arg)
+        # set flag for arg read/write
+        rw = 0
+        if read:  rw |= 0x1
+        if write: rw |= 0x2
+        self.args_rw.append(rw)
+
+    def __str__(self):
+        args = ', '.join(map(str, self.children))
+        return "%s(%s)" % (self.func, args)
