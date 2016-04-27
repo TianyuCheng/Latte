@@ -518,6 +518,8 @@ def process_lib(filename, ensemble_info, name2enm, PM_FLAG=True):
     print "###########################################"
     forward_codes = { }
     backward_codes = { }
+    fp_codes = [ ]
+    bp_codes = [ ]
 
     for ensemble in ensemble_info:
         _name, _type, _prev, _dim_x, _dim_y, _neuron_type = ensemble[:6]
@@ -526,5 +528,7 @@ def process_lib(filename, ensemble_info, name2enm, PM_FLAG=True):
         fp_code, bp_code = analyzer.analyze(ensemble, name2enm)
         forward_codes[_name] = fp_code
         backward_codes[_name] = bp_code
+        fp_codes.append(fp_code)
+        bp_codes.append(bp_code)
 
-    return neuron_analyzers, forward_codes, backward_codes
+    return neuron_analyzers, forward_codes, backward_codes, fp_codes, bp_codes
