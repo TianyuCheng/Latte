@@ -154,10 +154,10 @@ class FCNeuron(Neuron):
         self.output = 0.0 
         for prev in self.backward_adj:
             self.output += self.weights[prev.pos_x][prev.pos_y] * self.inputs[prev.pos_x][prev.pos_y]
-       # activation
-        self.output = np.tanh(dp_result) 
         # preset the gradient for back propagation
-        self.grad_activation = (1 - np.tanh(dp_result) ** 2 )
+        self.grad_activation = (1 - np.tanh(self.output) ** 2 )
+        # activation
+        self.output = np.tanh(self.output) 
 
     def backward(self):
         self.grad_output = self.grad_output * self.grad_activation
@@ -204,8 +204,8 @@ class ReLUNeuron(Neuron):
         self.output = 0.0
         for prev in self.backward_adj:
             self.output += self.weights[prev.pos_x][prev.pos_y] * self.inputs[prev.pos_x][prev.pos_y]
-        self.output = np.log(np.exp(dp_result) + 1) # softplus function
-        self.grad_activation = 1.0 / (1 + np.exp(-1.0*dp_result))  # logistic
+        self.grad_activation = 1.0 / (1 + np.exp(-1.0*self.output))  # logistic
+        self.output = np.log(np.exp(self.output) + 1) # softplus function
 
     def backward(self):
         self.grad_output = self.grad_output * self.grad_activation
