@@ -220,7 +220,7 @@ class DereferenceNode(Node):
         self.add_child(node)
 
     def __str__(self):
-        return "*%s" % str(self.children[0])
+        return "(*%s)" % str(self.children[0])
 
 class GetPointerNode(Node):
     def __init__(self, node):
@@ -228,7 +228,7 @@ class GetPointerNode(Node):
         self.add_child(node)
 
     def __str__(self):
-        return "&%s" % str(self.children[0])
+        return "(&%s)" % str(self.children[0])
         
 
 class CallNode(Node):
