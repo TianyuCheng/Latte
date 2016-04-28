@@ -99,10 +99,7 @@ class Translator(object):
             #tmpl = template_dp("self", "output")
             tmpl = template_fp_dp()
             matched = tmpl.match(node) 
-            print matched, "==================="
             if matched:
-                for x in map(self.process_node, tmpl.wildcard.values()):
-                    print x
                 A, C, B, i,  _, j = map(self.process_node, tmpl.wildcard.values())
                 call = CallNode(ConstantNode("sgemm_dp"))
                 #C = ConstantNode(self.curr_enm + "_output")
@@ -112,26 +109,32 @@ class Translator(object):
                 call.add_arg(ConstantNode(self.prev_enm_dim[0] * self.prev_enm_dim[1]), 1, 0)
                 return call
 
+            tmpl = template_bp_axpy()
+            matched = tmpl.match(node)
+            # print ast.dump(node)
+            ''' self.grad_weights[prev.pos_x][prev.pos_y] += 
+                            self.grad_output * self.inputs[prev.pos_x][prev.pos_y] '''
+            if matched:
+                #for x in map(self.process_node, tmpl.wildcard.values()): print x
+                C, B, _, _, scalar, _ = map(self.process_node, tmpl.wildcard.values())
+                call = CallNode(ConstantNode("sgemm_axpy"))
+                call.add_arg(C, 1, 1)
+                call.add_arg(DereferenceNode(scalar), 1, 0)
+                call.add_arg(B, 1, 0)
+                call.add_arg(ConstantNode(self.prev_enm_dim[0] * self.prev_enm_dim[1]), 1, 0)
+                print call
+                return call
+
             tmpl = template_bp_scalar_prod()
             matched = tmpl.match(node) 
+            ''' prev.grad_output += self.grad_output * self.weights[prev.pos_x][prev.pos_y] '''
             if matched:
-                B, _,  _, dim_x, dim_y, scalar = map(self.process_node, tmpl.wildcard.values())
+                #for x in map(self.process_node, tmpl.wildcard.values()): print x
+                C, B,  _, _, scalar, _ = map(self.process_node, tmpl.wildcard.values())
                 prev_type = self.neuron_analyzer.prev_enm_type()
                 if prev_type is None or prev_type.endswith("DataLayer"):
                     return None
                 C = ConstantNode(self.prev_enm + "_grad_output")
-                call = CallNode(ConstantNode("sgemm_axpy"))
-                call.add_arg(unwrap(C), 1, 1)
-                call.add_arg(DereferenceNode(scalar), 1, 0)
-                call.add_arg(B, 1, 0)
-                call.add_arg(ConstantNode(self.prev_enm_dim[0] * self.prev_enm_dim[1]), 1, 0)
-                return call
-
-            tmpl = template_bp_axpy()
-            matched = tmpl.match(node)
-            # print ast.dump(node)
-            if matched:
-                C, B, di, dj, scalar, dim_x, dim_y = map(self.process_node, tmpl.wildcard.values())
                 call = CallNode(ConstantNode("sgemm_axpy"))
                 call.add_arg(unwrap(C), 1, 1)
                 call.add_arg(DereferenceNode(scalar), 1, 0)

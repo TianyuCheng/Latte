@@ -93,21 +93,18 @@ def template_fp_dp():
     for _prev in self.backward_adj:
         _C += _A[_i][_j] * _B[_i][_j] 
 
+@template
+def template_bp_axpy():
+    for _prev in self.backward_adj:
+        _C[_i][_j] += _scalar * _B[_i][_j]
+
+@template
+def template_bp_scalar_prod():
+    for _prev in self.backward_adj:
+        _A += _alpha * _B[_i][_j]
 
 @template
 def template_asgn(field):
     self.field = _exp
-
-@template
-def template_bp_scalar_prod():
-    for _i in range(_dim_x):
-        for _j in range(_dim_y):
-            self.grad_inputs[_i][_j] = _alpha * _B[_i][_j]
-
-@template
-def template_bp_axpy():
-    for _i in range(_dim_x):
-        for _j in range(_dim_y):
-            _C[_i][_j] = _C[_i][_j] + _scalar * _B[_i][_j]
 
 

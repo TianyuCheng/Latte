@@ -285,17 +285,13 @@ class SoftmaxNeuron(Neuron):
 
     def backward(self):
         self.grad_output = self.output - self.label 
-        # scalar multiplication
-        for i in range(self.prev_dim_x):
-            for j in range(self.prev_dim_y):
-                self.grad_inputs[i][j] = self.grad_output * self.weights[i][j]
-        # propagate back
+        # backpropagate error
         for prev in self.backward_adj:
-            prev.grad_output += self.grad_inputs[prev.pos_x][prev.pos_y] 
-        # weights update
-        for i in range(self.prev_dim_x):
-            for j in range(self.prev_dim_y):
-                self.grad_weights[i][j] = self.grad_weights[i][j] + self.grad_output * self.inputs[i][j]
+            prev.grad_output += self.grad_output * self.weights[prev.pos_x][prev.pos_y]
+        # weights to update
+        for prev in self.backward_adj:
+            self.grad_weights[prev.pos_x][prev.pos_y] += self.grad_output * self.inputs[prev.pos_x][prev.pos_y]
+
 
 class Ensemble:
     def __init__(self, N1, N2, TYPE, share_weights=False):
