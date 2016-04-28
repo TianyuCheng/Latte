@@ -13,8 +13,15 @@ Ensemble ip1_enm(1, 20, &data_enm); net.add_ensemble(&ip1_enm);
 Ensemble ip2_enm(1, 10, &ip1_enm); net.add_ensemble(&ip2_enm);
 Ensemble label_enm(1, 3, &ip2_enm); net.add_ensemble(&label_enm);
 
+// allocating memory for specific fields of data_enm
+float* data_enm_grad_activation = init_mkl_mat(1, 4);
+vector<vector<float*>> data_enm_inputs (1, vector<float*>(4, NULL));
+vector<vector<float*>> data_enm_grad_inputs (1, vector<float*>(4, NULL));
+float* data_enm_output = init_mkl_mat(1, 4);
+float* data_enm_grad_output = init_mkl_mat(1, 4);
 // allocating memory for specific fields of ip1_enm
 vector<vector<float*>> ip1_enm_inputs (1, vector<float*>(20, NULL));
+vector<vector<float*>> ip1_enm_grad_inputs (1, vector<float*>(20, NULL));
 vector<vector<float*>> ip1_enm_grad_weights (1, vector<float*>(20, NULL));
 float* ip1_enm_grad_activation = init_mkl_mat(1, 20);
 vector<vector<float*>> ip1_enm_weights (1, vector<float*>(20, NULL));
@@ -22,6 +29,7 @@ float* ip1_enm_grad_output = init_mkl_mat(1, 20);
 float* ip1_enm_output = init_mkl_mat(1, 20);
 // allocating memory for specific fields of ip2_enm
 vector<vector<float*>> ip2_enm_inputs (1, vector<float*>(10, NULL));
+vector<vector<float*>> ip2_enm_grad_inputs (1, vector<float*>(10, NULL));
 vector<vector<float*>> ip2_enm_grad_weights (1, vector<float*>(10, NULL));
 float* ip2_enm_grad_activation = init_mkl_mat(1, 10);
 vector<vector<float*>> ip2_enm_weights (1, vector<float*>(10, NULL));
@@ -31,6 +39,7 @@ float* ip2_enm_output = init_mkl_mat(1, 10);
 vector<vector<float*>> label_enm_inputs (1, vector<float*>(3, NULL));
 vector<vector<float*>> label_enm_grad_inputs (1, vector<float*>(3, NULL));
 vector<vector<float*>> label_enm_grad_weights (1, vector<float*>(3, NULL));
+float* label_enm_grad_activation = init_mkl_mat(1, 3);
 vector<vector<float*>> label_enm_weights (1, vector<float*>(3, NULL));
 float* label_enm_grad_output = init_mkl_mat(1, 3);
 float* label_enm_output = init_mkl_mat(1, 3);
@@ -67,18 +76,28 @@ float dp_result;
 
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 20; y += 1) {
-*(ip1_enm_output+x*20+y) = 0.0;
-*(ip1_enm_output+x*20+y) = tanh(dp_result);
-*(ip1_enm_grad_activation+x*20+y) = (1 - pow(tanh(dp_result), 2));
+(*(ip1_enm_output+x*20+y)) = 0.0;
+for (int i = 0; i < 1; i += 1) {
+for (int j = 0; j < 4; j += 1) {
+(*(ip1_enm_output+x*20+y)) = ((*(ip1_enm_output+x*20+y)) + ((*(ip1_enm_weights[x][y]+i*20+j)) * (*(data_enm_output+i*20+j))));
+}
+}
+(*(ip1_enm_output+x*20+y)) = tanh(dp_result);
+(*(ip1_enm_grad_activation+x*20+y)) = (1 - pow(tanh(dp_result), 2));
 }
 }
 
 
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 10; y += 1) {
-*(ip2_enm_output+x*10+y) = 0.0;
-*(ip2_enm_output+x*10+y) = tanh(dp_result);
-*(ip2_enm_grad_activation+x*10+y) = (1 - pow(tanh(dp_result), 2));
+(*(ip2_enm_output+x*10+y)) = 0.0;
+for (int i = 0; i < 1; i += 1) {
+for (int j = 0; j < 4; j += 1) {
+(*(ip2_enm_output+x*10+y)) = ((*(ip2_enm_output+x*10+y)) + ((*(ip2_enm_weights[x][y]+i*10+j)) * (*(ip1_enm_output+i*10+j))));
+}
+}
+(*(ip2_enm_output+x*10+y)) = tanh(dp_result);
+(*(ip2_enm_grad_activation+x*10+y)) = (1 - pow(tanh(dp_result), 2));
 }
 }
 
@@ -86,12 +105,8 @@ for (int y = 0; y < 10; y += 1) {
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 3; y += 1) {
 dp_result = 0.0;
-for (int i = 0; i < 1; i += 1) {
-for (int j = 0; j < 10; j += 1) {
-dp_result = (dp_result + (*(label_enm_weights[x][y]+i*3+j) * *(ip2_enm_output+i*3+j)));
-}
-}
-*(label_enm_output+x*3+y) = exp(dp_result);
+sgemm_dp((&dp_result), label_enm_weights[x][y], ip2_enm_output, 10);
+(*(label_enm_output+x*3+y)) = exp(dp_result);
 }
 }
 
@@ -111,31 +126,48 @@ for (int x = 0; x < 1; x++) {
 
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 3; y += 1) {
-*(label_enm_grad_output+x*3+y) = (*(label_enm_output+x*3+y) - cur_label[x][y]);
+(*(label_enm_grad_output+x*3+y)) = ((*(label_enm_output+x*3+y)) - cur_label[x][y]);
+sgemm_axpy(ip2_enm_grad_output, (*(label_enm_grad_output+x*3+y)), label_enm_weights[x][y], 10);
 for (int i = 0; i < 1; i += 1) {
 for (int j = 0; j < 10; j += 1) {
-*(ip2_enm_output+i*3+j) = (*(label_enm_grad_output+x*3+y) * *(label_enm_weights[x][y]+i*3+j));
+(*(ip2_enm_grad_output+x*10+y)) = ((*(ip2_enm_grad_output+x*10+y)) + (*(ip2_enm_output+i*3+j)));
 }
 }
-for (int i = 0; i < 1; i += 1) {
-for (int j = 0; j < 10; j += 1) {
-*(label_enm_grad_weights[x][y]+i*3+j) = (*(label_enm_grad_weights[x][y]+i*3+j) + (*(label_enm_grad_output+x*3+y) * *(ip2_enm_output+i*3+j)));
-}
-}
+sgemm_axpy(label_enm_grad_weights[x][y], (*(label_enm_grad_output+x*3+y)), ip2_enm_output, 10);
 }
 }
 
 
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 10; y += 1) {
-*(ip2_enm_grad_output+x*10+y) = (*(ip2_enm_grad_output+x*10+y) * *(ip2_enm_grad_activation+x*10+y));
+(*(ip2_enm_grad_output+x*10+y)) = ((*(ip2_enm_grad_output+x*10+y)) * (*(ip2_enm_grad_activation+x*10+y)));
+for (int i = 0; i < 1; i += 1) {
+for (int j = 0; j < 4; j += 1) {
+(*(ip1_enm_grad_output+x*20+y)) = ((*(ip1_enm_grad_output+x*20+y)) + ((*(ip2_enm_grad_output+x*10+y)) * (*(ip2_enm_weights[x][y]+i*10+j))));
+}
+}
+for (int i = 0; i < 1; i += 1) {
+for (int j = 0; j < 4; j += 1) {
+(*(ip2_enm_grad_weights[x][y]+i*10+j)) = ((*(ip2_enm_grad_weights[x][y]+i*10+j)) + ((*(ip2_enm_grad_output+x*10+y)) * (*(ip1_enm_output+i*10+j))));
+}
+}
 }
 }
 
 
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 20; y += 1) {
-*(ip1_enm_grad_output+x*20+y) = (*(ip1_enm_grad_output+x*20+y) * *(ip1_enm_grad_activation+x*20+y));
+(*(ip1_enm_grad_output+x*20+y)) = ((*(ip1_enm_grad_output+x*20+y)) * (*(ip1_enm_grad_activation+x*20+y)));
+for (int i = 0; i < 1; i += 1) {
+for (int j = 0; j < 4; j += 1) {
+(*(data_enm_grad_output+x*4+y)) = ((*(data_enm_grad_output+x*4+y)) + ((*(ip1_enm_grad_output+x*20+y)) * (*(ip1_enm_weights[x][y]+i*20+j))));
+}
+}
+for (int i = 0; i < 1; i += 1) {
+for (int j = 0; j < 4; j += 1) {
+(*(ip1_enm_grad_weights[x][y]+i*20+j)) = ((*(ip1_enm_grad_weights[x][y]+i*20+j)) + ((*(ip1_enm_grad_output+x*20+y)) * (*(data_enm_output+i*20+j))));
+}
+}
 }
 }
 
@@ -184,18 +216,28 @@ cur_label[0][test_labels[data_idx]] = 1;
 
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 20; y += 1) {
-*(ip1_enm_output+x*20+y) = 0.0;
-*(ip1_enm_output+x*20+y) = tanh(dp_result);
-*(ip1_enm_grad_activation+x*20+y) = (1 - pow(tanh(dp_result), 2));
+(*(ip1_enm_output+x*20+y)) = 0.0;
+for (int i = 0; i < 1; i += 1) {
+for (int j = 0; j < 4; j += 1) {
+(*(ip1_enm_output+x*20+y)) = ((*(ip1_enm_output+x*20+y)) + ((*(ip1_enm_weights[x][y]+i*20+j)) * (*(data_enm_output+i*20+j))));
+}
+}
+(*(ip1_enm_output+x*20+y)) = tanh(dp_result);
+(*(ip1_enm_grad_activation+x*20+y)) = (1 - pow(tanh(dp_result), 2));
 }
 }
 
 
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 10; y += 1) {
-*(ip2_enm_output+x*10+y) = 0.0;
-*(ip2_enm_output+x*10+y) = tanh(dp_result);
-*(ip2_enm_grad_activation+x*10+y) = (1 - pow(tanh(dp_result), 2));
+(*(ip2_enm_output+x*10+y)) = 0.0;
+for (int i = 0; i < 1; i += 1) {
+for (int j = 0; j < 4; j += 1) {
+(*(ip2_enm_output+x*10+y)) = ((*(ip2_enm_output+x*10+y)) + ((*(ip2_enm_weights[x][y]+i*10+j)) * (*(ip1_enm_output+i*10+j))));
+}
+}
+(*(ip2_enm_output+x*10+y)) = tanh(dp_result);
+(*(ip2_enm_grad_activation+x*10+y)) = (1 - pow(tanh(dp_result), 2));
 }
 }
 
@@ -203,12 +245,8 @@ for (int y = 0; y < 10; y += 1) {
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 3; y += 1) {
 dp_result = 0.0;
-for (int i = 0; i < 1; i += 1) {
-for (int j = 0; j < 10; j += 1) {
-dp_result = (dp_result + (*(label_enm_weights[x][y]+i*3+j) * *(ip2_enm_output+i*3+j)));
-}
-}
-*(label_enm_output+x*3+y) = exp(dp_result);
+sgemm_dp((&dp_result), label_enm_weights[x][y], ip2_enm_output, 10);
+(*(label_enm_output+x*3+y)) = exp(dp_result);
 }
 }
 
@@ -221,8 +259,15 @@ preds.push_back(pred);
 // evaluate the accuracy performance
 evaluate(preds, test_labels);
 
+// deallocating memory for specific fields of data_enm
+mkl_free(data_enm_grad_activation);
+free_weights_mats(data_enm_inputs);
+free_weights_mats(data_enm_grad_inputs);
+mkl_free(data_enm_output);
+mkl_free(data_enm_grad_output);
 // deallocating memory for specific fields of ip1_enm
 free_weights_mats(ip1_enm_inputs);
+free_weights_mats(ip1_enm_grad_inputs);
 free_weights_mats(ip1_enm_grad_weights);
 mkl_free(ip1_enm_grad_activation);
 free_weights_mats(ip1_enm_weights);
@@ -230,6 +275,7 @@ mkl_free(ip1_enm_grad_output);
 mkl_free(ip1_enm_output);
 // deallocating memory for specific fields of ip2_enm
 free_weights_mats(ip2_enm_inputs);
+free_weights_mats(ip2_enm_grad_inputs);
 free_weights_mats(ip2_enm_grad_weights);
 mkl_free(ip2_enm_grad_activation);
 free_weights_mats(ip2_enm_weights);
@@ -239,6 +285,7 @@ mkl_free(ip2_enm_output);
 free_weights_mats(label_enm_inputs);
 free_weights_mats(label_enm_grad_inputs);
 free_weights_mats(label_enm_grad_weights);
+mkl_free(label_enm_grad_activation);
 free_weights_mats(label_enm_weights);
 mkl_free(label_enm_grad_output);
 mkl_free(label_enm_output);
