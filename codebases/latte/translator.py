@@ -122,7 +122,6 @@ class Translator(object):
                 call.add_arg(DereferenceNode(scalar), 1, 0)
                 call.add_arg(B, 1, 0)
                 call.add_arg(ConstantNode(self.prev_enm_dim[0] * self.prev_enm_dim[1]), 1, 0)
-                print call
                 return call
 
             tmpl = template_bp_scalar_prod()

@@ -216,6 +216,7 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     solve_block.append(make_loop_header("iter", 0, str(iterations), 1) + "{")
     solve_block.append("")
 
+    # TODO: data parallel: add pragma directive here (a new nested loop with batch)
     solve_block.append(make_loop_header("si", 0, "train_features.size()", 1) + "{")
     solve_block.append("")
     
@@ -254,6 +255,7 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
         solve_block.append("")
         
     # weights_update
+    # TODO: data parallel: use average grad_weights derived from batch instance 
     for enm in ensembles_info[1:]: 
         _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
         weights_update_str = "// weights_update for " + enm[0] + "\n"
