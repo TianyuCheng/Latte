@@ -68,6 +68,19 @@ class RewriteName(ast.NodeTransformer):
             node.id = self.new_name
         return node
 
+class RewriteAttribute(ast.NodeTransformer):
+    """change name of a node"""
+    def __init__(self, old_name, new_name):
+        super(RewriteAttribute, self).__init__()
+        self.old_name = old_name
+        self.new_name = new_name
+
+    def visit_Attribute(self, node):
+        self.generic_visit(node)
+        if node.attr == self.old_name:
+            node.attr = self.new_name
+        return node
+
 class SubstituteNameToNum(ast.NodeTransformer):
     """change name of a node"""
     def __init__(self, old_name, new_name):
@@ -156,6 +169,7 @@ class ASTTemplate(object):
             old_name = arg_node.id
             new_name = str(args[i])
             self.ast = RewriteName(old_name, new_name).visit(self.ast)
+            self.ast = RewriteAttribute(old_name, new_name).visit(self.ast)
         
         self.fname = self.ast.name                       # find template name
 
