@@ -241,7 +241,8 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, f
             omp_directive_str = "#pragma omp for schedule(static, 1)"
         solve_block.append(omp_directive_str + " private(tid)")
     solve_block.append(make_loop_header("si", 0, "train_features.size()", 1) + "{")
-    solve_block.append("int tid = omp_get_thread_num();")
+    if batch_parallel_flag:
+        solve_block.append("int tid = omp_get_thread_num();")
     solve_block.append("")
     
     #  load next instance of train data (feature and label)
