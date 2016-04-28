@@ -28,10 +28,14 @@ def usage():
 # cout << "iter: " << iter << ", data_idx: " << data_idx << endl;
 LATTE_H_PATH = '''"Latte.h"'''
 
-def make_include_header():
+def make_include_header(options):
     """makes the C++ header"""
     header = ""
     header += '''#include ''' + LATTE_H_PATH 
+    batch_parallel_flag = options.BATCH_PARA_FLAG
+    tiling_flag = options.TILING_FLAG
+    if batch_parallel_flag or tiling_flag: 
+        header += '''\n#include <omp.h>'''
     header += '''\n\n//using namespace std;'''
     return header
 
@@ -39,6 +43,16 @@ def make_main_header():
     """makes the main header"""
     main_header = "int main (int argn, char** argv) { "
     return main_header
+
+def make_omp_init_block(options):
+    numWorkers = options.NWORKERS
+    batch_parallel_flag = options.BATCH_PARA_FLAG
+    tiling_flag = options.TILING_FLAG
+    if not (batch_parallel_flag or tiling_flag): return []
+    block = [ "// OMP Library Initialization Block" ]
+    omp_init_str = "omp_set_num_threads(%d);" % numWorkers
+    block.append(omp_init_str)
+    return block
 
 def make_newlines(num=1):
     """creates new lines based on argument passed it"""
@@ -208,7 +222,7 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
 
     return test_block
 
-def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
+def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     solve_block = []
     iterations = str(solver_info["iter"])
     if solver_info["step"] > 0: step_size = str(solver_info["step"] * -1.0)
@@ -217,11 +231,18 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     solve_block.append("")
 
     # TODO: data parallel: add pragma directive here (a new nested loop with batch)
-    solve_block.append(make_loop_header("si", 0, "train_features.size()", 1) + "{")
+    numWorkers = options.NWORKERS
+    batch_parallel_flag = options.BATCH_PARA_FLAG
+    if batch_parallel_flag: 
+        omp_directive_str = "#pragma omp for collapse(2) schedule(static, 1)"
+        solve_block.append(omp_directive_str)
+        #TODO: more loop header
+    else:
+        solve_block.append(make_loop_header("si", 0, "train_features.size()", 1) + "{")
     solve_block.append("")
     
     #  load next instance of train data (feature and label)
-    load_label_str = "int data_idx = shuffle_index[si];"
+    load_label_str = "int data_idx = shuffle_index[si];\n"
     load_label_str += "sgemm_copy (%s, train_features[data_idx], %s*%s);\n" % \
             (ensembles_info[0][0]+"_output", ensembles_info[0][3], ensembles_info[0][4])
     load_label_str += "vector<vector<int>> cur_label (%d, vector<int>(%d, 0));\n" % tuple(ensembles_info[-1][3:5])
@@ -374,6 +395,9 @@ def main(options, program_file, cpp_file):
     # CODE GENERATION:
     main_body_strs = []
 
+    # OMP initialization block
+    main_body_strs.append(make_omp_init_block(options))
+
     # creating network and ensembles
     main_body_strs.append(make_networks(networks2enms))
     main_body_strs.append(make_layers(networks2enms))
@@ -387,7 +411,7 @@ def main(options, program_file, cpp_file):
 
     # run solver
     #main_body_strs.append([make_init_solver(solver)])
-    main_body_strs.append(make_solve_block(solver, ensembles_info, name2enm, bp_codes, fp_codes))
+    main_body_strs.append(make_solve_block(options, solver, ensembles_info, name2enm, bp_codes, fp_codes))
 
     # run tester
     main_body_strs.append(make_test_block(solver, ensembles_info, name2enm, fp_codes))
@@ -398,7 +422,7 @@ def main(options, program_file, cpp_file):
 
     # OUTPUT TO CPP FILE
     cpp_out = open(cpp_file, "w+")
-    cpp_out.writelines([make_include_header(), make_newlines(2)])
+    cpp_out.writelines([make_include_header(options), make_newlines(2)])
     cpp_out.writelines([make_main_header(), make_newlines(2)])
     # TODO: output auxiliary function here
     for block in main_body_strs: 
@@ -410,12 +434,19 @@ def main(options, program_file, cpp_file):
     return
 
 if __name__ == "__main__":
-    usage = "usage: python generator.py [options] arg1 arg2"
+    usage = "usage: python generator.py [options] py_script cpp_out_file"
     parser = OptionParser(usage=usage)
     parser.add_option("-m", "--mkl", action="store_true", dest="MKL_FLAG", \
                       default=False, help="option to turn on pattern match for MKL calls.")
-    parser.add_option("-t", "--tiling", action="store_false", dest="TILING_FLAG", \
-                      default=True, help="option to turn off tiling optimization.")
+    parser.add_option("-b", "--batch-parallel", action="store_true", dest="BATCH_PARA_FLAG", \
+                      default=False, help="option to turn on batch parallelization.")
+    parser.add_option("-t", "--tiling-parallel", action="store_true", dest="TILING_FLAG", \
+                      default=False, help="option to turn on tiling parallelization.")
+    parser.add_option("-w", "--numWorkers", action="store", type="int", dest="NWORKERS", \
+                      default=1, help="Specify the allocated number of threads \
+                      for parallel computing (needed when -b or -t is on)")
+    parser.add_option("-f", "--fusion", action="store_true", dest="FUSION_FLAG", \
+                      default=False, help="option to turn on fusion functionality.")
     parser.add_option("-v", "--verbose", action="store_true", dest="verbose", help="verbose")
     (options, args) = parser.parse_args()
     if len(args) != 2: 
