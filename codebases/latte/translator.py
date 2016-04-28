@@ -25,9 +25,10 @@ class Translator(object):
     self-defined structure, since Python AST
     is complicated to manipulate
     """
-    def __init__(self, neuron_analyzer, curr_enm, prev_enm, conn_type, share_weights, pattern_match=True):
+    def __init__(self, neuron_analyzer, prev_neuron_analyzer, curr_enm, prev_enm, conn_type, share_weights, pattern_match=True):
         super(Translator, self).__init__()
         self.neuron_analyzer = neuron_analyzer
+        self.prev_neuron_analyzer = prev_neuron_analyzer
         self.curr_enm = curr_enm
         self.prev_enm = prev_enm
         self.statements = []
@@ -269,6 +270,7 @@ class Translator(object):
                 #############################################
                 # analyze field type
                 field_type = self.neuron_analyzer.get_field_type(attr)
+                dim_y = self.curr_enm_dim[1]
             else:   # must be prev
                 enm_name = self.prev_enm
                 if attr == "pos_x":
@@ -276,7 +278,14 @@ class Translator(object):
                 elif attr == "pos_y":
                     return ConstantNode("j")
                 # analyze field type
-                field_type = self.neuron_analyzer.get_field_type(attr)
+                if self.prev_neuron_analyzer is not None:
+                    field_type = self.prev_neuron_analyzer.get_field_type(attr)
+                else:
+                    field_type = None
+                dim_y = self.prev_enm_dim[1]
+
+            if str(owner) == "prev":
+                print "======>", self.prev_enm, attr, field_type
 
             if field_type is None:
                 return ConstantNode(enm_name + "_" + attr)
@@ -291,7 +300,7 @@ class Translator(object):
                 var_name = "%s_%s" % (enm_name, attr)
                 return IndexNode(\
                         ConstantNode(var_name), ['x', 'y'], \
-                        self.curr_enm_dim[1])
+                        dim_y)
         else:
             # calls like np.tanh, suffice to only return the attr
             return ConstantNode(node.attr)

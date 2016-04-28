@@ -121,7 +121,10 @@ class NeuronAnalyzer(object):
         self.fp_codes.append(for_node_x)
         for_node_x.add_child(for_node_y)
 
-        trans = Translator(self, curr_enm, prev_enm, self.conn_type, self.enable_pattern_match)
+        prev_analyzer = None
+        if self.enm_prev is not None and self.enm_prev[2] in neuron_analyzers:
+            prev_analyzer = neuron_analyzers[self.enm_prev[2]]
+        trans = Translator(self, prev_analyzer, curr_enm, prev_enm, self.conn_type, self.enable_pattern_match)
         for stmt in stmt_walk(function_ast):
             for_node_y.add_child(trans.process_stmt(stmt))
 
@@ -141,7 +144,12 @@ class NeuronAnalyzer(object):
         self.bp_codes.append(for_node_x)
         for_node_x.add_child(for_node_y)
 
-        trans = Translator(self, curr_enm, prev_enm, self.conn_type, self.enable_pattern_match)
+        prev_analyzer = None
+        if self.enm_prev is not None:
+            prev_type = self.name2enm[self.enm_prev][5]
+            if prev_type in neuron_analyzers:
+                prev_analyzer = neuron_analyzers[prev_type]
+        trans = Translator(self, prev_analyzer, curr_enm, prev_enm, self.conn_type, self.enable_pattern_match)
         for stmt in stmt_walk(function_ast):
             for_node_y.add_child(trans.process_stmt(stmt))
 
@@ -345,11 +353,11 @@ def process_lib(filename, ensemble_info, name2enm, conn_types, PM_FLAG=True):
     for name, neuron_analyzer in neuron_analyzers.iteritems():
        neuron_analyzer.init_fields()
 
-    # delete unused variables
-    print "+++++++++++++++++++++++++++++++++++++++++++"
-    for name, neuron_analyzer in neuron_analyzers.iteritems():
-       neuron_analyzer.delete_unused_fields()
-    print "+++++++++++++++++++++++++++++++++++++++++++"
+    # # delete unused variables
+    # print "+++++++++++++++++++++++++++++++++++++++++++"
+    # for name, neuron_analyzer in neuron_analyzers.iteritems():
+    #    neuron_analyzer.delete_unused_fields()
+    # print "+++++++++++++++++++++++++++++++++++++++++++"
     
     print "###########################################"
     forward_codes = { }
