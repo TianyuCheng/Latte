@@ -153,9 +153,7 @@ class FCNeuron(Neuron):
         assert len(self.forward_adj) > 0, "No forward adjacency element. "
         self.output = 0.0 
         for prev in self.backward_adj:
-            pi = prev.pos_x
-            pj = prev.pos_y
-            self.output += self.weights[pi][pj] * self.inputs[pi][pj]
+            self.output += self.weights[prev.pos_x][prev.pos_y] * self.inputs[prev.pos_x][prev.pos_y]
        # activation
         self.output = np.tanh(dp_result) 
         # preset the gradient for back propagation
@@ -165,14 +163,10 @@ class FCNeuron(Neuron):
         self.grad_output = self.grad_output * self.grad_activation
         # backpropagate error
         for prev in self.backward_adj:
-            pi = prev.pos_x
-            pj = prev.pos_y
-            prev.grad_output += self.grad_output * self.weights[pi][pj]
+            prev.grad_output += self.grad_output * self.weights[prev.pos_x][prev.pos_y]
         # weights to update
         for prev in self.backward_adj:
-            pi = prev.pos_x
-            pj = prev.pos_y
-            self.grad_weights[pi][pj] += self.grad_output * self.inputs[pi][pj]
+            self.grad_weights[pi][pj] += self.grad_output * self.inputs[prev.pos_x][prev.pos_y]
 
 
 class WeightedNeuron(Neuron):
@@ -184,9 +178,7 @@ class WeightedNeuron(Neuron):
     def forward(self):
         self.output = 0.0 
         for prev in self.backward_adj:
-            pi = prev.pos_x
-            pj = prev.pos_y
-            self.output += self.weights[pi][pj] * self.inputs[pi][pj]
+            self.output += self.weights[prev.pos_x][prev.pos_y] * self.inputs[prev.pos_x][prev.pos_y]
         self.grad_activation = 1.0
         #for next_neuron in self.forward_adj:
         #    next_neuron.inputs[self.pos_x][self.pos_y] = self.output
@@ -195,14 +187,10 @@ class WeightedNeuron(Neuron):
         self.grad_output = self.grad_output * self.grad_activation
         # backpropagate error
         for prev in self.backward_adj:
-            pi = prev.pos_x
-            pj = prev.pos_y
-            prev.grad_output += self.grad_output * self.weights[pi][pj]
+            prev.grad_output += self.grad_output * self.weights[prev.pos_x][prev.pos_y]
         # weights to update
         for prev in self.backward_adj:
-            pi = prev.pos_x
-            pj = prev.pos_y
-            self.grad_weights[pi][pj] += self.grad_output * self.inputs[pi][pj]
+            self.grad_weights[prev.pos_x][prev.pos_y] += self.grad_output * self.inputs[prev.pos_x][prev.pos_y]
 
 class ReLUNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
@@ -213,9 +201,7 @@ class ReLUNeuron(Neuron):
         assert len(self.forward_adj) > 0, "No forward adjacency element. "
         self.output = 0.0
         for prev in self.backward_adj:
-            pi = prev.pos_x
-            pj = prev.pos_y
-            self.output += self.weights[pi][pj] * self.inputs[pi][pj]
+            self.output += self.weights[prev.pos_x][prev.pos_y] * self.inputs[prev.pos_x][prev.pos_y]
         self.output = np.log(np.exp(dp_result) + 1) # softplus function
         self.grad_activation = 1.0 / (1 + np.exp(-1.0*dp_result))  # logistic
 
@@ -223,14 +209,10 @@ class ReLUNeuron(Neuron):
         self.grad_output = self.grad_output * self.grad_activation
         # backpropagate error
         for prev in self.backward_adj:
-            pi = prev.pos_x
-            pj = prev.pos_y
-            prev.grad_output += self.grad_output * self.weights[pi][pj]
+            prev.grad_output += self.grad_output * self.weights[prev.pos_x][prev.pos_y]
         # weights to update
         for prev in self.backward_adj:
-            pi = prev.pos_x
-            pj = prev.pos_y
-            self.grad_weights[pi][pj] += self.grad_output * self.inputs[pi][pj]
+            self.grad_weights[prev.pos_x][prev.pos_y] += self.grad_output * self.inputs[prev.pos_x][prev.pos_y]
 
 class MeanPoolingNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
@@ -241,9 +223,7 @@ class MeanPoolingNeuron(Neuron):
     def forward(self):
         self.output = 0.0
         for prev in self.backward_adj:
-            pi = prev.pos_x
-            pj = prev.pos_y
-            self.output += self.weights[pi][pj] * self.inputs[pi][pj]
+            self.output += self.weights[prev.pos_x][prev.pos_y] * self.inputs[prev.pos_x][prev.pos_y]
         self.output = self.output / (self.pool_dim_x * self.pool_dim_y) 
         # preset the gradient for back propagation
         self.grad_activation = 1.0 / (self.pool_dim_x * self.pool_dim_y) 
@@ -252,14 +232,10 @@ class MeanPoolingNeuron(Neuron):
         self.grad_output = self.grad_output * self.grad_activation
         # backpropagate error
         for prev in self.backward_adj:
-            pi = prev.pos_x
-            pj = prev.pos_y
-            prev.grad_output += self.grad_output * self.weights[pi][pj]
+            prev.grad_output += self.grad_output * self.weights[prev.pos_x][prev.pos_y]
         # weights to update
         for prev in self.backward_adj:
-            pi = prev.pos_x
-            pj = prev.pos_y
-            self.grad_weights[pi][pj] += self.grad_output * self.inputs[pi][pj]
+            self.grad_weights[pi][pj] += self.grad_output * self.inputs[prev.pos_x][prev.pos_y]
 
 class DataNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):

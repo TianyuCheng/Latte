@@ -39,8 +39,6 @@ class Translator(object):
         self.share_weights = share_weights
         # set pattern match flag
         self.pattern_match = pattern_match
-        # debug
-        self.process_adjacency([])
 
     def process_stmt(self, stmt):
         # ignore the stmts for syntax and debug
@@ -131,8 +129,17 @@ class Translator(object):
         tmpl = template_for_backward_adj()
         if tmpl.match(node):
             result = tmpl.wildcard
-            print "match for backward adj:", result
-            return None
+            elt, indices = self.process_adjacency([])
+            index = indices[elt[0].get_constant()]
+            for_i = ForNode(ConstantNode("i"), ConstantNode(index[0]),\
+                            ConstantNode(index[1]), ConstantNode(index[2]))
+            index = indices[elt[1].get_constant()]
+            for_j = ForNode(ConstantNode("j"), ConstantNode(index[0]),\
+                            ConstantNode(index[1]), ConstantNode(index[2]))
+            for_i.add_child(for_j)
+            for stmt in result['body']:
+                for_j.add_child(self.process_stmt(stmt))
+            return for_i
 
         # ---------------------------------------------------------------------
 
@@ -277,6 +284,13 @@ class Translator(object):
                 return IndexNode(\
                         ConstantNode(var_name), ['x', 'y'], \
                         self.curr_enm_dim[1])
+        elif str(owner) == "prev":
+            if attr == "pos_x":
+                return ConstantNode("i")
+            elif attr == "pos_y":
+                return ConstantNode("j")
+            else:
+                return ConstantNode(node.attr)
         else:
             # calls like np.tanh, suffice to only return the attr
             return ConstantNode(node.attr)
@@ -288,7 +302,7 @@ class Translator(object):
         args = self.connection.args
         args = map(self.process_node, args.args)
         body = self.connection.body
-        elt = body.elt
+        elt = map(self.process_node, body.elt.elts)
         gen = body.generators
         assert len(gen) == 2
         assert isinstance(gen[0].target, ast.Name)
@@ -305,4 +319,4 @@ class Translator(object):
         for key in indices.iterkeys():
             if len(indices[key]) == 1:
                 indices[key] = [0] + indices[key] + [1]
-        print indices
+        return elt, indices
