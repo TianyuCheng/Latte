@@ -42,7 +42,15 @@ class NeuronAnalyzer(object):
 
     def delete_unused_fields(self):
         # do not delete any field in the base class
-        if self.name == "Neuron": return
+        # except for inputs and anything ends with inputs
+        if self.name == "Neuron":
+            to_delete = [ ]
+            for field in self.fields:
+                if field.endswith("inputs"):
+                    to_delete.append(field)
+            for delete in to_delete:
+                del self.fields[delete]
+            return
 
         used_variables = set()
         for function in self.extract_functions():
@@ -353,6 +361,7 @@ def process_lib(filename, ensemble_info, name2enm, conn_types, MKL_FLAG=False):
         neuron_analyzers[neuron_ast.name] = NeuronAnalyzer(neuron_ast, MKL_FLAG)
     
     # process the fields of the neuron base types
+    neuron_analyzers['Neuron'].delete_unused_fields()
     for name, neuron_analyzer in neuron_analyzers.iteritems():
        neuron_analyzer.init_fields()
 
