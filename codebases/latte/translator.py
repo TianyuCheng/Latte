@@ -12,6 +12,13 @@ function_args = {
     "sgemm_zeros": [ 3, 1 ]
 }
 
+# def unwrap_node(node):
+#     if isinstance(node, DereferenceNode):
+#         return unwrap_node(node.children[0])
+#     if isinstance(node, IndexNode):
+#         return unwrap_node(node.children[0])
+#     return node
+
 def match_forloop(stmt):
     tmpls = [ template_for("range"), template_for("xrange") ]
     for tmpl in tmpls:
@@ -25,7 +32,7 @@ class Translator(object):
     self-defined structure, since Python AST
     is complicated to manipulate
     """
-    def __init__(self, neuron_analyzer, prev_neuron_analyzer, curr_enm, prev_enm, conn_type, share_weights, pattern_match=True):
+    def __init__(self, neuron_analyzer, prev_neuron_analyzer, curr_enm, prev_enm, conn_type, share_weights, pattern_match):
         super(Translator, self).__init__()
         self.neuron_analyzer = neuron_analyzer
         self.prev_neuron_analyzer = prev_neuron_analyzer
@@ -54,28 +61,29 @@ class Translator(object):
         term.dump("PROCESS STMT(NO MATCH): %s" % ast.dump(stmt), term.WARNING)
 
     def process_assign(self, node):
+        _, dim_y = self.curr_enm_dim
         # pattern match
         if self.pattern_match:
             # try pattern match a bunch of different patterns
             tmpl = template_asgn("output")
             if tmpl.prefix_of(node):
                 expr = self.process_node(tmpl.wildcard['exp'])
-                return AssignmentNode(ArrayNode(\
-                        ConstantNode(self.curr_enm+"_output"), ['x', 'y']), \
+                return AssignmentNode(IndexNode(\
+                        ConstantNode(self.curr_enm+"_output"), ['x', 'y'], dim_y), \
                         expr)
 
             tmpl = template_asgn("grad_activation")
             if tmpl.prefix_of(node):
                 expr = self.process_node(tmpl.wildcard['exp'])
-                return AssignmentNode(ArrayNode(\
-                        ConstantNode(self.curr_enm+"_grad_activation"), ['x', 'y']), \
+                return AssignmentNode(IndexNode(\
+                        ConstantNode(self.curr_enm+"_grad_activation"), ['x', 'y'], dim_y), \
                         expr)
 
             tmpl = template_asgn("grad_output")
             if tmpl.prefix_of(node):
                 expr = self.process_node(tmpl.wildcard['exp'])
-                return AssignmentNode(ArrayNode(\
-                        ConstantNode(self.curr_enm+"_grad_output"), ['x', 'y']), \
+                return AssignmentNode(IndexNode(\
+                        ConstantNode(self.curr_enm+"_grad_output"), ['x', 'y'], dim_y), \
                         expr)
 
         # assign node
@@ -288,6 +296,9 @@ class Translator(object):
                     field_type = None
                 dim_y = self.prev_enm_dim[1]
 
+            if attr == "grad_activation":
+                print "========>", str(owner), self.curr_enm, self.prev_enm, attr, field_type
+
             if field_type is None:
                 return ConstantNode(enm_name + "_" + attr)
             elif field_type == "vector<vector<float*>>":
@@ -296,12 +307,13 @@ class Translator(object):
                 return ArrayNode(\
                         ConstantNode(var_name), ['x', 'y'])
             else:
+                if attr == "grad_activation":
+                    print "-------->", str(owner), self.curr_enm, self.prev_enm, attr, field_type
                 # 1D fields
                 # transform to SoA form
                 var_name = "%s_%s" % (enm_name, attr)
                 return IndexNode(\
-                        ConstantNode(var_name), ['x', 'y'], \
-                        dim_y)
+                        ConstantNode(var_name), ['x', 'y'], dim_y)
         else:
             # calls like np.tanh, suffice to only return the attr
             return ConstantNode(node.attr)

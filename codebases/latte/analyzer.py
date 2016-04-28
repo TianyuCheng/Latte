@@ -127,7 +127,7 @@ class NeuronAnalyzer(object):
         prev_analyzer = None
         if self.enm_prev is not None and self.enm_prev[2] in neuron_analyzers:
             prev_analyzer = neuron_analyzers[self.enm_prev[2]]
-        trans = Translator(self, prev_analyzer, curr_enm, prev_enm, self.conn_type, self.enable_pattern_match)
+        trans = Translator(self, prev_analyzer, curr_enm, prev_enm, self.conn_type, self.share_weights, self.enable_pattern_match)
         for stmt in stmt_walk(function_ast):
             for_node_y.add_child(trans.process_stmt(stmt))
 
@@ -152,7 +152,7 @@ class NeuronAnalyzer(object):
             prev_type = self.name2enm[self.enm_prev][5]
             if prev_type in neuron_analyzers:
                 prev_analyzer = neuron_analyzers[prev_type]
-        trans = Translator(self, prev_analyzer, curr_enm, prev_enm, self.conn_type, self.enable_pattern_match)
+        trans = Translator(self, prev_analyzer, curr_enm, prev_enm, self.conn_type, self.share_weights, self.enable_pattern_match)
         for stmt in stmt_walk(function_ast):
             for_node_y.add_child(trans.process_stmt(stmt))
 
@@ -366,7 +366,7 @@ def process_lib(filename, ensemble_info, name2enm, conn_types, PM_FLAG=True):
     # process the fields of the neuron base types
     for name, neuron_analyzer in neuron_analyzers.iteritems():
        neuron_analyzer.init_fields()
-       print "-------------->", neuron_analyzer.name, neuron_analyzer.fields
+       # print "-------------->", neuron_analyzer.name, neuron_analyzer.fields
     
     print "###########################################"
     forward_codes = { }
