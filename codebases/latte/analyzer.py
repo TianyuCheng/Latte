@@ -54,9 +54,10 @@ class NeuronAnalyzer(object):
                 del self.fields[field_name]
         print "UNUSED FIELDS:", unused_variables
 
-    def analyze(self, enm_info, name2enm, conn_type):
+    def analyze(self, enm_info, name2enm, conn_type, share_weights):
         self.name2enm = name2enm
         self.conn_type = conn_type
+        self.share_weights = share_weights
         self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
         self.fp_codes = []
         self.bp_codes = []
@@ -207,37 +208,37 @@ def extract_functions(filename):
     return
 
 def process_add_connection_helper(all_functions, function_ast):
-        if function_ast.name.endswith("Layer"):
-            args = list(map(lambda x: x.id, function_ast.args.args))
-            layer_name = function_ast.name
-            tmpl = template_add_connection()
-            if tmpl.matchall(function_ast):
-                # right now we assume there should be only one match
-                # i.e. only one add_connection call in the layer function
-                mapping = tmpl.matches[0]['mappings']
-                return layer_name, args, mapping
-            else:
-                # not finding add_connection call, it must be somewhere
-                # called by some other functions
-                for node in ast.walk(function_ast):
-                    if isinstance(node, ast.Call):
-                        # we only process top level function calls
-                        # no attributes is allowed, e.g. self.Layer()
-                        if isinstance(node.func, ast.Name):
-                            if node.func.id in all_functions:
-                                call_args = list(map(lambda x: x.id, node.args))
-                                callee_function = all_functions[node.func.id]
-                                sublayer, callee_args, mappings = process_add_connection_helper(\
-                                        all_functions, callee_function)
-                                if sublayer is not None:
-                                    # rename arguments
-                                    mappings = deepcopy(mappings)
-                                    for new_name, old_name in zip(call_args, callee_args):
-                                        mappings = RewriteName(old_name, new_name).visit(mappings)
-                                    # return layer_name, args, mapping
-                                    return layer_name, args, mappings
-                print layer_name, "NO MATCH FOR ADD_CONNECTION"
-        return None, None, None
+    if function_ast.name.endswith("Layer"):
+        args = list(map(lambda x: x.id, function_ast.args.args))
+        layer_name = function_ast.name
+        tmpl = template_add_connection()
+        if tmpl.matchall(function_ast):
+            # right now we assume there should be only one match
+            # i.e. only one add_connection call in the layer function
+            mapping = tmpl.matches[0]['mappings']
+            return layer_name, args, mapping
+        else:
+            # not finding add_connection call, it must be somewhere
+            # called by some other functions
+            for node in ast.walk(function_ast):
+                if isinstance(node, ast.Call):
+                    # we only process top level function calls
+                    # no attributes is allowed, e.g. self.Layer()
+                    if isinstance(node.func, ast.Name):
+                        if node.func.id in all_functions:
+                            call_args = list(map(lambda x: x.id, node.args))
+                            callee_function = all_functions[node.func.id]
+                            sublayer, callee_args, mappings = process_add_connection_helper(\
+                                    all_functions, callee_function)
+                            if sublayer is not None:
+                                # rename arguments
+                                mappings = deepcopy(mappings)
+                                for new_name, old_name in zip(call_args, callee_args):
+                                    mappings = RewriteName(old_name, new_name).visit(mappings)
+                                # return layer_name, args, mapping
+                                return layer_name, args, mappings
+            print layer_name, "NO MATCH FOR ADD_CONNECTION"
+    return None, None, None
 
 def ast2lambda(mapping, args, ensemble, name2enm):
     # generate module wrapper
@@ -284,6 +285,27 @@ def check_uniform_dependency(args, mapping, ensemble_info, name2enm):
                     return False
     return True
 
+def process_ensemble_share_weight(all_functions, function_ast):
+    # find directly in the function
+    for tmpl in new_ensemble_templates:
+        if tmpl.matchall(function_ast):
+            # only extract the first mapping
+            match = tmpl.matches[0]
+            if "share_weights" in match:
+                return bool(match["share_weights"])
+    # find in the called functions
+    for node in ast.walk(function_ast):
+        if isinstance(node, ast.Call):
+            # we only process top level function calls
+            # no attributes is allowed, e.g. self.Layer()
+            if isinstance(node.func, ast.Name):
+                if node.func.id in all_functions:
+                    if process_ensemble_share_weight(all_functions,\
+                            all_functions[node.func.id]):
+                        return True
+    return False
+
+
 def process_add_connection(filename, name2enm):
     """TODO: Docstring for process_add_connection.
     :returns: TODO
@@ -297,13 +319,15 @@ def process_add_connection(filename, name2enm):
         layer_name, args, mapping = \
                 process_add_connection_helper(all_functions, function_ast)
         if layer_name is not None:
-            conn_types[layer_name] = (args, mapping)
+            share_weights = process_ensemble_share_weight(all_functions, function_ast)
+            conn_types[layer_name] = (args, mapping, share_weights)
 
     # review the mapping functions for layer connections
-    for layer, (args, mappings) in conn_types.iteritems():
+    for layer, (args, mappings, share_weights) in conn_types.iteritems():
         print ""
         print "layer:", layer
         print "args: ", args
+        print "share weights: ", share_weights
         print "conn: ", ast_dump(mappings)
     print "------------------------------------------"
     return conn_types
@@ -338,9 +362,10 @@ def process_lib(filename, ensemble_info, name2enm, conn_types, PM_FLAG=True):
         # print neuron_analyzers
         analyzer = neuron_analyzers[_neuron_type]
         conn_type = None
+        share_weights = False
         if _type in conn_types:
-            _, conn_type = conn_types[_type]
-        fp_code, bp_code = analyzer.analyze(ensemble, name2enm, conn_type)
+            _, conn_type, share_weights = conn_types[_type]
+        fp_code, bp_code = analyzer.analyze(ensemble, name2enm, conn_type, share_weights)
         forward_codes[_name] = fp_code
         backward_codes[_name] = bp_code
         fp_codes.append(fp_code)

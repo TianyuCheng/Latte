@@ -25,7 +25,7 @@ class Translator(object):
     self-defined structure, since Python AST
     is complicated to manipulate
     """
-    def __init__(self, neuron_analyzer, curr_enm, prev_enm, conn_type, pattern_match=True):
+    def __init__(self, neuron_analyzer, curr_enm, prev_enm, conn_type, share_weights, pattern_match=True):
         super(Translator, self).__init__()
         self.neuron_analyzer = neuron_analyzer
         self.curr_enm = curr_enm
@@ -34,7 +34,9 @@ class Translator(object):
         # getting the dimension from analyzer for constant replacement
         self.curr_enm_dim = neuron_analyzer.curr_enm_dim()
         self.prev_enm_dim = neuron_analyzer.prev_enm_dim()
+        # connections
         self.connection = conn_type
+        self.share_weights = share_weights
         # set pattern match flag
         self.pattern_match = pattern_match
         # debug

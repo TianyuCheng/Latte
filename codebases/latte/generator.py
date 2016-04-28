@@ -352,7 +352,7 @@ def main(options, program_file, cpp_file):
         for ensemble in ensembles:
             layer_type = ensemble['type']
             if layer_type in conn_types:
-                args, mapping = conn_types[layer_type]
+                args, mapping, _ = conn_types[layer_type]
                 term.dump("Layer %s uniform dependency? %s" % (layer_type, \
                         check_uniform_dependency(args, mapping, ensemble, name2enm)), \
                         term.OKBLUE)

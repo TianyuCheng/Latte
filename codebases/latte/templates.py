@@ -33,6 +33,19 @@ def template_Ensemble():
     _net.add_ensemble(_cur_enm)
 
 @template
+def template_NewEnsembleShareWeights():
+    _enm = Ensemble(_dim_x, _dim_y, _TYPE, share_weights=_share_weights)
+
+@template
+def template_NewEnsembleNoShareWeights():
+    _enm = Ensemble(_dim_x, _dim_y, _TYPE)
+
+new_ensemble_templates = [
+    template_NewEnsembleShareWeights(),
+    template_NewEnsembleNoShareWeights()
+]
+
+@template
 def template_SGD():
     _name = SGD(_iter, _step)
 
