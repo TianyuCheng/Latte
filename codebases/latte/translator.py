@@ -284,9 +284,6 @@ class Translator(object):
                     field_type = None
                 dim_y = self.prev_enm_dim[1]
 
-            if str(owner) == "prev":
-                print "======>", self.prev_enm, attr, field_type
-
             if field_type is None:
                 return ConstantNode(enm_name + "_" + attr)
             elif field_type == "vector<vector<float*>>":

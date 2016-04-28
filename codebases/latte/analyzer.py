@@ -41,6 +41,9 @@ class NeuronAnalyzer(object):
                     self.fields[field] = field_type
 
     def delete_unused_fields(self):
+        # do not delete any field in the base class
+        if self.name == "Neuron": return
+
         used_variables = set()
         for function in self.extract_functions():
             if function.name == "forward" or function.name == "backward" or function.name == "__claim__":
@@ -353,11 +356,16 @@ def process_lib(filename, ensemble_info, name2enm, conn_types, PM_FLAG=True):
     for name, neuron_analyzer in neuron_analyzers.iteritems():
        neuron_analyzer.init_fields()
 
-    # # delete unused variables
-    # print "+++++++++++++++++++++++++++++++++++++++++++"
-    # for name, neuron_analyzer in neuron_analyzers.iteritems():
-    #    neuron_analyzer.delete_unused_fields()
-    # print "+++++++++++++++++++++++++++++++++++++++++++"
+    # delete unused variables
+    print "+++++++++++++++++++++++++++++++++++++++++++"
+    for name, neuron_analyzer in neuron_analyzers.iteritems():
+       neuron_analyzer.delete_unused_fields()
+    print "+++++++++++++++++++++++++++++++++++++++++++"
+
+    # process the fields of the neuron base types
+    for name, neuron_analyzer in neuron_analyzers.iteritems():
+       neuron_analyzer.init_fields()
+       print "-------------->", neuron_analyzer.name, neuron_analyzer.fields
     
     print "###########################################"
     forward_codes = { }
