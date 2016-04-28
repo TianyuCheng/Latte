@@ -243,54 +243,55 @@ class Translator(object):
     def process_attribute(self, node):
         owner = self.process_node(node.value)
         attr = node.attr
-        if str(owner) == "self":
+        if str(owner) == "self" or str(owner) == "prev":
             # built-in dimension analysis
-            if attr == "prev_dim_x":
-                return ConstantNode(self.prev_enm_dim[0])
-            if attr == "prev_dim_y":
-                return ConstantNode(self.prev_enm_dim[1])
-            if attr == "dim_x":
-                return ConstantNode(self.curr_enm_dim[0])
-            if attr == "dim_y":
-                return ConstantNode(self.curr_enm_dim[1])
+            if str(owner) == "self":
+                enm_name = self.curr_enm
+                if attr == "prev_dim_x":
+                    return ConstantNode(self.prev_enm_dim[0])
+                if attr == "prev_dim_y":
+                    return ConstantNode(self.prev_enm_dim[1])
+                if attr == "dim_x":
+                    return ConstantNode(self.curr_enm_dim[0])
+                if attr == "dim_y":
+                    return ConstantNode(self.curr_enm_dim[1])
+                if attr.endswith("label"):
+                    return ArrayNode(ConstantNode("cur_label"), ['x', 'y'])
+                #############################################
+                # replace inputs with outputs from last layer
+                # this is done to fit the current design
+                # we might want to follow the paper and do
+                # input copy from last layer if the inputs
+                # are not shared
+                if attr.endswith("inputs"):
+                    var_name = "%s_output" % self.prev_enm
+                    return ConstantNode(var_name)
+                #############################################
+                # analyze field type
+                field_type = self.neuron_analyzer.get_field_type(attr)
+            else:   # must be prev
+                enm_name = self.prev_enm
+                if attr == "pos_x":
+                    return ConstantNode("i")
+                elif attr == "pos_y":
+                    return ConstantNode("j")
+                # analyze field type
+                field_type = self.neuron_analyzer.get_field_type(attr)
 
-            #############################################
-            # replace inputs with outputs from last layer
-            # this is done to fit the current design
-            # we might want to follow the paper and do
-            # input copy from last layer if the inputs
-            # are not shared
-            if attr.endswith("inputs"):
-                var_name = "%s_output" % self.prev_enm
-                return ConstantNode(var_name)
-            #############################################
-
-            if attr.endswith("label"):
-                return ArrayNode(ConstantNode("cur_label"), ['x', 'y'])
-
-            # analyze field type
-            field_type = self.neuron_analyzer.get_field_type(attr)
             if field_type is None:
-                return ConstantNode(self.curr_enm + "_" + attr)
+                return ConstantNode(enm_name + "_" + attr)
             elif field_type == "vector<vector<float*>>":
                 # 2D fields
-                var_name = "%s_%s" % (self.curr_enm, attr)
+                var_name = "%s_%s" % (enm_name, attr)
                 return ArrayNode(\
                         ConstantNode(var_name), ['x', 'y'])
             else:
                 # 1D fields
                 # transform to SoA form
-                var_name = "%s_%s" % (self.curr_enm, attr)
+                var_name = "%s_%s" % (enm_name, attr)
                 return IndexNode(\
                         ConstantNode(var_name), ['x', 'y'], \
                         self.curr_enm_dim[1])
-        elif str(owner) == "prev":
-            if attr == "pos_x":
-                return ConstantNode("i")
-            elif attr == "pos_y":
-                return ConstantNode("j")
-            else:
-                return ConstantNode(self.prev_enm + "_" + node.attr)
         else:
             # calls like np.tanh, suffice to only return the attr
             return ConstantNode(node.attr)
