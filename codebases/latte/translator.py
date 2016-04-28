@@ -86,7 +86,7 @@ class Translator(object):
     def process_for(self, node):
         # pattern match
         if self.pattern_match:
-            tmpl = template_fp_dp("self.output")
+            tmpl = template_fp_dp("self", "output")
             matched = tmpl.match(node) 
             print matched, "==================="
             if matched:

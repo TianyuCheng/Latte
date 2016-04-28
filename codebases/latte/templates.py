@@ -84,9 +84,9 @@ def template_for_range(range):
 for_templates = [ template_for_range("range"), template_for_range("xrange") ]
 
 @template
-def template_fp_dp(varname):
+def template_fp_dp(target, varname):
     for _prev in self.backward_adj:
-        varname += _A[_i][_j] * _B[_i][_j] 
+        target.varname += _A[_i][_j] * _B[_i][_j] 
 
 @template
 def template_asgn(field):
