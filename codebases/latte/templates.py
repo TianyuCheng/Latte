@@ -85,10 +85,9 @@ for_templates = [ template_for_range("range"), template_for_range("xrange") ]
 
 
 @template
-def template_dot_product(range):
-    for _i in range(_dim_x):
-        for _j in range(_dim_y):
-            _dp_result = _dp_result + _A[_i][_j] * _B[_i][_j] 
+def template_dot_product():
+    for _prev in self.backward_adj:
+        _C += _A[_i][_j] * _B[_i][_j] 
 
 @template
 def template_asgn(field):
@@ -105,4 +104,5 @@ def template_bp_axpy():
     for _i in range(_dim_x):
         for _j in range(_dim_y):
             _C[_i][_j] = _C[_i][_j] + _scalar * _B[_i][_j]
+
 

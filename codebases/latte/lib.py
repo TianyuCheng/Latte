@@ -272,12 +272,10 @@ class SoftmaxNeuron(Neuron):
         self.grad_weights = [[]]
     
     def forward(self):
-        dp_result = 0.0
-        for i in range(self.prev_dim_x):
-            for j in range(self.prev_dim_y):
-                dp_result = dp_result + self.weights[i][j] * self.inputs[i][j]
-
-        self.output = math.exp(dp_result)
+        self.output = 0.0 
+        for prev in self.backward_adj:
+            self.output += self.weights[prev.pos_x][prev.pos_y] * self.inputs[prev.pos_x][prev.pos_y]
+        self.output = math.exp(self.output)
 
     # NOTE: remember to invoke this annotate() and before backward
     def annotate(self):
