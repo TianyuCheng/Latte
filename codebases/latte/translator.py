@@ -60,21 +60,21 @@ class Translator(object):
             tmpl = template_asgn("output")
             if tmpl.prefix_of(node):
                 expr = self.process_node(tmpl.wildcard['exp'])
-                return AssignmentNode(ArrayNode(\
+                return AssignmentNode(IndexNode(\
                         ConstantNode(self.curr_enm+"_output"), ['x', 'y']), \
                         expr)
 
             tmpl = template_asgn("grad_activation")
             if tmpl.prefix_of(node):
                 expr = self.process_node(tmpl.wildcard['exp'])
-                return AssignmentNode(ArrayNode(\
+                return AssignmentNode(IndexNode(\
                         ConstantNode(self.curr_enm+"_grad_activation"), ['x', 'y']), \
                         expr)
 
             tmpl = template_asgn("grad_output")
             if tmpl.prefix_of(node):
                 expr = self.process_node(tmpl.wildcard['exp'])
-                return AssignmentNode(ArrayNode(\
+                return AssignmentNode(IndexNode(\
                         ConstantNode(self.curr_enm+"_grad_output"), ['x', 'y']), \
                         expr)
 
