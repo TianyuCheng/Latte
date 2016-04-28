@@ -34,7 +34,7 @@ class Translator(object):
     self-defined structure, since Python AST
     is complicated to manipulate
     """
-    def __init__(self, neuron_analyzer, prev_neuron_analyzer, curr_enm, prev_enm, conn_type, share_weights, pattern_match):
+    def __init__(self, neuron_analyzer, prev_neuron_analyzer, curr_enm, prev_enm, conn_type, share_weights, MKL_FLAG):
         super(Translator, self).__init__()
         self.neuron_analyzer = neuron_analyzer
         self.prev_neuron_analyzer = prev_neuron_analyzer
@@ -48,7 +48,7 @@ class Translator(object):
         self.connection = conn_type
         self.share_weights = share_weights
         # set pattern match flag
-        self.pattern_match = pattern_match
+        self.MKL_FLAG = MKL_FLAG
 
     def process_stmt(self, stmt):
         # ignore the stmts for syntax and debug
@@ -65,7 +65,7 @@ class Translator(object):
     def process_assign(self, node):
         _, dim_y = self.curr_enm_dim
         # pattern match
-        if self.pattern_match:
+        if self.MKL_FLAG:
             # try pattern match a bunch of different patterns
             tmpl = template_asgn("output")
             if tmpl.prefix_of(node):
@@ -95,7 +95,7 @@ class Translator(object):
 
     def process_for(self, node):
         # pattern match
-        if self.pattern_match:
+        if self.MKL_FLAG:
             #tmpl = template_dp("self", "output")
             tmpl = template_fp_dp()
             matched = tmpl.match(node) 
