@@ -12,12 +12,14 @@ function_args = {
     "sgemm_zeros": [ 3, 1 ]
 }
 
-# def unwrap_node(node):
-#     if isinstance(node, DereferenceNode):
-#         return unwrap_node(node.children[0])
-#     if isinstance(node, IndexNode):
-#         return unwrap_node(node.children[0])
-#     return node
+def unwrap(node):
+    if isinstance(node, DereferenceNode):
+        return unwrap(node.children[0])
+    if isinstance(node, IndexNode):
+        return unwrap(node.base_addr)
+    if isinstance(node, ArrayNode):
+        return unwrap(node.base_addr)
+    return node
 
 def match_forloop(stmt):
     tmpls = [ template_for("range"), template_for("xrange") ]
@@ -102,9 +104,9 @@ class Translator(object):
                 for x in map(self.process_node, tmpl.wildcard.values()):
                     print x
                 A, C, B, i,  _, j = map(self.process_node, tmpl.wildcard.values())
-                call = CallNode("sgemm_dp")
+                call = CallNode(ConstantNode("sgemm_dp"))
                 #C = ConstantNode(self.curr_enm + "_output")
-                call.add_arg(C, 1, 1)
+                call.add_arg(unwrap(C), 1, 1)
                 call.add_arg(A, 1, 0)
                 call.add_arg(B, 1, 0)
                 call.add_arg(ConstantNode(self.prev_enm_dim[0] * self.prev_enm_dim[1]), 1, 0)
@@ -118,8 +120,8 @@ class Translator(object):
                 if prev_type is None or prev_type.endswith("DataLayer"):
                     return None
                 C = ConstantNode(self.prev_enm + "_grad_output")
-                call = CallNode("sgemm_axpy")
-                call.add_arg(C, 1, 1)
+                call = CallNode(ConstantNode("sgemm_axpy"))
+                call.add_arg(unwrap(C), 1, 1)
                 call.add_arg(DereferenceNode(scalar), 1, 0)
                 call.add_arg(B, 1, 0)
                 call.add_arg(ConstantNode(self.prev_enm_dim[0] * self.prev_enm_dim[1]), 1, 0)
@@ -130,8 +132,8 @@ class Translator(object):
             # print ast.dump(node)
             if matched:
                 C, B, di, dj, scalar, dim_x, dim_y = map(self.process_node, tmpl.wildcard.values())
-                call = CallNode("sgemm_axpy")
-                call.add_arg(C, 1, 1)
+                call = CallNode(ConstantNode("sgemm_axpy"))
+                call.add_arg(unwrap(C), 1, 1)
                 call.add_arg(DereferenceNode(scalar), 1, 0)
                 call.add_arg(B, 1, 0)
                 call.add_arg(ConstantNode(self.prev_enm_dim[0] * self.prev_enm_dim[1]), 1, 0)

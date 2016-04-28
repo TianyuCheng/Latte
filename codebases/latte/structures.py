@@ -241,6 +241,9 @@ class CallNode(Node):
         self.args_rw = []
 
     def add_arg(self, arg, read, write):
+        if not self.func.get_constant().startswith("sgemm"):
+            if isinstance(arg, IndexNode):
+                arg = DereferenceNode(arg)
         self.add_child(arg)
         # set flag for arg read/write
         rw = 0
