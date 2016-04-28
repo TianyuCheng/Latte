@@ -410,8 +410,8 @@ def main(options, program_file, cpp_file):
 if __name__ == "__main__":
     usage = "usage: python generator.py [options] arg1 arg2"
     parser = OptionParser(usage=usage)
-    parser.add_option("-m", "--mkl", action="store_false", dest="MKL_FLAG", \
-                      default=True, help="option to turn off pattern match for MKL calls.")
+    parser.add_option("-m", "--mkl", action="store_true", dest="MKL_FLAG", \
+                      default=False, help="option to turn on pattern match for MKL calls.")
     parser.add_option("-t", "--tiling", action="store_false", dest="TILING_FLAG", \
                       default=True, help="option to turn off tiling optimization.")
     parser.add_option("-v", "--verbose", action="store_true", dest="verbose", help="verbose")

@@ -106,7 +106,7 @@ class Translator(object):
                 A, C, B, i,  _, j = map(self.process_node, tmpl.wildcard.values())
                 call = CallNode(ConstantNode("sgemm_dp"))
                 #C = ConstantNode(self.curr_enm + "_output")
-                call.add_arg(unwrap(C), 1, 1)
+                call.add_arg(C, 1, 1)
                 call.add_arg(A, 1, 0)
                 call.add_arg(B, 1, 0)
                 call.add_arg(ConstantNode(self.prev_enm_dim[0] * self.prev_enm_dim[1]), 1, 0)
