@@ -94,15 +94,16 @@ class Translator(object):
     def process_for(self, node):
         # pattern match
         if self.pattern_match:
-            tmpl = template_fp_dp("self", "output")
+            #tmpl = template_dp("self", "output")
+            tmpl = template_fp_dp()
             matched = tmpl.match(node) 
             print matched, "==================="
             if matched:
                 for x in map(self.process_node, tmpl.wildcard.values()):
                     print x
-                A,  i, B, _, j = map(self.process_node, tmpl.wildcard.values())
+                A, C, B, i,  _, j = map(self.process_node, tmpl.wildcard.values())
                 call = CallNode("sgemm_dp")
-                C = ConstantNode(self.prev_enm + "_grad_output")
+                #C = ConstantNode(self.curr_enm + "_output")
                 call.add_arg(C, 1, 1)
                 call.add_arg(A, 1, 0)
                 call.add_arg(B, 1, 0)
