@@ -54,8 +54,9 @@ class NeuronAnalyzer(object):
                 del self.fields[field_name]
         print "UNUSED FIELDS:", unused_variables
 
-    def analyze(self, enm_info, name2enm):
+    def analyze(self, enm_info, name2enm, conn_type):
         self.name2enm = name2enm
+        self.conn_type = conn_type
         self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
         self.fp_codes = []
         self.bp_codes = []
@@ -119,7 +120,7 @@ class NeuronAnalyzer(object):
         self.fp_codes.append(for_node_x)
         for_node_x.add_child(for_node_y)
 
-        trans = Translator(self, curr_enm, prev_enm, self.enable_pattern_match)
+        trans = Translator(self, curr_enm, prev_enm, self.conn_type, self.enable_pattern_match)
         for stmt in stmt_walk(function_ast):
             for_node_y.add_child(trans.process_stmt(stmt))
 
@@ -139,7 +140,7 @@ class NeuronAnalyzer(object):
         self.bp_codes.append(for_node_x)
         for_node_x.add_child(for_node_y)
 
-        trans = Translator(self, curr_enm, prev_enm, self.enable_pattern_match)
+        trans = Translator(self, curr_enm, prev_enm, self.conn_type, self.enable_pattern_match)
         for stmt in stmt_walk(function_ast):
             for_node_y.add_child(trans.process_stmt(stmt))
 
@@ -307,7 +308,7 @@ def process_add_connection(filename, name2enm):
     print "------------------------------------------"
     return conn_types
 
-def process_lib(filename, ensemble_info, name2enm, PM_FLAG=True):
+def process_lib(filename, ensemble_info, name2enm, conn_types, PM_FLAG=True):
     """
     read in a library file parse all neuron types,
     and their associated forward/backward functions
@@ -336,7 +337,10 @@ def process_lib(filename, ensemble_info, name2enm, PM_FLAG=True):
         _name, _type, _prev, _dim_x, _dim_y, _neuron_type = ensemble[:6]
         # print neuron_analyzers
         analyzer = neuron_analyzers[_neuron_type]
-        fp_code, bp_code = analyzer.analyze(ensemble, name2enm)
+        conn_type = None
+        if _type in conn_types:
+            _, conn_type = conn_types[_type]
+        fp_code, bp_code = analyzer.analyze(ensemble, name2enm, conn_type)
         forward_codes[_name] = fp_code
         backward_codes[_name] = bp_code
         fp_codes.append(fp_code)

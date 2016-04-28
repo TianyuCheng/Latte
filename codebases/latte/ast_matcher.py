@@ -295,6 +295,8 @@ class ASTTemplate(object):
                     _, tgt_value = tgt_kids[i]
                     if not self._match(tpl_value, tgt_value):
                         # print "4"
+                        # print ast_dump(tpl_value)
+                        # print ast_dump(tgt_value)
                         return False
         return True
 
@@ -308,6 +310,11 @@ class ASTTemplate(object):
         # match dangling expression
         if isinstance(tpl, ast.Expr) and isinstance(tpl.value, ast.Name):
             return self._set_wildcard(tpl.value, tgt)
+
+        if isinstance(tpl, list) and \
+           len(tpl) == 1 and \
+           isinstance(tpl[0], ast.Expr) and isinstance(tpl[0].value, ast.Name):
+            return self._set_wildcard(tpl[0].value, tgt)
 
         # match wildcard variable
         if isinstance(tpl, ast.Name) and tpl.id.startswith('_') and \

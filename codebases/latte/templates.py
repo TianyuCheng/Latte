@@ -54,6 +54,11 @@ Templates for computation programming paradigm
 """
 
 @template
+def template_for_backward_adj():
+    for _i in self.backward_adj:
+        _body
+
+@template
 def template_for(range):
     for _i in range(_N):
         _body
