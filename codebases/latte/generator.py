@@ -74,6 +74,7 @@ def make_allocate_block(ensembles_info, neuron_analyzers, allocate=True):
     for enm in ensembles_info:
         _cur, _type, _prev, _dim_x, _dim_y, _neurontype  = enm[:6]
         attributes = neuron_analyzers[_neurontype].fields
+        print _cur, attributes
         if len(attributes) > 0:
             if allocate:
                 block.append("// allocating memory for specific fields of " + _cur)

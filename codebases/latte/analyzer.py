@@ -43,7 +43,7 @@ class NeuronAnalyzer(object):
     def delete_unused_fields(self):
         used_variables = set()
         for function in self.extract_functions():
-            if function.name == "forward" or function.name == "backward":
+            if function.name == "forward" or function.name == "backward" or function.name == "__claim__":
                 for node in ast.walk(function):
                     if isinstance(node, ast.Attribute):
                         used_variables.add(node.attr)

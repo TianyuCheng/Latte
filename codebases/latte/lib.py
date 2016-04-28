@@ -195,6 +195,8 @@ class WeightedNeuron(Neuron):
 class ReLUNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
         Neuron.__init__(self, enm, pos_x, pos_y)
+        self.weights      = [[]]
+        self.grad_weights = [[]]
 
     def forward(self):
         # innder product of inputs and weights
@@ -240,10 +242,11 @@ class MeanPoolingNeuron(Neuron):
 class DataNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
         Neuron.__init__(self, enm, pos_x, pos_y)
+    
+    def __claim__(self):
+        self.output = 0.0
 
     def forward(self):
-        # remember to load input feature to data neuron before forward propa
-        assert len(self.forward_adj) > 0, "No forward adjacency element. "
         pass
 
     def backward(self):
