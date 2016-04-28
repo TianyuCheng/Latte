@@ -73,6 +73,10 @@ def FullyConnectedLayer(net, prev, dim_x, dim_y, TYPE):
 
 def ConvolutionLayer(net, prev, dim_x, dim_y, TYPE, ker_dim_x, ker_dim_y):
     '''
+    1d constraint:
+        assert dim_x == ker_dim_x == prev_dim_x 
+        assert dim_y + ker_dim_y == prev_dim_y
+    2d constraint:
         assert dim_x + ker_dim_x == prev_dim_x 
         assert dim_y + ker_dim_y == prev_dim_y
     '''

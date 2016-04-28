@@ -61,16 +61,22 @@ def make_newlines(num=1):
 # def make_indent(num=indent):
 #     return "    " * num
 
-def make_mkl_malloc(mat_name, dim_x, dim_y, tp):
+def make_mkl_malloc(options, mat_name, dim_x, dim_y, tp):
     if tp == "float*":
-        return "%s %s = init_mkl_mat(%s, %s);" % (tp, mat_name, dim_x, dim_y)
+        if options.BATCH_PARA_FLAG: 
+            return "vector<%s> %s (%d, init_mkl_mat(%s, %s)); " % \
+                    (tp, mat_name, options.NWORKERS, dim_x, dim_y)
+        else: return "%s %s = init_mkl_mat(%s, %s);" % (tp, mat_name, dim_x, dim_y)
     elif tp == "vector<vector<float*>>":
         return "%s %s (%s, vector<float*>(%s, NULL));" % (tp, mat_name, dim_x, dim_y)
         
 
-def make_mkl_free(mat_name, tp): 
+def make_mkl_free(options, mat_name, tp): 
     if tp == "float*":
-        return "mkl_free(%s);" % (mat_name)
+        if options.BATCH_PARA_FLAG: 
+            return "for (int w = 0; w < %d; w++) mkl_free(%s);" % \
+                    (options.NWORKERS, mat_name)
+        else: return "mkl_free(%s);" % (mat_name)
     elif tp == "vector<vector<float*>>":
         return "free_weights_mats(%s);" % (mat_name)
 
@@ -78,7 +84,7 @@ def make_FC_weights_free(name):
     return "free_weights_mats(%s);" % (name)
 
 # input list of ensembles name
-def make_allocate_block(ensembles_info, neuron_analyzers, allocate=True):
+def make_allocate_block(options, ensembles_info, neuron_analyzers, allocate=True):
     """ 
     allocate = True -->  Does allocation
     allocate = False --> Does deallocation
@@ -95,16 +101,17 @@ def make_allocate_block(ensembles_info, neuron_analyzers, allocate=True):
             else:
                 block.append("// deallocating memory for specific fields of " + _cur)
         for attr in attributes: 
-            output_mat_name = _cur+ "_" +attr
+            mat_name = _cur+ "_" +attr
+            # TODO: add differently for data parallelization -b
             if allocate:
-                output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, _dim_y, attributes[attr])
-                block.append(output_malloc_str) 
+                block.append(make_mkl_malloc(options, mat_name, _dim_x, _dim_y, attributes[attr])) 
             else:
-                block.append(make_mkl_free(output_mat_name, attributes[attr])) 
+                block.append(make_mkl_free(options, mat_name, attributes[attr])) 
         #block.append("")
     return block
 
 def make_weights_init_block(ensembles_info, name2enm, allocate=True):
+    ''' Weights are shared by all threads, so nothing to do with data parallelism '''
     if allocate:
         block = ["// initialize weights of layers "]
     else:
@@ -230,15 +237,19 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, f
     solve_block.append(make_loop_header("iter", 0, str(iterations), 1) + "{")
     solve_block.append("")
 
-    # TODO: data parallel: add pragma directive here (a new nested loop with batch)
+    # Data parallel: add pragma directive here (a new nested loop with batch)
     numWorkers = options.NWORKERS
     batch_parallel_flag = options.BATCH_PARA_FLAG
+    tiling_flag = options.TILING_FLAG
     if batch_parallel_flag: 
-        omp_directive_str = "#pragma omp for collapse(2) schedule(static, 1)"
-        solve_block.append(omp_directive_str)
-        #TODO: more loop header
-    else:
-        solve_block.append(make_loop_header("si", 0, "train_features.size()", 1) + "{")
+        if tiling_flag:
+            omp_directive_str = "#pragma omp for collapse(2) schedule(static, 1)"
+        else:
+            omp_directive_str = "#pragma omp for schedule(static, 1)"
+        solve_block.append(omp_directive_str + " private(tid)")
+    solve_block.append(make_loop_header("si", 0, "train_features.size()", 1) + "{")
+    if batch_parallel_flag:
+        solve_block.append("int tid = omp_get_thread_num();")
     solve_block.append("")
     
     #  load next instance of train data (feature and label)
@@ -276,7 +287,7 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, f
         solve_block.append("")
         
     # weights_update
-    # TODO: data parallel: use average grad_weights derived from batch instance 
+    # TODO: data parallel: use atomic sum grad_weights derived from batch instance 
     for enm in ensembles_info[1:]: 
         _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
         weights_update_str = "// weights_update for " + enm[0] + "\n"
@@ -384,7 +395,7 @@ def main(options, program_file, cpp_file):
     # create the neuron analyzers and also pass in ensemble info in order to create
     # forward and backward propogation code
     neuron_analyzers, fp_codes, bp_codes, fp_code_list, bp_code_list = \
-            process_lib("lib.py", ensembles_info, name2enm, conn_types, options.MKL_FLAG)
+            process_lib("lib.py", ensembles_info, name2enm, conn_types, options)
     # for x in neuron_analyzers: print x, neuron_analyzers[x].fields
 
     #for x in fp_codes: print x, fp_codes[x]
@@ -403,7 +414,7 @@ def main(options, program_file, cpp_file):
     main_body_strs.append(make_layers(networks2enms))
     
     # allocating block 
-    main_body_strs.append(make_allocate_block(ensembles_info, neuron_analyzers))
+    main_body_strs.append(make_allocate_block(options, ensembles_info, neuron_analyzers))
     main_body_strs.append(make_weights_init_block(ensembles_info, name2enm))
 
     # load data
@@ -418,7 +429,7 @@ def main(options, program_file, cpp_file):
 
     # deallocating block
     #main_body_strs.append(make_weights_init_block(ensembles_info, name2enm, False))
-    main_body_strs.append(make_allocate_block(ensembles_info, neuron_analyzers, False))
+    main_body_strs.append(make_allocate_block(options, ensembles_info, neuron_analyzers, False))
 
     # OUTPUT TO CPP FILE
     cpp_out = open(cpp_file, "w+")
