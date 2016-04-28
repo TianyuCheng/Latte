@@ -96,9 +96,9 @@ def make_allocate_block(ensembles_info, neuron_analyzers, allocate=True):
                 block.append("// deallocating memory for specific fields of " + _cur)
         for attr in attributes: 
             output_mat_name = _cur+ "_" +attr
+            # TODO: add differently for data parallelization -b
             if allocate:
-                output_malloc_str = make_mkl_malloc(output_mat_name, _dim_x, _dim_y, attributes[attr])
-                block.append(output_malloc_str) 
+                block.append(make_mkl_malloc(output_mat_name, _dim_x, _dim_y, attributes[attr])) 
             else:
                 block.append(make_mkl_free(output_mat_name, attributes[attr])) 
         #block.append("")
@@ -230,7 +230,7 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, f
     solve_block.append(make_loop_header("iter", 0, str(iterations), 1) + "{")
     solve_block.append("")
 
-    # TODO: data parallel: add pragma directive here (a new nested loop with batch)
+    # Data parallel: add pragma directive here (a new nested loop with batch)
     numWorkers = options.NWORKERS
     batch_parallel_flag = options.BATCH_PARA_FLAG
     tiling_flag = options.TILING_FLAG
@@ -279,7 +279,7 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, f
         solve_block.append("")
         
     # weights_update
-    # TODO: data parallel: use average grad_weights derived from batch instance 
+    # TODO: data parallel: use atomic sum grad_weights derived from batch instance 
     for enm in ensembles_info[1:]: 
         _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
         weights_update_str = "// weights_update for " + enm[0] + "\n"
@@ -387,7 +387,7 @@ def main(options, program_file, cpp_file):
     # create the neuron analyzers and also pass in ensemble info in order to create
     # forward and backward propogation code
     neuron_analyzers, fp_codes, bp_codes, fp_code_list, bp_code_list = \
-            process_lib("lib.py", ensembles_info, name2enm, conn_types, options.MKL_FLAG)
+            process_lib("lib.py", ensembles_info, name2enm, conn_types, options)
     # for x in neuron_analyzers: print x, neuron_analyzers[x].fields
 
     #for x in fp_codes: print x, fp_codes[x]

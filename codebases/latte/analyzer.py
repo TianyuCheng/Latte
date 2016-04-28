@@ -343,11 +343,12 @@ def process_add_connection(filename, name2enm):
     print "------------------------------------------"
     return conn_types
 
-def process_lib(filename, ensemble_info, name2enm, conn_types, MKL_FLAG=False):
+def process_lib(filename, ensemble_info, name2enm, conn_types, options):
     """
     read in a library file parse all neuron types,
     and their associated forward/backward functions
     """
+    MKL_FLAG = options.MKL_FLAG
     # create neuron analyzer for each neuron subtype
     for neuron_ast in extract_neuron_classes(filename):
         neuron_analyzers[neuron_ast.name] = NeuronAnalyzer(neuron_ast, MKL_FLAG)
