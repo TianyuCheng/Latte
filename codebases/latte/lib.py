@@ -166,7 +166,7 @@ class FCNeuron(Neuron):
             prev.grad_output += self.grad_output * self.weights[prev.pos_x][prev.pos_y]
         # weights to update
         for prev in self.backward_adj:
-            self.grad_weights[pi][pj] += self.grad_output * self.inputs[prev.pos_x][prev.pos_y]
+            self.grad_weights[prev.pos_x][prev.pos_y] += self.grad_output * self.inputs[prev.pos_x][prev.pos_y]
 
 
 class WeightedNeuron(Neuron):

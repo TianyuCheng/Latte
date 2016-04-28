@@ -290,7 +290,7 @@ class Translator(object):
             elif attr == "pos_y":
                 return ConstantNode("j")
             else:
-                return ConstantNode(node.attr)
+                return ConstantNode(self.prev_enm + "_" + node.attr)
         else:
             # calls like np.tanh, suffice to only return the attr
             return ConstantNode(node.attr)
