@@ -10,6 +10,7 @@ from ast_matcher import *
 from templates import *
 import py_compile
 from optparse import OptionParser
+from term import *
 
 from analyzer import * 
 NARGS = 3
@@ -360,13 +361,15 @@ def main(options, program_file, cpp_file):
 
     # parse the add_connection calls in stdlib
     # and perform the shared variable analysis
-    conn_types = process_add_connection("lib.py")
+    conn_types = process_add_connection("lib.py", name2enm)
     for net, ensembles in networks2enms.iteritems():
         for ensemble in ensembles:
             layer_type = ensemble['type']
             if layer_type in conn_types:
                 args, mapping = conn_types[layer_type]
-                print "Layer %s uniform dependency?" % layer_type, check_uniform_dependency(args, mapping, ensemble)
+                term.dump("Layer %s uniform dependency? %s" % (layer_type, \
+                        check_uniform_dependency(args, mapping, ensemble, name2enm)), \
+                        term.OKBLUE)
 
     # create the neuron analyzers and also pass in ensemble info in order to create
     # forward and backward propogation code

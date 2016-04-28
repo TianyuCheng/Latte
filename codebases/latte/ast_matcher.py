@@ -82,6 +82,23 @@ class SubstituteNameToNum(ast.NodeTransformer):
             return node
         return node
 
+class SubstituteAttributeToNum(ast.NodeTransformer):
+    """change name of a node"""
+    def __init__(self, owner, attr, value):
+        super(SubstituteAttributeToNum, self).__init__()
+        self.owner = owner
+        self.attr = attr
+        self.value = value
+
+    def visit_Attribute(self, node):
+        self.generic_visit(node)
+        if isinstance(node.value, ast.Name) and \
+            node.value.id == self.owner and \
+            node.attr == self.attr:
+            node = ast.Num(self.value)
+            return node
+        return node
+
 def ast_parse_file(filename):
     f = open(filename, "r")
     AST = ast.parse(f.read())
