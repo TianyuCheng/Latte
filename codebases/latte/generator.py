@@ -10,6 +10,7 @@ from ast_matcher import *
 from templates import *
 import py_compile
 from optparse import OptionParser
+from term import *
 
 from analyzer import * 
 NARGS = 3
@@ -272,20 +273,6 @@ def make_solve_block(solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
     solve_block.append("} // end of iterative traversal") # end the iteration loop
     return solve_block
 
-# def share_var_analyze(neuron_analyzers):
-#     # neuron analyzers is a dict that points a name to an analyzer
-#     for neuron_name, neuron_analyzer in neuron_analyzers.iteritems():
-#         shared_vars = [ ]
-#         for field_name in neuron_analyzer.fields.iterkeys():
-#             # ignore all inputs
-#             if field_name.endswith("inputs"):
-#                 shared_vars.append(field_name)
-#             if field_name.endswith("adj"):
-#                 shared_vars.append(field_name)
-#         # delete all shared variables
-#         for shared_var in shared_vars:
-#             del neuron_analyzer.fields[shared_var]
-
 def main(options, program_file, cpp_file):
     # Front-end: processing program_file here
     py_compile.compile(program_file)
@@ -360,18 +347,20 @@ def main(options, program_file, cpp_file):
 
     # parse the add_connection calls in stdlib
     # and perform the shared variable analysis
-    conn_types = process_add_connection("lib.py")
+    conn_types = process_add_connection("lib.py", name2enm)
     for net, ensembles in networks2enms.iteritems():
         for ensemble in ensembles:
             layer_type = ensemble['type']
             if layer_type in conn_types:
                 args, mapping = conn_types[layer_type]
-                print "Layer %s uniform dependency?" % layer_type, check_uniform_dependency(args, mapping, ensemble)
+                term.dump("Layer %s uniform dependency? %s" % (layer_type, \
+                        check_uniform_dependency(args, mapping, ensemble, name2enm)), \
+                        term.OKBLUE)
 
     # create the neuron analyzers and also pass in ensemble info in order to create
     # forward and backward propogation code
     neuron_analyzers, fp_codes, bp_codes, fp_code_list, bp_code_list = \
-            process_lib("lib.py", ensembles_info, name2enm, options.MKL_FLAG)
+            process_lib("lib.py", ensembles_info, name2enm, conn_types, options.MKL_FLAG)
     # for x in neuron_analyzers: print x, neuron_analyzers[x].fields
 
     #for x in fp_codes: print x, fp_codes[x]

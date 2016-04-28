@@ -19,7 +19,7 @@ Authors
     + EID: xl5224
     + Email: jimmylin@utexas.edu
 
-Finish Status
+Status
 ----------
 
 - [DONE] User Description of Network
@@ -230,16 +230,22 @@ TODO not done yet since the system itself isn't complete yet; i.e. still
 need to describe loop tiling and fusion pass
 
 
-Assumptions
+Assumptions/Design Decisions
 -----
 
 - Assume only one data layer and loss layer in each network
 
-- Assume the Function name for a data layer contains "DataLayer"
+- Assume the function name for a data layer contains "DataLayer"
 
-- Assume the Function name for a loss layer contains "LossLayer"
+- Assume the function name for a loss layer contains "LossLayer"
 
 - The function you use for add\_connection must be defined as a lambda function.
+
+- The user won't define variables that begin with \_tile
+
+- No different ensemble types: fused ensembles with layers. (i.e. may not be
+exactly Latte)
+
 
 References
 --------

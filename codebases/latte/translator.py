@@ -25,7 +25,7 @@ class Translator(object):
     self-defined structure, since Python AST
     is complicated to manipulate
     """
-    def __init__(self, neuron_analyzer, curr_enm, prev_enm, pattern_match=True):
+    def __init__(self, neuron_analyzer, curr_enm, prev_enm, conn_type, pattern_match=True):
         super(Translator, self).__init__()
         self.neuron_analyzer = neuron_analyzer
         self.curr_enm = curr_enm
@@ -34,8 +34,11 @@ class Translator(object):
         # getting the dimension from analyzer for constant replacement
         self.curr_enm_dim = neuron_analyzer.curr_enm_dim()
         self.prev_enm_dim = neuron_analyzer.prev_enm_dim()
+        self.connection = conn_type
         # set pattern match flag
         self.pattern_match = pattern_match
+        # debug
+        self.process_adjacency([])
 
     def process_stmt(self, stmt):
         # ignore the stmts for syntax and debug
@@ -120,7 +123,18 @@ class Translator(object):
                 call.add_arg(ConstantNode(self.prev_enm_dim[0] * self.prev_enm_dim[1]), 1, 0)
                 return call
 
-        # direct translation
+        # ---------------------------------------------------------------------
+
+        # match for-backward-adj loop
+        tmpl = template_for_backward_adj()
+        if tmpl.match(node):
+            result = tmpl.wildcard
+            print "match for backward adj:", result
+            return None
+
+        # ---------------------------------------------------------------------
+
+        # match for-range loop
         result = match_forloop(node)
         if result is None:
             term.dump("PROCESS FOR STMT(ERROR): %s" % ast.dump(node), term.FAIL)
@@ -264,3 +278,29 @@ class Translator(object):
         else:
             # calls like np.tanh, suffice to only return the attr
             return ConstantNode(node.attr)
+
+    def process_adjacency(self, stmts):
+        if self.connection is None: return
+        assert isinstance(self.connection, ast.Lambda)
+        assert isinstance(self.connection.body, ast.ListComp)
+        args = self.connection.args
+        args = map(self.process_node, args.args)
+        body = self.connection.body
+        elt = body.elt
+        gen = body.generators
+        assert len(gen) == 2
+        assert isinstance(gen[0].target, ast.Name)
+        assert isinstance(gen[1].target, ast.Name)
+        assert isinstance(gen[0].iter, ast.Call)
+        assert isinstance(gen[1].iter, ast.Call)
+        assert gen[0].iter.func.id == "range"
+        assert gen[1].iter.func.id == "range"
+        indices = {
+            gen[0].target.id: map(lambda x: x.n, gen[0].iter.args),
+            gen[1].target.id: map(lambda x: x.n, gen[1].iter.args)
+        }
+        # transform the loop bound into range format
+        for key in indices.iterkeys():
+            if len(indices[key]) == 1:
+                indices[key] = [0] + indices[key] + [1]
+        print indices

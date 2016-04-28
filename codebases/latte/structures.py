@@ -37,11 +37,13 @@ class Node(object):
         other_child_number = other_node.get_child_number()
         other_parent = other_node.get_parent()
 
-        # replace the other child with self
-        other_parent.substitute_child(other_child_number, other_parent)
+        if not other_parent == None:
+            # replace the other child with self
+            other_parent.substitute_child(other_child_number, self)
 
-        # mnake the other node a child of this one
+        # make the other node a child of this one
         self.add_child(other_node)
+
 
     def substitute_child(self, child_number, new_child):
         """Overwrite the child at child_number with a new child"""

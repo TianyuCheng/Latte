@@ -21,6 +21,14 @@ def template_SoftmaxLossLayer():
     _name = SoftmaxLossLayer(_net, _prev, _dim_x, _dim_y)
 
 @template
+def template_ConvolutionLayer():
+    _name = ConvolutionLayer(_net, _prev, _dim_x, _dim_y, _TYPE, _ker_dim_x, _ker_dim_y)
+
+@template
+def template_PoolingLayer():
+    _name = PoolingLayer(_net, _prev, _dim_x, _dim_y, _TYPE, _pool_dim_x, _pool_dim_y)
+
+@template
 def template_Ensemble():
     _net.add_ensemble(_cur_enm)
 
@@ -36,12 +44,19 @@ def template_add_connection():
 layer_templates = [
         template_LibsvmDataLayer(),
         template_FullyConnectedLayer(),
+        template_PoolingLayer(),
+        template_ConvolutionLayer(),
         template_SoftmaxLossLayer()
 ]
 
 """
 Templates for computation programming paradigm
 """
+
+@template
+def template_for_backward_adj():
+    for _i in self.backward_adj:
+        _body
 
 @template
 def template_for(range):

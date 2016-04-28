@@ -67,7 +67,7 @@ def FullyConnectedLayer(net, prev, dim_x, dim_y, TYPE):
     # construct a new ensemble
     cur_enm = Ensemble(dim_x, dim_y, TYPE)
     add_connection(net, prev, cur_enm, lambda x, y: \
-         [ (i,j) for i in range(prev.dim_x)) for j in range(prev.dim_y)) ])
+         [ (i,j) for i in range(prev.dim_x) for j in range(prev.dim_y) ])
     net.add_ensemble (cur_enm)
     return cur_enm
 

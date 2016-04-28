@@ -86,7 +86,11 @@ for (int y = 0; y < 10; y += 1) {
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 3; y += 1) {
 dp_result = 0.0;
-sgemm_dp(&dp_result, label_enm_weights[x][y], ip2_enm_output, 10);
+for (int i = 0; i < 1; i += 1) {
+for (int j = 0; j < 10; j += 1) {
+dp_result = (dp_result + (*(label_enm_weights[x][y]+i*3+j) * *(ip2_enm_output+i*3+j)));
+}
+}
 *(label_enm_output+x*3+y) = exp(dp_result);
 }
 }
@@ -108,8 +112,16 @@ for (int x = 0; x < 1; x++) {
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 3; y += 1) {
 *(label_enm_grad_output+x*3+y) = (*(label_enm_output+x*3+y) - cur_label[x][y]);
-sgemm_axpy(ip2_enm_grad_output, *(label_enm_grad_output+x*3+y), label_enm_weights[x][y], 10);
-sgemm_axpy(label_enm_grad_weights[x][y], *(label_enm_grad_output+x*3+y), ip2_enm_output, 10);
+for (int i = 0; i < 1; i += 1) {
+for (int j = 0; j < 10; j += 1) {
+*(ip2_enm_output+i*3+j) = (*(label_enm_grad_output+x*3+y) * *(label_enm_weights[x][y]+i*3+j));
+}
+}
+for (int i = 0; i < 1; i += 1) {
+for (int j = 0; j < 10; j += 1) {
+*(label_enm_grad_weights[x][y]+i*3+j) = (*(label_enm_grad_weights[x][y]+i*3+j) + (*(label_enm_grad_output+x*3+y) * *(ip2_enm_output+i*3+j)));
+}
+}
 }
 }
 
@@ -191,7 +203,11 @@ for (int y = 0; y < 10; y += 1) {
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 3; y += 1) {
 dp_result = 0.0;
-sgemm_dp(&dp_result, label_enm_weights[x][y], ip2_enm_output, 10);
+for (int i = 0; i < 1; i += 1) {
+for (int j = 0; j < 10; j += 1) {
+dp_result = (dp_result + (*(label_enm_weights[x][y]+i*3+j) * *(ip2_enm_output+i*3+j)));
+}
+}
 *(label_enm_output+x*3+y) = exp(dp_result);
 }
 }
