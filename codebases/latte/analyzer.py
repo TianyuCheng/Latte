@@ -362,6 +362,7 @@ def process_lib(filename, ensemble_info, name2enm, conn_types, PM_FLAG=True):
        neuron_analyzer.delete_unused_fields()
     print "+++++++++++++++++++++++++++++++++++++++++++"
 
+    # DOING SECOND TIME TO GET THE BASE's VARIABLES
     # process the fields of the neuron base types
     for name, neuron_analyzer in neuron_analyzers.iteritems():
        neuron_analyzer.init_fields()
