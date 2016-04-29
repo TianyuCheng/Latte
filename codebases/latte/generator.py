@@ -32,7 +32,7 @@ def make_include_header(options):
     """makes the C++ header"""
     header = ""
     header += '''#include ''' + LATTE_H_PATH 
-    batch_parallel_flag = options.BATCH_PARA_FLAG
+    batch_parallel_flag = options.DP_FLAG
     tiling_flag = options.TILING_FLAG
     if batch_parallel_flag or tiling_flag: 
         header += '''\n#include <omp.h>'''
@@ -46,7 +46,7 @@ def make_main_header():
 
 def make_omp_init_block(options):
     numWorkers = options.NWORKERS
-    batch_parallel_flag = options.BATCH_PARA_FLAG
+    batch_parallel_flag = options.DP_FLAG
     tiling_flag = options.TILING_FLAG
     if not (batch_parallel_flag or tiling_flag): return []
     block = [ "// OMP Library Initialization Block" ]
@@ -63,12 +63,12 @@ def make_newlines(num=1):
 
 def make_mkl_malloc(options, mat_name, dim_x, dim_y, tp):
     if tp == "float*":
-        if options.BATCH_PARA_FLAG: 
+        if options.DP_FLAG: 
             return "vector<%s> %s (%d, init_mkl_mat(%s, %s)); " % \
                     (tp, mat_name, options.NWORKERS, dim_x, dim_y)
         else: return "%s %s = init_mkl_mat(%s, %s);" % (tp, mat_name, dim_x, dim_y)
     elif tp == "vector<vector<float*>>":
-        if options.BATCH_PARA_FLAG and "grad_weights" in mat_name:
+        if options.DP_FLAG and "grad_weights" in mat_name:
             return "vector<%s> %s (%d, (%s, vector<float*>(%s, NULL)));" % \
                         (tp, mat_name, options.NWORKERS, dim_x, dim_y)
         else:
@@ -77,12 +77,12 @@ def make_mkl_malloc(options, mat_name, dim_x, dim_y, tp):
 
 def make_mkl_free(options, mat_name, tp): 
     if tp == "float*":
-        if options.BATCH_PARA_FLAG: 
+        if options.DP_FLAG: 
             return "for (int i = 0; i < %d; i++) mkl_free(%s[i]);" % \
                     (options.NWORKERS, mat_name)
         else: return "mkl_free(%s);" % (mat_name)
     elif tp == "vector<vector<float*>>":
-        if options.BATCH_PARA_FLAG and "grad_weights" in mat_name:
+        if options.DP_FLAG and "grad_weights" in mat_name:
             return "for (int i = 0; i < %d; i++) free_weights_mats(%s[i]);" % \
                     (options.NWORKERS, mat_name)
         else: return "free_weights_mats(%s);" % (mat_name)
@@ -246,7 +246,7 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, f
 
     # Data parallel: add pragma directive here (a new nested loop with batch)
     numWorkers = options.NWORKERS
-    batch_parallel_flag = options.BATCH_PARA_FLAG
+    batch_parallel_flag = options.DP_FLAG
     tiling_flag = options.TILING_FLAG
     if batch_parallel_flag: 
         omp_directive_str = "#pragma omp for"
@@ -300,11 +300,15 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, f
         weights_update_str = "// weights_update for " + enm[0] + "\n"
         weights_update_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
         weights_update_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
+        if options.DP_FLAG: 
+            weights_update_str += "#pragma omp atomic\n"
+            subscript = "[tid]"
+        else: subscript = ""
         weights_update_str += "\t\tsgemm_axpy(%s[x][y], %s, %s[x][y], %s*%s);\n" %\
-                (_cur+"_weights", step_size, _cur+"_grad_weights", \
+                (_cur+"_weights", step_size, _cur+"_grad_weights"+subscript, \
                     name2enm[_prev][3], name2enm[_prev][4])
         weights_update_str += "\t\tsgemm_zeros(%s[x][y], %s*%s);\n" % \
-                (_cur+"_grad_weights", name2enm[_prev][3], name2enm[_prev][4])
+                (_cur+"_grad_weights"+subscript, name2enm[_prev][3], name2enm[_prev][4])
         weights_update_str += "\t\tsgemm_zeros(%s, %s*%s);\n" % \
                 (_cur+"_grad_output", _dim_x, _dim_y)
         weights_update_str += "\t}\n}"
@@ -456,7 +460,7 @@ if __name__ == "__main__":
     parser = OptionParser(usage=usage)
     parser.add_option("-m", "--mkl", action="store_true", dest="MKL_FLAG", \
                       default=False, help="option to turn on pattern match for MKL calls.")
-    parser.add_option("-b", "--batch-parallel", action="store_true", dest="BATCH_PARA_FLAG", \
+    parser.add_option("-b", "--batch-parallel", action="store_true", dest="DP_FLAG", \
                       default=False, help="option to turn on batch parallelization.")
     parser.add_option("-t", "--tiling-parallel", action="store_true", dest="TILING_FLAG", \
                       default=False, help="option to turn on tiling parallelization.")
