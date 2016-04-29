@@ -204,6 +204,7 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
     test_block.append("vector<int> preds;")
     test_block.append(make_loop_header("data_idx", 0, "test_features.size()", 1) + "{")
     #test_block.append("float dp_result;")
+    test_block.append("int tid = 0;")
     test_block.append("")
 
     # load next instance of train data (feature and label)
