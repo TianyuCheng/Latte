@@ -69,26 +69,29 @@ class Translator(object):
         _, dim_y = self.curr_enm_dim
         # pattern match
         if self.MKL_FLAG:
+            # hard code the tid if DP_FLAG is enabled
+            subscript = "[tid]" if self.DP_FLAG else ""
+
             # try pattern match a bunch of different patterns
             tmpl = template_asgn("output")
             if tmpl.prefix_of(node):
                 expr = self.process_node(tmpl.wildcard['exp'])
                 return AssignmentNode(IndexNode(\
-                        ConstantNode(self.curr_enm+"_output"), ['x', 'y'], dim_y), \
+                        ConstantNode(self.curr_enm+"_output%s" % subscript), ['x', 'y'], dim_y), \
                         expr)
 
             tmpl = template_asgn("grad_activation")
             if tmpl.prefix_of(node):
                 expr = self.process_node(tmpl.wildcard['exp'])
                 return AssignmentNode(IndexNode(\
-                        ConstantNode(self.curr_enm+"_grad_activation"), ['x', 'y'], dim_y), \
+                        ConstantNode(self.curr_enm+"_grad_activation%s" % subscript), ['x', 'y'], dim_y), \
                         expr)
 
             tmpl = template_asgn("grad_output")
             if tmpl.prefix_of(node):
                 expr = self.process_node(tmpl.wildcard['exp'])
                 return AssignmentNode(IndexNode(\
-                        ConstantNode(self.curr_enm+"_grad_output"), ['x', 'y'], dim_y), \
+                        ConstantNode(self.curr_enm+"_grad_output%s" % subscript), ['x', 'y'], dim_y), \
                         expr)
 
         # assign node
@@ -317,6 +320,7 @@ class Translator(object):
             elif field_type == "vector<vector<float*>>":
                 # 2D fields
                 var_name = "%s_%s" % (enm_name, attr)
+                # term.dump("///////> %s" % var_name, term.WARNING)
                 return ArrayNode(\
                         ConstantNode(var_name), ['x', 'y'])
             else:
