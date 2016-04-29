@@ -68,17 +68,24 @@ def make_mkl_malloc(options, mat_name, dim_x, dim_y, tp):
                     (tp, mat_name, options.NWORKERS, dim_x, dim_y)
         else: return "%s %s = init_mkl_mat(%s, %s);" % (tp, mat_name, dim_x, dim_y)
     elif tp == "vector<vector<float*>>":
-        return "%s %s (%s, vector<float*>(%s, NULL));" % (tp, mat_name, dim_x, dim_y)
+        if options.BATCH_PARA_FLAG and "grad_weights" in mat_name:
+            return "vector<%s> %s (%d, (%s, vector<float*>(%s, NULL)));" % \
+                        (tp, mat_name, options.NWORKERS, dim_x, dim_y)
+        else:
+            return "%s %s (%s, vector<float*>(%s, NULL));" % (tp, mat_name, dim_x, dim_y)
         
 
 def make_mkl_free(options, mat_name, tp): 
     if tp == "float*":
         if options.BATCH_PARA_FLAG: 
-            return "for (int w = 0; w < %d; w++) mkl_free(%s);" % \
+            return "for (int i = 0; i < %d; i++) mkl_free(%s[i]);" % \
                     (options.NWORKERS, mat_name)
         else: return "mkl_free(%s);" % (mat_name)
     elif tp == "vector<vector<float*>>":
-        return "free_weights_mats(%s);" % (mat_name)
+        if options.BATCH_PARA_FLAG and "grad_weights" in mat_name:
+            return "for (int i = 0; i < %d; i++) free_weights_mats(%s[i]);" % \
+                    (options.NWORKERS, mat_name)
+        else: return "free_weights_mats(%s);" % (mat_name)
 
 def make_FC_weights_free(name):
     return "free_weights_mats(%s);" % (name)
@@ -196,7 +203,7 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
     test_block.append("// test block")
     test_block.append("vector<int> preds;")
     test_block.append(make_loop_header("data_idx", 0, "test_features.size()", 1) + "{")
-    test_block.append("float dp_result;")
+    #test_block.append("float dp_result;")
     test_block.append("")
 
     # load next instance of train data (feature and label)
@@ -242,11 +249,11 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, f
     batch_parallel_flag = options.BATCH_PARA_FLAG
     tiling_flag = options.TILING_FLAG
     if batch_parallel_flag: 
-        if tiling_flag:
-            omp_directive_str = "#pragma omp for collapse(2) schedule(static, 1)"
-        else:
-            omp_directive_str = "#pragma omp for schedule(static, 1)"
-        solve_block.append(omp_directive_str + " private(tid)")
+        omp_directive_str = "#pragma omp for"
+        if tiling_flag: omp_directive_str = " collapse(2)"
+        omp_directive_str += " schedule(static, 1)"
+        omp_directive_str += " private(tid, data_idx, cur_label, sumover)"
+        solve_block.append(omp_directive_str)
     solve_block.append(make_loop_header("si", 0, "train_features.size()", 1) + "{")
     if batch_parallel_flag:
         solve_block.append("int tid = omp_get_thread_num();")
@@ -258,7 +265,7 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, f
             (ensembles_info[0][0]+"_output", ensembles_info[0][3], ensembles_info[0][4])
     load_label_str += "vector<vector<int>> cur_label (%d, vector<int>(%d, 0));\n" % tuple(ensembles_info[-1][3:5])
     load_label_str += "cur_label[0][%s] = 1;\n" % "train_labels[data_idx]"
-    load_label_str += "float dp_result;"
+    #load_label_str += "float dp_result;"
     solve_block.append(load_label_str)
     
     # forward propagation
