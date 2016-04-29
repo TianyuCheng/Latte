@@ -106,9 +106,9 @@ class Translator(object):
             tmpl = template_fp_dp()
             matched = tmpl.match(node) 
             if matched:
+                print ast.dump(tmpl.wildcard['B'])
                 A, C, B, i,  _, j = map(self.process_node, tmpl.wildcard.values())
                 call = CallNode(ConstantNode("sgemm_dp"))
-                #C = ConstantNode(self.curr_enm + "_output")
                 call.add_arg(C, 1, 1)
                 call.add_arg(A, 1, 0)
                 call.add_arg(B, 1, 0)
@@ -288,8 +288,12 @@ class Translator(object):
                 # input copy from last layer if the inputs
                 # are not shared
                 if attr.endswith("inputs"):
-                    var_name = "%s_output" % self.prev_enm
-                    return ConstantNode(var_name)
+                    if not self.DP_FLAG:
+                        var_name = "%s_output" % self.prev_enm
+                        return ConstantNode(var_name)
+                    else:
+                        var_name = "%s_output" % self.prev_enm
+                        return ArrayNode(ConstantNode(var_name), ['tid'])
                 #############################################
                 # analyze field type
                 field_type = self.neuron_analyzer.get_field_type(attr)
