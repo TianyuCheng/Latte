@@ -64,12 +64,14 @@ def make_newlines(num=1):
 def make_mkl_malloc(options, mat_name, dim_x, dim_y, tp):
     if tp == "float*":
         if options.DP_FLAG: 
-            return "vector<%s> %s (%d, init_mkl_mat(%s, %s)); " % \
-                    (tp, mat_name, options.NWORKERS, dim_x, dim_y)
+            string = "vector<%s> %s (%d, NULL); \n" % (tp, mat_name, options.NWORKERS)
+            string += "for (int i = 0; i < %d; i ++) %s[i] = init_mkl_mat(%s, %s);" \
+                    % (options.NWORKERS, mat_name, dim_x, dim_y)
+            return string
         else: return "%s %s = init_mkl_mat(%s, %s);" % (tp, mat_name, dim_x, dim_y)
     elif tp == "vector<vector<float*>>":
         if options.DP_FLAG and "grad_weights" in mat_name:
-            return "vector<%s> %s (%d, (%s, vector<float*>(%s, NULL)));" % \
+            return "vector<%s> %s (%d, vector<vector<float*>>(%s, vector<float*>(%s, NULL)));" % \
                         (tp, mat_name, options.NWORKERS, dim_x, dim_y)
         else:
             return "%s %s (%s, vector<float*>(%s, NULL));" % (tp, mat_name, dim_x, dim_y)
@@ -117,7 +119,7 @@ def make_allocate_block(options, ensembles_info, neuron_analyzers, allocate=True
         #block.append("")
     return block
 
-def make_weights_init_block(ensembles_info, name2enm, allocate=True):
+def make_weights_init_block(options, ensembles_info, name2enm, allocate=True):
     ''' Weights are shared by all threads, so nothing to do with data parallelism '''
     if allocate:
         block = ["// initialize weights of layers "]
@@ -139,7 +141,11 @@ def make_weights_init_block(ensembles_info, name2enm, allocate=True):
         prev_dim_x = name2enm[_prev][3]
         prev_dim_y = name2enm[_prev][4]
         if allocate:
-            init_str = "init_weights_mats(%s, %d, %d); " % (_cur+"_grad_weights", prev_dim_x, prev_dim_y)
+            init_str, subscript = "", ""
+            if options.DP_FLAG:
+                init_str += "for (int i = 0; i < %d; i ++) " % options.NWORKERS
+                subscript += "[i]"
+            init_str += "init_weights_mats(%s, %d, %d); " % (_cur+"_grad_weights"+subscript, prev_dim_x, prev_dim_y)
         else:
             init_str = make_FC_weights_free(_cur+"_grad_weights")
         block.append(init_str)   
@@ -207,9 +213,9 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
     test_block.append("int tid = 0;")
     test_block.append("")
 
-    # load next instance of train data (feature and label)
     if options.DP_FLAG: subscript = "[tid]"
     else: subscript = ""
+    # load next instance of train data (feature and label)
     load_label_str = "sgemm_copy (%s, test_features[data_idx], %s*%s);\n" % \
             (ensembles_info[0][0]+"_output"+subscript, ensembles_info[0][3], ensembles_info[0][4])
     load_label_str += "vector<vector<int>> cur_label (%d, vector<int>(%d, 0));\n" % tuple(ensembles_info[-1][3:5])
@@ -226,7 +232,7 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
     loss_layer_output = _cur+"_output"
     annotate_str = "// annotate for loss layer in testing stage\n"
     annotate_str += "int pred = argmax (%s, %s*%s);\n" % \
-            (loss_layer_output, _dim_x, _dim_y)
+            (loss_layer_output+subscript, _dim_x, _dim_y)
     annotate_str += "preds.push_back(pred);\n"
     test_block.append(annotate_str)
 
@@ -431,7 +437,7 @@ def main(options, program_file, cpp_file):
     
     # allocating block 
     main_body_strs.append(make_allocate_block(options, ensembles_info, neuron_analyzers))
-    main_body_strs.append(make_weights_init_block(ensembles_info, name2enm))
+    main_body_strs.append(make_weights_init_block(options, ensembles_info, name2enm))
 
     # load data
     main_body_strs.append(make_load_data(networks2enms))
