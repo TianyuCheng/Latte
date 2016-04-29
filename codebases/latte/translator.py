@@ -17,8 +17,10 @@ def unwrap(node):
         return unwrap(node.children[0])
     if isinstance(node, IndexNode):
         return unwrap(node.base_addr)
-    if isinstance(node, ArrayNode):
-        return unwrap(node.base_addr)
+    # if isinstance(node, ArrayNode):
+    #     if node.indices[0] == "tid":
+    #         return node
+    #     return unwrap(node.base_addr)
     return node
 
 def match_forloop(stmt):
@@ -306,8 +308,8 @@ class Translator(object):
             if self.DP_FLAG:
                 if attr.endswith("grad_weights"):
                     var_name = "%s_%s" % (enm_name, attr)
-                    return ArrayNode(\
-                            ConstantNode(var_name), ['tid', 'x', 'y'])
+                    return ArrayNode(ArrayNode(\
+                            ConstantNode(var_name), ['tid']), ['x', 'y'])
 
             # general process based on the type of field
             if field_type is None:
@@ -318,16 +320,18 @@ class Translator(object):
                 return ArrayNode(\
                         ConstantNode(var_name), ['x', 'y'])
             else:
+                var_name = "%s_%s" % (enm_name, attr)
+                # term.dump("=======> %s" % var_name, term.OKBLUE)
                 # 1D fields
                 # transform to SoA form
                 if not self.DP_FLAG:
+                    # term.dump("-------> %s" % var_name, term.OKGREEN)
                     # disable data parallelism
-                    var_name = "%s_%s" % (enm_name, attr)
                     return IndexNode(\
                             ConstantNode(var_name), ['x', 'y'], dim_y)
                 else:
+                    # term.dump("+++++++> %s" % var_name, term.FAIL)
                     # enable data parallelism
-                    var_name = "%s_%s" % (enm_name, attr)
                     return IndexNode(\
                             ArrayNode(var_name, ['tid']), ['x', 'y'], dim_y)
         else:
