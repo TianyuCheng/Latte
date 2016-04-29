@@ -208,8 +208,10 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
     test_block.append("")
 
     # load next instance of train data (feature and label)
+    if options.DP_FLAG: subscript = "[tid]"
+    else: subscript = ""
     load_label_str = "sgemm_copy (%s, test_features[data_idx], %s*%s);\n" % \
-            (ensembles_info[0][0]+"_output", ensembles_info[0][3], ensembles_info[0][4])
+            (ensembles_info[0][0]+"_output"+subscript, ensembles_info[0][3], ensembles_info[0][4])
     load_label_str += "vector<vector<int>> cur_label (%d, vector<int>(%d, 0));\n" % tuple(ensembles_info[-1][3:5])
     load_label_str += "cur_label[0][%s] = 1;" % "test_labels[data_idx]"
     test_block.append(load_label_str)
@@ -262,8 +264,10 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, f
     
     #  load next instance of train data (feature and label)
     load_label_str = "int data_idx = shuffle_index[si];\n"
+    if options.DP_FLAG: subscript = "[tid]"
+    else: subscript = ""
     load_label_str += "sgemm_copy (%s, train_features[data_idx], %s*%s);\n" % \
-            (ensembles_info[0][0]+"_output", ensembles_info[0][3], ensembles_info[0][4])
+            (ensembles_info[0][0]+"_output"+subscript, ensembles_info[0][3], ensembles_info[0][4])
     load_label_str += "vector<vector<int>> cur_label (%d, vector<int>(%d, 0));\n" % tuple(ensembles_info[-1][3:5])
     load_label_str += "cur_label[0][%s] = 1;\n" % "train_labels[data_idx]"
     #load_label_str += "float dp_result;"
@@ -280,12 +284,12 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, f
     annotate_str += "float sumover = 0.0;\n"
     annotate_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
     annotate_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
-    annotate_str += "\t\tsumover += *(%s+x*%s+y);\n" % (_cur+"_output", _dim_y)
+    annotate_str += "\t\tsumover += *(%s+x*%s+y);\n" % (_cur+"_output"+subscript, _dim_y)
     annotate_str += "\t}\n}\n"
     annotate_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
     annotate_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
     annotate_str += "\t\t*(%s+x*%s+y) = *(%s+x*%s+y) / sumover;\n" % \
-            (_cur+"_output", _dim_y, _cur+"_output", _dim_y)
+            (_cur+"_output"+subscript, _dim_y, _cur+"_output"+subscript, _dim_y)
     annotate_str += "\t}\n}\n"
     solve_block.append(annotate_str)
 
@@ -311,7 +315,7 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, f
         weights_update_str += "\t\tsgemm_zeros(%s[x][y], %s*%s);\n" % \
                 (_cur+"_grad_weights"+subscript, name2enm[_prev][3], name2enm[_prev][4])
         weights_update_str += "\t\tsgemm_zeros(%s, %s*%s);\n" % \
-                (_cur+"_grad_output", _dim_x, _dim_y)
+                (_cur+"_grad_output"+subscript, _dim_x, _dim_y)
         weights_update_str += "\t}\n}"
         solve_block.append(weights_update_str)
     solve_block.append("")
