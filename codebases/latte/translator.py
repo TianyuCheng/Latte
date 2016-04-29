@@ -102,6 +102,9 @@ class Translator(object):
     def process_for(self, node):
         # pattern match
         if self.MKL_FLAG:
+            # hard code the tid if DP_FLAG is enabled
+            subscript = "[tid]" if self.DP_FLAG else ""
+
             #tmpl = template_dp("self", "output")
             tmpl = template_fp_dp()
             matched = tmpl.match(node) 
@@ -139,7 +142,7 @@ class Translator(object):
                 prev_type = self.neuron_analyzer.prev_enm_type()
                 if prev_type is None or prev_type.endswith("DataLayer"):
                     return None
-                C = ConstantNode(self.prev_enm + "_grad_output")
+                C = ConstantNode(self.prev_enm + "_grad_output%s" % subscript)
                 call = CallNode(ConstantNode("sgemm_axpy"))
                 call.add_arg(unwrap(C), 1, 1)
                 call.add_arg(DereferenceNode(scalar), 1, 0)
