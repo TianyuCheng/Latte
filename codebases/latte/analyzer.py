@@ -20,10 +20,10 @@ field_blacklist = set([\
 class NeuronAnalyzer(object):
     """class for neuron specific code generation
     Each neuron type has its own analyzer"""
-    def __init__(self, neuron_ast, MKL_FLAG = False, DP_FLAG=False):
+    def __init__(self, neuron_ast, options):
         super(NeuronAnalyzer, self).__init__()
-        self.MKL_FLAG = MKL_FLAG
-        self.DP_FLAG = DP_FLAG
+        self.MKL_FLAG = options.MKL_FLAG
+        self.DP_FLAG = options.DP_FLAG
         # field variables
         self.name = neuron_ast.name
         self.neuron_ast = neuron_ast
@@ -359,10 +359,9 @@ def process_lib(filename, ensemble_info, name2enm, conn_types, options):
     read in a library file parse all neuron types,
     and their associated forward/backward functions
     """
-    MKL_FLAG = options.MKL_FLAG
     # create neuron analyzer for each neuron subtype
     for neuron_ast in extract_neuron_classes(filename):
-        neuron_analyzers[neuron_ast.name] = NeuronAnalyzer(neuron_ast, MKL_FLAG)
+        neuron_analyzers[neuron_ast.name] = NeuronAnalyzer(neuron_ast, options)
     
     # process the fields of the neuron base types
     neuron_analyzers['Neuron'].delete_unused_fields()

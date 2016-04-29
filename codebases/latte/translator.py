@@ -302,9 +302,14 @@ class Translator(object):
                     field_type = None
                 dim_y = self.prev_enm_dim[1]
 
-            if attr == "grad_activation":
-                print "========>", str(owner), self.curr_enm, self.prev_enm, attr, field_type
+            # special case during data parallelism
+            if self.DP_FLAG:
+                if attr.endswith("grad_weights"):
+                    var_name = "%s_%s" % (enm_name, attr)
+                    return ArrayNode(\
+                            ConstantNode(var_name), ['tid', 'x', 'y'])
 
+            # general process based on the type of field
             if field_type is None:
                 return ConstantNode(enm_name + "_" + attr)
             elif field_type == "vector<vector<float*>>":
@@ -313,13 +318,18 @@ class Translator(object):
                 return ArrayNode(\
                         ConstantNode(var_name), ['x', 'y'])
             else:
-                if attr == "grad_activation":
-                    print "-------->", str(owner), self.curr_enm, self.prev_enm, attr, field_type
                 # 1D fields
                 # transform to SoA form
-                var_name = "%s_%s" % (enm_name, attr)
-                return IndexNode(\
-                        ConstantNode(var_name), ['x', 'y'], dim_y)
+                if not self.DP_FLAG:
+                    # disable data parallelism
+                    var_name = "%s_%s" % (enm_name, attr)
+                    return IndexNode(\
+                            ConstantNode(var_name), ['x', 'y'], dim_y)
+                else:
+                    # enable data parallelism
+                    var_name = "%s_%s" % (enm_name, attr)
+                    return IndexNode(\
+                            ArrayNode(var_name, ['tid']), ['x', 'y'], dim_y)
         else:
             # calls like np.tanh, suffice to only return the attr
             return ConstantNode(node.attr)
