@@ -34,7 +34,7 @@ class Translator(object):
     self-defined structure, since Python AST
     is complicated to manipulate
     """
-    def __init__(self, neuron_analyzer, prev_neuron_analyzer, curr_enm, prev_enm, conn_type, share_weights, MKL_FLAG):
+    def __init__(self, neuron_analyzer, prev_neuron_analyzer, curr_enm, prev_enm, conn_type, share_weights, MKL_FLAG, DP_FLAG ):
         super(Translator, self).__init__()
         self.neuron_analyzer = neuron_analyzer
         self.prev_neuron_analyzer = prev_neuron_analyzer
@@ -49,6 +49,7 @@ class Translator(object):
         self.share_weights = share_weights
         # set pattern match flag
         self.MKL_FLAG = MKL_FLAG
+        self.DP_FLAG = DP_FLAG
 
     def process_stmt(self, stmt):
         # ignore the stmts for syntax and debug

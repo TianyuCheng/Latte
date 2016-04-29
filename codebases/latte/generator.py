@@ -250,7 +250,7 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, f
     tiling_flag = options.TILING_FLAG
     if batch_parallel_flag: 
         omp_directive_str = "#pragma omp for"
-        if tiling_flag: omp_directive_str = " collapse(2)"
+        if tiling_flag: omp_directive_str += " collapse(2)"
         omp_directive_str += " schedule(static, 1)"
         omp_directive_str += " private(tid, data_idx, cur_label, sumover)"
         solve_block.append(omp_directive_str)

@@ -20,9 +20,10 @@ field_blacklist = set([\
 class NeuronAnalyzer(object):
     """class for neuron specific code generation
     Each neuron type has its own analyzer"""
-    def __init__(self, neuron_ast, MKL_FLAG = True):
+    def __init__(self, neuron_ast, MKL_FLAG = False, DP_FLAG=False):
         super(NeuronAnalyzer, self).__init__()
         self.MKL_FLAG = MKL_FLAG
+        self.DP_FLAG = DP_FLAG
         # field variables
         self.name = neuron_ast.name
         self.neuron_ast = neuron_ast
@@ -135,7 +136,8 @@ class NeuronAnalyzer(object):
         prev_analyzer = None
         if self.enm_prev is not None and self.enm_prev[2] in neuron_analyzers:
             prev_analyzer = neuron_analyzers[self.enm_prev[2]]
-        trans = Translator(self, prev_analyzer, curr_enm, prev_enm, self.conn_type, self.share_weights, self.MKL_FLAG)
+        trans = Translator(self, prev_analyzer, curr_enm, prev_enm, \
+                 self.conn_type, self.share_weights, self.MKL_FLAG, self.DP_FLAG)
         for stmt in stmt_walk(function_ast):
             for_node_y.add_child(trans.process_stmt(stmt))
 
@@ -160,7 +162,8 @@ class NeuronAnalyzer(object):
             prev_type = self.name2enm[self.enm_prev][5]
             if prev_type in neuron_analyzers:
                 prev_analyzer = neuron_analyzers[prev_type]
-        trans = Translator(self, prev_analyzer, curr_enm, prev_enm, self.conn_type, self.share_weights, self.MKL_FLAG)
+        trans = Translator(self, prev_analyzer, curr_enm, prev_enm,\
+                self.conn_type, self.share_weights, self.MKL_FLAG, self.DP_FLAG)
         for stmt in stmt_walk(function_ast):
             for_node_y.add_child(trans.process_stmt(stmt))
 
