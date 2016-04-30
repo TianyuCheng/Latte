@@ -63,7 +63,7 @@ class Node(object):
     def get_children(self):
         """return list of children"""
         return self.children
-    
+
 
 class ForNode(Node):
     """Holds information for a for loop"""
@@ -100,6 +100,17 @@ class ForNode(Node):
     def get_increment(self):
         return self.increment
 
+    def deep_copy(self):
+        """returns a node that is a copy of this node"""
+        my_copy = ForNode(self.initial_name, self.initial, self.loop_bound,
+                          self.increment)
+
+        for child in self.children:
+            child_copy = child.deep_copy()
+            my_copy.add_child(child_copy)
+
+        return my_copy
+
     def __str__(self):
         """Prints the ENTIRE loop including its children"""
         for_fmt = "for (int {i} = {initial}; {i} < {bound}; {i} += {increment}) {{\n{code}\n}}"
@@ -119,6 +130,16 @@ class ConstantNode(Node):
 
     def get_constant(self):
         return self.constant
+
+    def deep_copy(self):
+        my_copy = ConstantNode(self.constant)
+
+        for child in self.children:
+            child_copy = child.deep_copy()
+            my_copy.add_child(child_copy)
+
+        return my_copy
+
 
     #def is_used(self, use, use_list):
     #    """Adds our constant to a use list if the use is equal to what is
@@ -144,6 +165,15 @@ class AssignmentNode(Node):
         if isinstance(self.right, IndexNode):
             self.right = DereferenceNode(self.right)
 
+    def deep_copy(self):
+        my_copy = AssignmentNode(self.left, self.right)
+
+        for child in self.children:
+            child_copy = child.deep_copy()
+            my_copy.add_child(child_copy)
+
+        return my_copy
+
     def __str__(self):
         return "%s = %s;" % (str(self.left), str(self.right))
 
@@ -166,6 +196,15 @@ class ExpressionNode(Node):
         if isinstance(self.right, IndexNode):
             self.right = DereferenceNode(self.right)
 
+    def deep_copy(self):
+        my_copy = ExpressionNode(self.left, self.right, self.operator)
+
+        for child in self.children:
+            child_copy = child.deep_copy()
+            my_copy.add_child(child_copy)
+
+        return my_copy
+
     def __str__(self):
         if self.operator == "pow":
             return "%s(%s, %s)" % (self.operator, str(self.left), str(self.right))
@@ -183,6 +222,15 @@ class ArrayNode(Node):
             self.indices = indices
         else:
             self.indices = [ indices ]
+
+    def deep_copy(self):
+        my_copy = ArrayNode(self.base_addr, self.indices)
+
+        for child in self.children:
+            child_copy = child.deep_copy()
+            my_copy.add_child(child_copy)
+
+        return my_copy
 
     def __str__(self):
         indices = ''.join(map(lambda x: "[%s]" % str(x), self.indices))
@@ -205,6 +253,15 @@ class IndexNode(Node):
             self.indices = [ indices ]
         assert len(self.indices) <= 2
 
+    def deep_copy(self):
+        my_copy = IndexNode(self.base_addr, self.indices, self.stride)
+
+        for child in self.children:
+            child_copy = child.deep_copy()
+            my_copy.add_child(child_copy)
+
+        return my_copy
+
     def __str__(self):
         if len(self.indices) == 1:
             # single dimension pointer arithmetic
@@ -219,6 +276,11 @@ class DereferenceNode(Node):
         super(DereferenceNode, self).__init__()
         self.add_child(node)
 
+    def deep_copy(self):
+        my_copy = DereferenceNode(self.children[0])
+
+        return my_copy
+
     def __str__(self):
         return "(*%s)" % str(self.children[0])
 
@@ -226,6 +288,11 @@ class GetPointerNode(Node):
     def __init__(self, node):
         super(GetPointerNode, self).__init__()
         self.add_child(node)
+
+    def deep_copy(self):
+        my_copy = GetPointerNode(self.children[0])
+
+        return my_copy
 
     def __str__(self):
         return "(&%s)" % str(self.children[0])
@@ -250,6 +317,17 @@ class CallNode(Node):
         if read:  rw |= 0x1
         if write: rw |= 0x2
         self.args_rw.append(rw)
+
+    def deep_copy(self):
+        my_copy = CallNode(self.func)
+
+        my_copy.args_rw = self.args_rw
+
+        for child in self.children:
+            child_copy = child.deep_copy()
+            my_copy.add_child(child_copy)
+
+        return my_copy
 
     def __str__(self):
         args = ', '.join(map(str, self.children))
