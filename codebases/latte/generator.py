@@ -441,6 +441,7 @@ def main(options, program_file, cpp_file):
     tiling_flag = options.TILING_FLAG
 
     # if tiling flag is set, then run the tiling
+    tiling_flag = options.TILING_FLAG
     if tiling_flag:
         # forward
         opt1 = TilingOptimizer(fp_codes, forwards_ensemble_order)
