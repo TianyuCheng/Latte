@@ -73,7 +73,7 @@ generate_shuffle_index(shuffle_index, train_features.size());
 // solve block
 for ( int iter = 0 ; iter < 100 ; iter = iter + 1 ) {
 
-#pragma omp for collapse(2) schedule(static, 1) private(tid, data_idx, cur_label, sumover)
+#pragma omp for schedule(static, 1) private(tid, data_idx, cur_label, sumover)
 for ( int si = 0 ; si < train_features.size() ; si = si + 1 ) {
 int tid = omp_get_thread_num();
 
@@ -88,11 +88,7 @@ cur_label[0][train_labels[data_idx]] = 1;
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 20; y += 1) {
 (*(ip1_enm_output[tid]+x*20+y)) = 0.0;
-for (int i = 0; i < 1; i += 1) {
-for (int j = 0; j < 4; j += 1) {
-(*(ip1_enm_output[tid]+x*20+y)) = ((*(ip1_enm_output[tid]+x*20+y)) + ((*(ip1_enm_weights[x][y]+i*20+j)) * (*(data_enm_output[tid]+i*20+j))));
-}
-}
+sgemm_dp((ip1_enm_output[tid]+x*20+y), ip1_enm_weights[x][y], data_enm_output[tid], 4);
 (*(ip1_enm_grad_activation[tid]+x*20+y)) = (1 - pow(tanh((*(ip1_enm_output[tid]+x*20+y))), 2));
 (*(ip1_enm_output[tid]+x*20+y)) = tanh((*(ip1_enm_output[tid]+x*20+y)));
 }
@@ -102,11 +98,7 @@ for (int j = 0; j < 4; j += 1) {
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 10; y += 1) {
 (*(ip2_enm_output[tid]+x*10+y)) = 0.0;
-for (int i = 0; i < 1; i += 1) {
-for (int j = 0; j < 4; j += 1) {
-(*(ip2_enm_output[tid]+x*10+y)) = ((*(ip2_enm_output[tid]+x*10+y)) + ((*(ip2_enm_weights[x][y]+i*10+j)) * (*(ip1_enm_output[tid]+i*10+j))));
-}
-}
+sgemm_dp((ip2_enm_output[tid]+x*10+y), ip2_enm_weights[x][y], ip1_enm_output[tid], 20);
 (*(ip2_enm_grad_activation[tid]+x*10+y)) = (1 - pow(tanh((*(ip2_enm_output[tid]+x*10+y))), 2));
 (*(ip2_enm_output[tid]+x*10+y)) = tanh((*(ip2_enm_output[tid]+x*10+y)));
 }
@@ -116,11 +108,7 @@ for (int j = 0; j < 4; j += 1) {
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 3; y += 1) {
 (*(label_enm_output[tid]+x*3+y)) = 0.0;
-for (int i = 0; i < 1; i += 1) {
-for (int j = 0; j < 10; j += 1) {
-(*(label_enm_output[tid]+x*3+y)) = ((*(label_enm_output[tid]+x*3+y)) + ((*(label_enm_weights[x][y]+i*3+j)) * (*(ip2_enm_output[tid]+i*3+j))));
-}
-}
+sgemm_dp((label_enm_output[tid]+x*3+y), label_enm_weights[x][y], ip2_enm_output[tid], 10);
 (*(label_enm_output[tid]+x*3+y)) = exp((*(label_enm_output[tid]+x*3+y)));
 }
 }
@@ -142,16 +130,8 @@ for (int x = 0; x < 1; x++) {
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 3; y += 1) {
 (*(label_enm_grad_output[tid]+x*3+y)) = ((*(label_enm_output[tid]+x*3+y)) - cur_label[x][y]);
-for (int i = 0; i < 1; i += 1) {
-for (int j = 0; j < 10; j += 1) {
-(*(ip2_enm_grad_output[tid]+x*10+y)) = ((*(ip2_enm_grad_output[tid]+x*10+y)) + ((*(label_enm_grad_output[tid]+x*3+y)) * (*(label_enm_weights[x][y]+i*3+j))));
-}
-}
-for (int i = 0; i < 1; i += 1) {
-for (int j = 0; j < 10; j += 1) {
-(*(label_enm_grad_weights[tid][x][y]+i*3+j)) = ((*(label_enm_grad_weights[tid][x][y]+i*3+j)) + ((*(label_enm_grad_output[tid]+x*3+y)) * (*(ip2_enm_output[tid]+i*3+j))));
-}
-}
+sgemm_axpy(ip2_enm_grad_output[tid], (*(label_enm_grad_output[tid]+x*3+y)), label_enm_weights[x][y], 10);
+sgemm_axpy(label_enm_grad_weights[tid][x][y], (*(label_enm_grad_output[tid]+x*3+y)), ip2_enm_output[tid], 10);
 }
 }
 
@@ -159,16 +139,8 @@ for (int j = 0; j < 10; j += 1) {
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 10; y += 1) {
 (*(ip2_enm_grad_output[tid]+x*10+y)) = ((*(ip2_enm_grad_output[tid]+x*10+y)) * (*(ip2_enm_grad_activation[tid]+x*10+y)));
-for (int i = 0; i < 1; i += 1) {
-for (int j = 0; j < 4; j += 1) {
-(*(ip1_enm_grad_output[tid]+x*20+y)) = ((*(ip1_enm_grad_output[tid]+x*20+y)) + ((*(ip2_enm_grad_output[tid]+x*10+y)) * (*(ip2_enm_weights[x][y]+i*10+j))));
-}
-}
-for (int i = 0; i < 1; i += 1) {
-for (int j = 0; j < 4; j += 1) {
-(*(ip2_enm_grad_weights[tid][x][y]+i*10+j)) = ((*(ip2_enm_grad_weights[tid][x][y]+i*10+j)) + ((*(ip2_enm_grad_output[tid]+x*10+y)) * (*(ip1_enm_output[tid]+i*10+j))));
-}
-}
+sgemm_axpy(ip1_enm_grad_output[tid], (*(ip2_enm_grad_output[tid]+x*10+y)), ip2_enm_weights[x][y], 20);
+sgemm_axpy(ip2_enm_grad_weights[tid][x][y], (*(ip2_enm_grad_output[tid]+x*10+y)), ip1_enm_output[tid], 20);
 }
 }
 
@@ -176,16 +148,7 @@ for (int j = 0; j < 4; j += 1) {
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 20; y += 1) {
 (*(ip1_enm_grad_output[tid]+x*20+y)) = ((*(ip1_enm_grad_output[tid]+x*20+y)) * (*(ip1_enm_grad_activation[tid]+x*20+y)));
-for (int i = 0; i < 1; i += 1) {
-for (int j = 0; j < 4; j += 1) {
-(*(data_enm_grad_output[tid]+x*4+y)) = ((*(data_enm_grad_output[tid]+x*4+y)) + ((*(ip1_enm_grad_output[tid]+x*20+y)) * (*(ip1_enm_weights[x][y]+i*20+j))));
-}
-}
-for (int i = 0; i < 1; i += 1) {
-for (int j = 0; j < 4; j += 1) {
-(*(ip1_enm_grad_weights[tid][x][y]+i*20+j)) = ((*(ip1_enm_grad_weights[tid][x][y]+i*20+j)) + ((*(ip1_enm_grad_output[tid]+x*20+y)) * (*(data_enm_output[tid]+i*20+j))));
-}
-}
+sgemm_axpy(ip1_enm_grad_weights[tid][x][y], (*(ip1_enm_grad_output[tid]+x*20+y)), data_enm_output[tid], 4);
 }
 }
 
@@ -238,11 +201,7 @@ cur_label[0][test_labels[data_idx]] = 1;
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 20; y += 1) {
 (*(ip1_enm_output[tid]+x*20+y)) = 0.0;
-for (int i = 0; i < 1; i += 1) {
-for (int j = 0; j < 4; j += 1) {
-(*(ip1_enm_output[tid]+x*20+y)) = ((*(ip1_enm_output[tid]+x*20+y)) + ((*(ip1_enm_weights[x][y]+i*20+j)) * (*(data_enm_output[tid]+i*20+j))));
-}
-}
+sgemm_dp((ip1_enm_output[tid]+x*20+y), ip1_enm_weights[x][y], data_enm_output[tid], 4);
 (*(ip1_enm_grad_activation[tid]+x*20+y)) = (1 - pow(tanh((*(ip1_enm_output[tid]+x*20+y))), 2));
 (*(ip1_enm_output[tid]+x*20+y)) = tanh((*(ip1_enm_output[tid]+x*20+y)));
 }
@@ -252,11 +211,7 @@ for (int j = 0; j < 4; j += 1) {
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 10; y += 1) {
 (*(ip2_enm_output[tid]+x*10+y)) = 0.0;
-for (int i = 0; i < 1; i += 1) {
-for (int j = 0; j < 4; j += 1) {
-(*(ip2_enm_output[tid]+x*10+y)) = ((*(ip2_enm_output[tid]+x*10+y)) + ((*(ip2_enm_weights[x][y]+i*10+j)) * (*(ip1_enm_output[tid]+i*10+j))));
-}
-}
+sgemm_dp((ip2_enm_output[tid]+x*10+y), ip2_enm_weights[x][y], ip1_enm_output[tid], 20);
 (*(ip2_enm_grad_activation[tid]+x*10+y)) = (1 - pow(tanh((*(ip2_enm_output[tid]+x*10+y))), 2));
 (*(ip2_enm_output[tid]+x*10+y)) = tanh((*(ip2_enm_output[tid]+x*10+y)));
 }
@@ -266,11 +221,7 @@ for (int j = 0; j < 4; j += 1) {
 for (int x = 0; x < 1; x += 1) {
 for (int y = 0; y < 3; y += 1) {
 (*(label_enm_output[tid]+x*3+y)) = 0.0;
-for (int i = 0; i < 1; i += 1) {
-for (int j = 0; j < 10; j += 1) {
-(*(label_enm_output[tid]+x*3+y)) = ((*(label_enm_output[tid]+x*3+y)) + ((*(label_enm_weights[x][y]+i*3+j)) * (*(ip2_enm_output[tid]+i*3+j))));
-}
-}
+sgemm_dp((label_enm_output[tid]+x*3+y), label_enm_weights[x][y], ip2_enm_output[tid], 10);
 (*(label_enm_output[tid]+x*3+y)) = exp((*(label_enm_output[tid]+x*3+y)));
 }
 }

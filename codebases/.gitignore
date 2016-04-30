@@ -35,3 +35,6 @@ bin/
 #swp files
 *.swp
 *.mlp
+
+# compiled python
+*.pyc
