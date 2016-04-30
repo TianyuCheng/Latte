@@ -227,7 +227,10 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes,
     
     # forward propagation
     for i in forwards_ensemble_order: 
-        test_block.append(fp_codes[i])
+        if fp_codes[i] == None:
+            continue
+
+        test_block.append(str(fp_codes[i]))
         test_block.append("")
 
     # annotate
@@ -285,7 +288,10 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes,
     
     # forward propagation
     for i in forwards_ensemble_order: 
-        solve_block.append(fp_codes[i])
+        if fp_codes[i] == None:
+            continue
+
+        solve_block.append(str(fp_codes[i]))
         solve_block.append("")
 
     # annotate
@@ -305,7 +311,9 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes,
 
     # backward propagation
     for i in backwards_ensemble_order:
-        solve_block.append(bp_codes[i])
+        if bp_codes[i] == None:
+            continue
+        solve_block.append(str(bp_codes[i]))
         solve_block.append("")
         
     # weights_update
