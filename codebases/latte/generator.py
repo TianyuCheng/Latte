@@ -15,6 +15,8 @@ from term import *
 from analyzer import * 
 NARGS = 3
 
+from optimizer import TilingOptimizer
+
 '''
 def usage():
     """prints usage info when calling it"""
@@ -204,7 +206,9 @@ def make_layers(network_info):
             block.append(stmt_str)
     return block
 
-def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
+def make_test_block(solver_info, ensembles_info, name2enm, fp_codes,
+                    ensemble_order, forwards_ensemble_order, 
+                    backwards_ensemble_order):
     test_block = []
     test_block.append("// test block")
     test_block.append("vector<int> preds;")
@@ -223,8 +227,8 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
     test_block.append(load_label_str)
     
     # forward propagation
-    for enm in ensembles_info: 
-        test_block.append(fp_codes[enm[0]])
+    for i in forwards_ensemble_order: 
+        test_block.append(fp_codes[i])
         test_block.append("")
 
     # annotate
@@ -245,7 +249,8 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes):
 
     return test_block
 
-def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, fp_codes):
+def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, 
+                     fp_codes, forwards_ensemble_order, backwards_ensemble_order)
     solve_block = []
     iterations = str(solver_info["iter"])
     if solver_info["step"] > 0: step_size = str(solver_info["step"] * -1.0)
@@ -280,8 +285,8 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, f
     solve_block.append(load_label_str)
     
     # forward propagation
-    for enm in ensembles_info: 
-        solve_block.append(fp_codes[enm[0]])
+    for i in forwards_ensemble_order: 
+        solve_block.append(fp_codes[i])
         solve_block.append("")
 
     # annotate
@@ -300,8 +305,8 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, f
     solve_block.append(annotate_str)
 
     # backward propagation
-    for enm in ensembles_info[::-1]: 
-        solve_block.append(bp_codes[enm[0]])
+    for i in backwards_ensemble_order:
+        solve_block.append(bp_codes[i])
         solve_block.append("")
         
     # weights_update
@@ -425,10 +430,24 @@ def main(options, program_file, cpp_file):
     # share_var_analyze (neuron_analyzers)
     #####################################################################
 
+    
+    forwards_ensemble_order = []
+    for i in ensembles_info:
+        forwards_ensemble_order.append(i[0])
+        
+    backwards_ensemble_order = []
+    for i in ensembles_info[::-1]:
+        backwards_ensemble_order.append(i[0])
+
     # if tiling flag is set, then run the tiling
     if tiling_flag:
-        #TODO
-        pass
+        # forward
+        opt1 = TilingOptimizer(fp_codes, forwards_ensemble_order)
+        forwards_ensemble_order = opt1.optimize()
+
+        # backward
+        opt2 = TilingOptimizer(bp_codes, backwards_ensemble_order)
+        backwards_ensemble_order = opt2.optimize()
 
     # CODE GENERATION:
     main_body_strs = []
@@ -449,14 +468,18 @@ def main(options, program_file, cpp_file):
 
     # run solver
     #main_body_strs.append([make_init_solver(solver)])
-    main_body_strs.append(make_solve_block(options, solver, ensembles_info, name2enm, bp_codes, fp_codes))
+    main_body_strs.append(make_solve_block(options, solver, ensembles_info, 
+                          name2enm, bp_codes, fp_codes, forwards_ensemble_order,
+                          backwards_ensemble_order))
 
     # run tester
-    main_body_strs.append(make_test_block(solver, ensembles_info, name2enm, fp_codes))
+    main_body_strs.append(make_test_block(solver, ensembles_info, name2enm, fp_codes,
+                          forwards_ensemble_order, backwards_ensemble_order))
 
     # deallocating block
     #main_body_strs.append(make_weights_init_block(ensembles_info, name2enm, False))
-    main_body_strs.append(make_allocate_block(options, ensembles_info, neuron_analyzers, False))
+    main_body_strs.append(make_allocate_block(options, ensembles_info, 
+                          neuron_analyzers, False))
 
     # OUTPUT TO CPP FILE
     cpp_out = open(cpp_file, "w+")
