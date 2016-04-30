@@ -1,3 +1,5 @@
+import copy
+
 """Tree representation of for loops for analysis/tiling/fusion purposes"""
 class Node(object):
     def __init__(self):
@@ -75,6 +77,32 @@ class Node(object):
         else:
             return to_copy
 
+class ListNode(Node):
+    """Type of node that needs access to the list find and replace
+    method"""
+    def __init__(self):
+        super(ListNode, self).__init__()
+
+    def list_find_and_replace(self, the_list, to_find, replacement):
+        to_return = []
+
+        for i in range(list_copy):
+            element = the_list[i]
+
+            if isinstance(element, list):
+                # recursive call on the list
+                new_list = list_find_and_replace(element, to_find, replacement)
+
+                to_return.append(new_list)
+            else:
+                # single element, not a list: check and replace
+                if element == to_find:
+                    to_return.append(replacement)
+                else:
+                    to_return.append(element)
+
+        return to_return 
+
 
 class ForNode(Node):
     """Holds information for a for loop"""
@@ -132,8 +160,16 @@ class ForNode(Node):
 
     def find_and_replace(self, to_find, replacement):
         """look through self and all children to replace something"""
-        #TODO
-        pass
+        # check through our stuff to see if anything needs to be changed
+
+        self.initial_name.find_and_replace(to_find, replacement)
+        self.initial.find_and_replace(to_find, replacement)
+        self.loop_bound.find_and_replace(to_find, replacement)
+        self.increment.find_and_replace(to_find, replacement)
+
+        # check through children
+        for child in self.children:
+            child.find_and_replace(to_find, replacement)
 
     def __str__(self):
         """Prints the ENTIRE loop including its children"""
@@ -157,6 +193,10 @@ class ConstantNode(Node):
 
     def set_constant(self, new_value):
         self.constant = new_value
+
+    def find_and_replace(self, to_find, replacement):
+        if self.constant == to_find:
+            self.constant = replacement
 
     def deep_copy(self):
         my_copy = ConstantNode(self.constant)
@@ -201,6 +241,13 @@ class AssignmentNode(Node):
 
         return my_copy
 
+    def find_and_replace(self, to_find, replacement):
+        self.left.find_and_replace(to_find, replacement)
+        self.right.find_and_replace(to_find, replacement)
+
+        for child in self.children:
+            child.find_and_replace(to_find, replacement)
+
     def __str__(self):
         return "%s = %s;" % (str(self.left), str(self.right))
 
@@ -238,13 +285,20 @@ class ExpressionNode(Node):
 
         return my_copy
 
+    def find_and_replace(self, to_find, replacement):
+        self.left.find_and_replace(to_find, replacement)
+        self.right.find_and_replace(to_find, replacement)
+
+        for child in self.children:
+            child.find_and_replace(to_find, replacement)
+
     def __str__(self):
         if self.operator == "pow":
             return "%s(%s, %s)" % (self.operator, str(self.left), str(self.right))
         return "(%s %s %s)" % (str(self.left), self.operator, str(self.right))
 
 
-class ArrayNode(Node):
+class ArrayNode(ListNode):
     def __init__(self, base_addr, indices):
         super(ArrayNode, self).__init__()
 
@@ -262,7 +316,7 @@ class ArrayNode(Node):
             self.indices = [ indices ]
 
     def deep_copy(self):
-        my_copy = ArrayNode(self.copy(self.base_addr), self.indices[::])
+        my_copy = ArrayNode(self.copy(self.base_addr), copy.deepcopy(self.indices))
 
         for child in self.children:
             child_copy = child.deep_copy()
@@ -270,12 +324,29 @@ class ArrayNode(Node):
 
         return my_copy
 
+
+    def find_and_replace(self, to_find, replacement):
+        #TODO check?
+        if isinstance(Node, self.base_addr):
+            self.base_addr.find_and_replace(to_find, replacement)
+        else:
+            if self.base_addr == to_find:
+                self.base_addr = replacement
+        
+        # deal with indices
+        self.indices = self.list_find_and_replace(self.indices, 
+                            to_find, replacement)
+
+        for child in self.children:
+            child.find_and_replace(to_find, replacement)
+
+
     def __str__(self):
         indices = ''.join(map(lambda x: "[%s]" % str(x), self.indices))
         return "%s%s" % (self.base_addr, indices)
 
 
-class IndexNode(Node):
+class IndexNode(ListNode):
     """Purpose of this is to store pointer arithmetic expressions, i.e. i*10 + j.
     Works for 2D pointer arithmetic at most"""
     def __init__(self, base_addr, indices, stride=1):
@@ -295,7 +366,8 @@ class IndexNode(Node):
         assert len(self.indices) <= 2
 
     def deep_copy(self):
-        my_copy = IndexNode(self.copy(self.base_addr), self.indices[:], 
+        my_copy = IndexNode(self.copy(self.base_addr), 
+                            copy.deepcopy(self.indices), 
                             self.copy(self.stride))
 
         for child in self.children:
@@ -303,6 +375,27 @@ class IndexNode(Node):
             my_copy.add_child(child_copy)
 
         return my_copy
+
+    def find_and_replace(self, to_find, replacement):
+        if isinstance(Node, self.base_addr):
+            self.base_addr.find_and_replace(to_find, replacement)
+        else:
+            if self.base_addr == to_find:
+                self.base_addr = replacement
+
+        if isinstance(Node, self.stride):
+            self.stride.find_and_replace(to_find, replacement)
+        else:
+            if self.stride == to_find:
+                self.stride = replacement
+        
+        # deal with indices
+        self.indices = self.list_find_and_replace(self.indices, 
+                            to_find, replacement)
+
+        # shouldn't have children, but just in case
+        for child in self.children:
+            child.find_and_replace(to_find, replacement)
 
     def __str__(self):
         if len(self.indices) == 1:
@@ -323,6 +416,10 @@ class DereferenceNode(Node):
 
         return my_copy
 
+    def find_and_replace(self, to_find, replacement):
+        child = self.children[0]
+        child.find_and_replace(to_find, replacement)
+
     def __str__(self):
         return "(*%s)" % str(self.children[0])
 
@@ -335,6 +432,10 @@ class GetPointerNode(Node):
         my_copy = GetPointerNode(self.children[0].deep_copy())
 
         return my_copy
+
+    def find_and_replace(self, to_find, replacement):
+        child = self.children[0]
+        child.find_and_replace(to_find, replacement)
 
     def __str__(self):
         return "(&%s)" % str(self.children[0])
@@ -367,13 +468,24 @@ class CallNode(Node):
     def deep_copy(self):
         my_copy = CallNode(self.copy(self.func))
 
-        my_copy.args_rw = self.args_rw[:]
+        my_copy.args_rw = copy.deepcopy(self.args_rw)
 
         for child in self.children:
             child_copy = child.deep_copy()
             my_copy.add_child(child_copy)
 
         return my_copy
+
+    def find_and_replace(self, to_find, replacement):
+        if isinstance(Node, self.func):
+            self.func.find_and_replace(to_find, replacement)
+        else:
+            if self.func == to_find:
+                self.func = replacement
+
+        # check children
+        for child in self.children:
+            child.find_and_replace(to_find, replacement)
 
     def __str__(self):
         args = ', '.join(map(str, self.children))
