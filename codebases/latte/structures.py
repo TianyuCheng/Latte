@@ -134,6 +134,7 @@ class ConstantNode(Node):
     def deep_copy(self):
         my_copy = ConstantNode(self.constant)
 
+        # shouldn't have children, but whatever
         for child in self.children:
             child_copy = child.deep_copy()
             my_copy.add_child(child_copy)
@@ -166,8 +167,9 @@ class AssignmentNode(Node):
             self.right = DereferenceNode(self.right)
 
     def deep_copy(self):
-        my_copy = AssignmentNode(self.left, self.right)
+        my_copy = AssignmentNode(self.left.deep_copy(), self.right.deep_copy())
 
+        # shouldn't have children
         for child in self.children:
             child_copy = child.deep_copy()
             my_copy.add_child(child_copy)
@@ -197,8 +199,10 @@ class ExpressionNode(Node):
             self.right = DereferenceNode(self.right)
 
     def deep_copy(self):
-        my_copy = ExpressionNode(self.left, self.right, self.operator)
+        my_copy = ExpressionNode(self.left.deep_copy(), self.right.deep_copy(), 
+                                 self.operator)
 
+        # shouldn't have children
         for child in self.children:
             child_copy = child.deep_copy()
             my_copy.add_child(child_copy)
@@ -224,7 +228,7 @@ class ArrayNode(Node):
             self.indices = [ indices ]
 
     def deep_copy(self):
-        my_copy = ArrayNode(self.base_addr, self.indices)
+        my_copy = ArrayNode(self.base_addr, self.indices[:])
 
         for child in self.children:
             child_copy = child.deep_copy()
@@ -247,14 +251,16 @@ class IndexNode(Node):
         # e.g. [ i, j ]
         self.base_addr = base_addr
         self.stride = stride
+
         if isinstance(indices, list):
             self.indices = indices
         else:
             self.indices = [ indices ]
+
         assert len(self.indices) <= 2
 
     def deep_copy(self):
-        my_copy = IndexNode(self.base_addr, self.indices, self.stride)
+        my_copy = IndexNode(self.base_addr, self.indices[:], self.stride)
 
         for child in self.children:
             child_copy = child.deep_copy()
@@ -290,7 +296,7 @@ class GetPointerNode(Node):
         self.add_child(node)
 
     def deep_copy(self):
-        my_copy = GetPointerNode(self.children[0])
+        my_copy = GetPointerNode(self.children[0].deep_copy())
 
         return my_copy
 
