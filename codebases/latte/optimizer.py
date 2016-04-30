@@ -89,6 +89,10 @@ class TilingOptimizer(Optimizer):
         loop_bound = for_node.get_loop_bound()
         loop_var_name = for_node.get_initial_name()
 
+        remainder = loop_bound % self.tile_size
+
+        altered_loop_bound = int(loop_bound) - remainder
+
         # if loop bound is less than our tile size, ignore it
         if loop_bound < self.tile_size:
             return ensembles_to_return
@@ -99,7 +103,7 @@ class TilingOptimizer(Optimizer):
         # with the new tile
         tile_node = ForNode(ConstantNode(tile_var_name), 
                             ConstantNode(for_node.get_initial()), 
-                            ConstantNode(loop_bound), 
+                            ConstantNode(altered_loop_bound), 
                             ConstantNode(self.tile_size))
 
         # replace the new node in whatever place the for node we are
@@ -110,7 +114,6 @@ class TilingOptimizer(Optimizer):
         for_node.set_initial(tile_var_name)
         for_node.set_loop_bound(tile_var_name + " + " + str(self.tile_size))
 
-        remainder = loop_bound % self.tile_size
 
         # if no remaider, no clean up code required, else we do need cleanup
         # code
