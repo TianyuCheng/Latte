@@ -38,3 +38,7 @@ bin/
 
 # compiled python
 *.pyc
+
+mlp.cpp
+
+*.sbatch
