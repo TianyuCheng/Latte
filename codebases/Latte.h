@@ -3,6 +3,7 @@
 #include <string>
 #include <cstring>
 #include <vector>
+#include <ctime>
 #include <map>
 #include <memory>
 #include <random>
@@ -15,6 +16,7 @@
 #include <mkl.h>
 
 #include <boost/random/mersenne_twister.hpp>
+// #include <boost/random/random_device.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
 
 using namespace std;
@@ -74,7 +76,11 @@ inline int argmax (float* vec, int size) {
 }
 void Xaiver_initialize (float* mat, int n_j, int n_jp) {
     float high = sqrt(6.0 / (n_j+n_jp)), low = -1.0 * high;
-    boost::random::mt19937 generator;
+    // boost::random::random_device generator;
+    // boost::random::mt19937 generator ();
+    std::random_device rd;
+    std::mt19937 generator(rd());
+    // generator.seed(std::time(0));
     boost::random::uniform_real_distribution<float> distribution(low, high);
     for (int i = 0; i < n_j; i ++) *(mat+i) = distribution(generator);
 }

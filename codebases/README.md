@@ -1,4 +1,4 @@
-Latte Project
+PyLatte Project
 =============
 
 Authors
@@ -19,6 +19,58 @@ Authors
     + EID: xl5224
     + Email: jimmylin@utexas.edu
 
+Status
+----------
+
+- [DONE] User Description of Network
+    
+    - [DONE] PyLatte Programming Model: mlp.py,  and more ..
+
+    - [DONE] Neuron Specification (fields, forward, backward): FCNeuron, and more ..
+    
+- [DONE] Internal Representation
+
+    - [DONE] Implicit adjacency lists: lambda representation of functions
+
+- [] Share Variable Analysis
+
+    - [DONE] Determine uniform dependency of dimension
+
+
+- [DONE] Synthesis
+
+    - [DONE] Data Flow: traversing dataflow graph by ensemble partitioning
+
+    - [DONE] Compute: convert AoS to SoA form
+
+- [] Optimization
+
+    - [DONE] Library Kernel Pattern Matching
+
+    - [] Loop Tiling pass 
+
+    - [] Loop Fusion pass
+
+    - [] Data Parallelization: Parallel in Batch Items
+
+
+- [DONE] Code Generation
+
+
+Performance Evaluation
+-----------------------
+
+| Optimization \ Network   | FC+FC+Softmax | FC+ReLU+FC+Softmax | FC+ReLU+MeanPool+Softmax | Conv+FC+ReLU+Softmax | Conv+ReLU+MeanPool+Softmax |
+|--------------------------|---------------|--------------------|--------------------------|----------------------|----------------------------|
+| None                     |               |                    |                          |                      |                            |
+| MKL-SGEMM                |               |                    |                          |                      |                            |
+| MKL-SGEMM + Tiling       |               |                    |                          |                      |                            |
+| MKL-SGEMM+ Tiling+Fusion |               |                    |                          |                      |                            |
+| MKL-SGEMM+ Tiling+Fusion |               |                    |                          |                      |                            |
+| MKL-SGEMM+BatchPara      |               |                    |                          |                      |                            |
+| All Above                |               |                    |                          |                      |                            |
+
+
 Installation (Stampede)
 -----------------------
 
@@ -35,22 +87,6 @@ After loading intel icc and boost, type:
 ```
 make mlp
 ```
-
-TODO LIST:
-----------
-
-- share variable analysis: determine uniform dependency of dimension; monitor data copy
-
-- verbatim translation of forward/backward in SoA form (general form, no optimization)
-
-- test the existing pattern matching and code generation framework with mlp.py
-
-- develop more felexible and scalable framework of pattern matching
-
-- loop tiling pass 
-
-- loop fusion pass
-
 
 Usage
 -----
@@ -144,8 +180,6 @@ ASTs that are extracted from a Latte-Python description of a neural network.
 Each template for has "wildcards" that are eventually replaced by data from a
 the AST that each template is matching against.
 
-TODO check if the following statement is right
-
 By doing so ths system is able to have a some kind of uniformity when examining ASTs
 since all ASTs will be matched to some template if they are valid.
 
@@ -197,14 +231,14 @@ TODO not done yet since the system itself isn't complete yet; i.e. still
 need to describe loop tiling and fusion pass
 
 
-Assumptions
+Assumptions/Design Decisions
 -----
 
 - Assume only one data layer and loss layer in each network
 
-- Assume the Function name for a data layer contains "DataLayer"
+- Assume the function name for a data layer contains "DataLayer"
 
-- Assume the Function name for a loss layer contains "LossLayer"
+- Assume the function name for a loss layer contains "LossLayer"
 
 - The function you use for add\_connection must be defined as a lambda function.
 
@@ -212,6 +246,11 @@ Assumptions
 one should be free to reorder additions and multiplications as it should
 be possible to match reordered additions (we have a template for all 
 permutations).
+
+- The user won't define variables that begin with \_tile
+
+- No different ensemble types: fused ensembles with layers. (i.e. may not be
+exactly Latte)
 
 References
 --------
@@ -246,10 +285,9 @@ We primarily referred to the Latte Paper provided in the course CS380C Compilers
 
    https://guides.github.com/features/mastering-markdown/
 
-NOTES
----------
-1. 
-    
+- [Other] Markdown Table Generator
+
+   http://www.tablesgenerator.com/markdown\_tables
 
 
 Acknowledgements

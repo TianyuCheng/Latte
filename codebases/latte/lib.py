@@ -7,25 +7,6 @@ import math
 import random 
 import time
 
-ensemble_id_counter = 0
-neuron_id_counter = 0
-network_id_counter = 0
-def allocate_neuron_id ():
-    global neuron_id_counter
-    assigned_id = neuron_id_counter
-    neuron_id_counter += 1
-    return assigned_id
-def allocate_ensemble_id ():
-    global ensemble_id_counter
-    assigned_id = ensemble_id_counter
-    ensemble_id_counter += 1
-    return assigned_id
-def allocate_network_id ():
-    global network_id_counter
-    assigned_id = network_id_counter
-    network_id_counter += 1
-    return assigned_id
-
 def Xaiver_weights_init (dim_x, dim_y, cur_enm_size):
     prev_enm_size = dim_x * dim_y;
     high = np.sqrt( 6.0 / (prev_enm_size + cur_enm_size) )
@@ -84,36 +65,47 @@ def LibsvmDataLayer(net, train_file, test_file, dim_x, dim_y, n_classes):
 
 def FullyConnectedLayer(net, prev, dim_x, dim_y, TYPE):
     # construct a new ensemble
-    # prev_size = prev.get_size()
     cur_enm = Ensemble(dim_x, dim_y, TYPE)
-    cur_enm.set_backward_adj(prev)
-    prev.set_forward_adj(cur_enm)
-    cur_enm.set_inputs_dim (prev.dim_x, prev.dim_y)
-
-    # enforce connections
-    # mappings = {}
-    # for i in range(prev_size): mappings.update({i:[j for j in range(dim_y)]})
-    add_connection(net, prev, cur_enm, lambda _: [ j for j in range(dim_y) ])
+    add_connection(net, prev, cur_enm, lambda x, y: \
+         [ (i,j) for i in range(prev.dim_x) for j in range(prev.dim_y) ])
     net.add_ensemble (cur_enm)
     return cur_enm
+
+def ConvolutionLayer(net, prev, dim_x, dim_y, TYPE, ker_dim_x, ker_dim_y):
+    '''
+    1d constraint:
+        assert dim_x == ker_dim_x == prev_dim_x 
+        assert dim_y + ker_dim_y == prev_dim_y
+    2d constraint:
+        assert dim_x + ker_dim_x == prev_dim_x 
+        assert dim_y + ker_dim_y == prev_dim_y
+    '''
+    cur_enm = Ensemble(dim_x, dim_y, TYPE, share_weights=True)
+    add_connection(net, prev, cur_enm, lambda x, y: \
+         [ (i,j) for i in range(x, x+ker_dim_x) \
+                 for j in range(y, y+ker_dim_y) ])
+    net.add_ensemble (cur_enm)
+
+def PoolingLayer(net, prev, dim_x, dim_y, TYPE, pool_dim_x, pool_dim_y):
+    '''
+        assert prev_dim_x % pool_dim_x == 0
+        assert prev_dim_y % pool_dim_y == 0
+        assert prev_dim_x / pool_dim_x == dim_x
+        assert prev_dim_y / pool_dim_y == dim_y
+    '''
+    cur_enm = Ensemble(dim_x, dim_y, TYPE)
+    add_connection(net, prev, cur_enm, lambda x, y: \
+         [ (i,j) for i in range(x*pool_dim_x, (x+1)*pool_dim_x) \
+                 for j in range(y*pool_dim_y, (y+1)*pool_dim_y) ])
+    net.add_ensemble (cur_enm)
 
 def SoftmaxLossLayer(net, prev, dim_x, dim_y):
     label_enm = Ensemble(1, nLabels, SoftmaxNeuron)
     return FullyConnectedLayer(net, prev, dim_x, dim_y, SoftmaxNeuron)
 
-'''
-def inner_product (A, B):
-    dp_result = 0.0
-    for i in range(len(A)):
-        for j in range(len(A[i])):
-            dp_result += A[i][j] * B[i][j]
-    return dp_result
-'''
-
 class Neuron:
     def __init__(self, enm, pos_x, pos_y):
         # management info
-        self.neuron_id = allocate_ensemble_id()
         self.pos_x = pos_x
         self.pos_y = pos_y
         self.prev_dim_x = 0
@@ -163,82 +155,103 @@ class FCNeuron(Neuron):
     def forward(self):
         # innder product of inputs and weights
         assert len(self.forward_adj) > 0, "No forward adjacency element. "
-        dp_result = 0.0
-        for i in range(self.prev_dim_x):
-            for j in range(self.prev_dim_y):
-                dp_result = dp_result + self.weights[i][j] * self.inputs[i][j]
-        # activation
-        self.output = np.tanh(dp_result) 
+        self.output = 0.0 
+        for prev in self.backward_adj:
+            self.output += self.weights[prev.pos_x][prev.pos_y] * self.inputs[prev.pos_x][prev.pos_y]
         # preset the gradient for back propagation
-        self.grad_activation = (1 - np.tanh(dp_result) ** 2 )
-
-        # Data Copy: put output value to the inputs of next layer
-        for next_neuron in self.forward_adj:
-            next_neuron.inputs[self.pos_x][self.pos_y] = self.output
+        self.grad_activation = (1 - np.tanh(self.output) ** 2 )
+        # activation
+        self.output = np.tanh(self.output) 
 
     def backward(self):
         self.grad_output = self.grad_output * self.grad_activation
-
-        # scalar multiplication
-        for i in range(self.prev_dim_x):
-            for j in range(self.prev_dim_y):
-                self.grad_inputs[i][j] = self.grad_output * self.weights[i][j]
-                
         # backpropagate error
         for prev in self.backward_adj:
-            prev.grad_output += self.grad_inputs[prev.pos_x][prev.pos_y] 
+            prev.grad_output += self.grad_output * self.weights[prev.pos_x][prev.pos_y]
+        # weights to update
+        for prev in self.backward_adj:
+            self.grad_weights[prev.pos_x][prev.pos_y] += self.grad_output * self.inputs[prev.pos_x][prev.pos_y]
 
-        # weights update 
-        for i in range(self.prev_dim_x):
-            for j in range(self.prev_dim_y):
-                self.grad_weights[i][j] = self.grad_weights[i][j] + self.grad_output * self.inputs[i][j]
 
-class InnerProductNeuron(Neuron):
+class WeightedNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
         Neuron.__init__(self, enm, pos_x, pos_y)
         self.weights      = [[]]
         self.grad_weights = [[]]
 
     def forward(self):
-        dp_result = inner_product (self.weights, self.inputs)
-        self.output = dp_result
-        self.grad_output = 1.0
-        for next_neuron in self.forward_adj:
-            next_neuron.inputs[self.pos_x][self.pos_y] = self.output
+        self.output = 0.0 
+        for prev in self.backward_adj:
+            self.output += self.weights[prev.pos_x][prev.pos_y] * self.inputs[prev.pos_x][prev.pos_y]
+        self.grad_activation = 1.0
+        #for next_neuron in self.forward_adj:
+        #    next_neuron.inputs[self.pos_x][self.pos_y] = self.output
 
-    def backward(self): Neuron.backward(self)
+    def backward(self): 
+        self.grad_output = self.grad_output * self.grad_activation
+        # backpropagate error
+        for prev in self.backward_adj:
+            prev.grad_output += self.grad_output * self.weights[prev.pos_x][prev.pos_y]
+        # weights to update
+        for prev in self.backward_adj:
+            self.grad_weights[prev.pos_x][prev.pos_y] += self.grad_output * self.inputs[prev.pos_x][prev.pos_y]
 
 class ReLUNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
         Neuron.__init__(self, enm, pos_x, pos_y)
+        self.weights      = [[]]
+        self.grad_weights = [[]]
 
     def forward(self):
-        pass
+        # innder product of inputs and weights
+        assert len(self.forward_adj) > 0, "No forward adjacency element. "
+        self.output = 0.0
+        for prev in self.backward_adj:
+            self.output += self.weights[prev.pos_x][prev.pos_y] * self.inputs[prev.pos_x][prev.pos_y]
+        self.grad_activation = 1.0 / (1 + np.exp(-1.0*self.output))  # logistic
+        self.output = np.log(np.exp(self.output) + 1) # softplus function
 
     def backward(self):
-        pass 
+        self.grad_output = self.grad_output * self.grad_activation
+        # backpropagate error
+        for prev in self.backward_adj:
+            prev.grad_output += self.grad_output * self.weights[prev.pos_x][prev.pos_y]
+        # weights to update
+        for prev in self.backward_adj:
+            self.grad_weights[prev.pos_x][prev.pos_y] += self.grad_output * self.inputs[prev.pos_x][prev.pos_y]
 
-class ConvolutionNeuron(Neuron):
+class MeanPoolingNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
-        Neuron.__init__(self, enm, pos_x, pos_y)
+        Neuron.__init__(self, enm, pos_x, pos_y, pool_dim_x, pool_dim_y)
+        self.pool_dim_x = pool_dim_x
+        self.pool_dim_y = pool_dim_y
 
     def forward(self):
-        pass
+        self.output = 0.0
+        for prev in self.backward_adj:
+            self.output += self.weights[prev.pos_x][prev.pos_y] * self.inputs[prev.pos_x][prev.pos_y]
+        self.output = self.output / (self.pool_dim_x * self.pool_dim_y) 
+        # preset the gradient for back propagation
+        self.grad_activation = 1.0 / (self.pool_dim_x * self.pool_dim_y) 
 
     def backward(self):
-        pass 
-
+        self.grad_output = self.grad_output * self.grad_activation
+        # backpropagate error
+        for prev in self.backward_adj:
+            prev.grad_output += self.grad_output * self.weights[prev.pos_x][prev.pos_y]
+        # weights to update
+        for prev in self.backward_adj:
+            self.grad_weights[pi][pj] += self.grad_output * self.inputs[prev.pos_x][prev.pos_y]
 
 class DataNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
         Neuron.__init__(self, enm, pos_x, pos_y)
+    
+    def __claim__(self):
+        self.output = 0.0
 
     def forward(self):
-        # remember to load input feature to data neuron before forward propa
-        assert len(self.forward_adj) > 0, "No forward adjacency element. "
-        for next_neuron in self.forward_adj:
-            #print self.pos_x, self.pos_y, len(next_neuron.inputs), len(next_neuron.inputs[0])
-            next_neuron.inputs[self.pos_x][self.pos_y] = self.output
+        pass
 
     def backward(self):
         pass # no backward propagation for data neuron
@@ -263,13 +276,10 @@ class SoftmaxNeuron(Neuron):
         self.grad_weights = [[]]
     
     def forward(self):
-        dp_result = 0.0
-
-        for i in range(self.prev_dim_x):
-            for j in range(self.prev_dim_y):
-                dp_result = dp_result + self.weights[i][j] * self.inputs[i][j]
-
-        self.output = math.exp(dp_result)
+        self.output = 0.0 
+        for prev in self.backward_adj:
+            self.output += self.weights[prev.pos_x][prev.pos_y] * self.inputs[prev.pos_x][prev.pos_y]
+        self.output = math.exp(self.output)
 
     # NOTE: remember to invoke this annotate() and before backward
     def annotate(self):
@@ -279,21 +289,16 @@ class SoftmaxNeuron(Neuron):
 
     def backward(self):
         self.grad_output = self.output - self.label 
-        # scalar multiplication
-        for i in range(self.prev_dim_x):
-            for j in range(self.prev_dim_y):
-                self.grad_inputs[i][j] = self.grad_output * self.weights[i][j]
-        # propagate back
+        # backpropagate error
         for prev in self.backward_adj:
-            prev.grad_output += self.grad_inputs[prev.pos_x][prev.pos_y] 
-        # weights update
-        for i in range(self.prev_dim_x):
-            for j in range(self.prev_dim_y):
-                self.grad_weights[i][j] = self.grad_weights[i][j] + self.grad_output * self.inputs[i][j]
+            prev.grad_output += self.grad_output * self.weights[prev.pos_x][prev.pos_y]
+        # weights to update
+        for prev in self.backward_adj:
+            self.grad_weights[prev.pos_x][prev.pos_y] += self.grad_output * self.inputs[prev.pos_x][prev.pos_y]
+
 
 class Ensemble:
-    def __init__(self, N1, N2, TYPE):
-        self.ensemble_id = allocate_ensemble_id()
+    def __init__(self, N1, N2, TYPE, share_weights=False):
         self.dim_x = N1
         self.dim_y = N2
         self.size = N1 * N2
@@ -329,7 +334,6 @@ class Ensemble:
 
 class Network:
     def __init__(self):
-        self.network_id = allocate_network_id()
         self.ensembles = []
         self.train_features = None
         self.train_labels = None

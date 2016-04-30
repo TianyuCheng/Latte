@@ -21,8 +21,29 @@ def template_SoftmaxLossLayer():
     _name = SoftmaxLossLayer(_net, _prev, _dim_x, _dim_y)
 
 @template
+def template_ConvolutionLayer():
+    _name = ConvolutionLayer(_net, _prev, _dim_x, _dim_y, _TYPE, _ker_dim_x, _ker_dim_y)
+
+@template
+def template_PoolingLayer():
+    _name = PoolingLayer(_net, _prev, _dim_x, _dim_y, _TYPE, _pool_dim_x, _pool_dim_y)
+
+@template
 def template_Ensemble():
     _net.add_ensemble(_cur_enm)
+
+@template
+def template_NewEnsembleShareWeights():
+    _enm = Ensemble(_dim_x, _dim_y, _TYPE, share_weights=_share_weights)
+
+@template
+def template_NewEnsembleNoShareWeights():
+    _enm = Ensemble(_dim_x, _dim_y, _TYPE)
+
+new_ensemble_templates = [
+    template_NewEnsembleShareWeights(),
+    template_NewEnsembleNoShareWeights()
+]
 
 @template
 def template_SGD():
@@ -36,12 +57,19 @@ def template_add_connection():
 layer_templates = [
         template_LibsvmDataLayer(),
         template_FullyConnectedLayer(),
+        template_PoolingLayer(),
+        template_ConvolutionLayer(),
         template_SoftmaxLossLayer()
 ]
 
 """
 Templates for computation programming paradigm
 """
+
+@template
+def template_for_backward_adj():
+    for _i in self.backward_adj:
+        _body
 
 @template
 def template_for(range):
@@ -55,26 +83,28 @@ def template_for_range(range):
 
 for_templates = [ template_for_range("range"), template_for_range("xrange") ]
 
+@template
+def template_dp(target, varname):
+    for _prev in self.backward_adj:
+        target.varname += _A[_i][_j] * _B[_i][_j] 
 
 @template
-def template_dot_product(range):
-    for _i in range(_dim_x):
-        for _j in range(_dim_y):
-            _dp_result = _dp_result + _A[_i][_j] * _B[_i][_j] 
+def template_fp_dp():
+    for _prev in self.backward_adj:
+        _C += _A[_i][_j] * _B[_i][_j] 
+
+@template
+def template_bp_axpy():
+    for _prev in self.backward_adj:
+        _C[_i][_j] += _scalar * _B[_i][_j]
+
+@template
+def template_bp_scalar_prod():
+    for _prev in self.backward_adj:
+        _A += _alpha * _B[_i][_j]
 
 @template
 def template_asgn(field):
     self.field = _exp
 
-@template
-def template_bp_scalar_prod():
-    for _i in range(_dim_x):
-        for _j in range(_dim_y):
-            self.grad_inputs[_i][_j] = _alpha * _B[_i][_j]
-
-@template
-def template_bp_axpy():
-    for _i in range(_dim_x):
-        for _j in range(_dim_y):
-            _C[_i][_j] = _C[_i][_j] + _scalar * _B[_i][_j]
 

@@ -68,6 +68,19 @@ class RewriteName(ast.NodeTransformer):
             node.id = self.new_name
         return node
 
+class RewriteAttribute(ast.NodeTransformer):
+    """change name of a node"""
+    def __init__(self, old_name, new_name):
+        super(RewriteAttribute, self).__init__()
+        self.old_name = old_name
+        self.new_name = new_name
+
+    def visit_Attribute(self, node):
+        self.generic_visit(node)
+        if node.attr == self.old_name:
+            node.attr = self.new_name
+        return node
+
 class SubstituteNameToNum(ast.NodeTransformer):
     """change name of a node"""
     def __init__(self, old_name, new_name):
@@ -79,6 +92,23 @@ class SubstituteNameToNum(ast.NodeTransformer):
         self.generic_visit(node)
         if node.id == self.old_name:
             node = ast.Num(self.new_name)
+            return node
+        return node
+
+class SubstituteAttributeToNum(ast.NodeTransformer):
+    """change name of a node"""
+    def __init__(self, owner, attr, value):
+        super(SubstituteAttributeToNum, self).__init__()
+        self.owner = owner
+        self.attr = attr
+        self.value = value
+
+    def visit_Attribute(self, node):
+        self.generic_visit(node)
+        if isinstance(node.value, ast.Name) and \
+            node.value.id == self.owner and \
+            node.attr == self.attr:
+            node = ast.Num(self.value)
             return node
         return node
 
@@ -139,6 +169,7 @@ class ASTTemplate(object):
             old_name = arg_node.id
             new_name = str(args[i])
             self.ast = RewriteName(old_name, new_name).visit(self.ast)
+            self.ast = RewriteAttribute(old_name, new_name).visit(self.ast)
         
         self.fname = self.ast.name                       # find template name
 
@@ -278,6 +309,8 @@ class ASTTemplate(object):
                     _, tgt_value = tgt_kids[i]
                     if not self._match(tpl_value, tgt_value):
                         # print "4"
+                        # print ast_dump(tpl_value)
+                        # print ast_dump(tgt_value)
                         return False
         return True
 
@@ -291,6 +324,11 @@ class ASTTemplate(object):
         # match dangling expression
         if isinstance(tpl, ast.Expr) and isinstance(tpl.value, ast.Name):
             return self._set_wildcard(tpl.value, tgt)
+
+        if isinstance(tpl, list) and \
+           len(tpl) == 1 and \
+           isinstance(tpl[0], ast.Expr) and isinstance(tpl[0].value, ast.Name):
+            return self._set_wildcard(tpl[0].value, tgt)
 
         # match wildcard variable
         if isinstance(tpl, ast.Name) and tpl.id.startswith('_') and \
