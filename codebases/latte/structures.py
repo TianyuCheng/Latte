@@ -11,6 +11,10 @@ class Node(object):
         if child is None:
             return
 
+        # make sure it's a Node
+        if not isinstance(Node, child):
+            raise Exception("Trying to add non-node as child")
+
         child_number = len(self.children)
         self.children.append(child)
 
@@ -64,11 +68,24 @@ class Node(object):
         """return list of children"""
         return self.children
 
+    def copy(self, to_copy):
+        """If to_copy is a node, do a deep copy, else just return it"""
+        if isinstance(Node, to_copy):
+            return to_copy.deep_copy()
+        else:
+            return to_copy
+
 
 class ForNode(Node):
     """Holds information for a for loop"""
     def __init__(self, initial_name, initial, loop_bound, increment):
         super(ForNode, self).__init__()
+
+        if not (isinstance(Node, initial_name) and
+                isinstance(Node, initial) and
+                isinstance(Node, loop_bound) and
+                isinstance(Node, increment)):
+            raise Exception("Everything pass into ForNode must be a node")
 
         # save initial variables
         self.initial_name = initial_name
@@ -102,8 +119,10 @@ class ForNode(Node):
 
     def deep_copy(self):
         """returns a node that is a copy of this node"""
-        my_copy = ForNode(self.initial_name.deep_copy(), self.initial, self.loop_bound,
-                          self.increment)
+        my_copy = ForNode(self.initial_name.deep_copy(), 
+                          self.initial.deep_copy(), 
+                          self.loop_bound.deep_copy(),
+                          self.increment.deep_copy())
 
         for child in self.children:
             child_copy = child.deep_copy()
@@ -149,13 +168,6 @@ class ConstantNode(Node):
 
         return my_copy
 
-
-    #def is_used(self, use, use_list):
-    #    """Adds our constant to a use list if the use is equal to what is
-    #    being asked about"""
-    #    if use == self.constant:
-    #        use_list.append(use)
-
     def __str__(self):
         return str(self.constant)
 
@@ -164,6 +176,11 @@ class AssignmentNode(Node):
     """Top level: holds an assignment statement: needs a left and a right"""
     def __init__(self, left, right):
         super(AssignmentNode, self).__init__()
+
+        # left right better be nodes
+        if not (isinstance(Node, left) and
+                isinstance(Node, right)):
+            raise Exception("Everything passed into Assignment must be a node")
 
         # left and right are nodes
         self.left = left
@@ -194,12 +211,16 @@ class ExpressionNode(Node):
     def __init__(self, left, right, operator):
         super(ExpressionNode, self).__init__()
 
+        # left right better be nodes
+        if not (isinstance(Node, left) and
+                isinstance(Node, right)):
+            raise Exception("left right in Expression must be nodes")
+
         # a node
         self.left = left
-        # NOTE operator should be a + or a *
-        self.operator = operator
-        # a node
         self.right = right
+
+        self.operator = operator
 
         if isinstance(self.left, IndexNode):
             self.left = DereferenceNode(self.left)
@@ -208,7 +229,7 @@ class ExpressionNode(Node):
 
     def deep_copy(self):
         my_copy = ExpressionNode(self.left.deep_copy(), self.right.deep_copy(), 
-                                 self.operator)
+                                 self.copy(self.operator))
 
         # shouldn't have children, but whatever
         for child in self.children:
@@ -226,7 +247,12 @@ class ExpressionNode(Node):
 class ArrayNode(Node):
     def __init__(self, base_addr, indices):
         super(ArrayNode, self).__init__()
+
         self.base_addr = base_addr
+
+        #TODO amke sure everything in indices is a list? 
+        # (right now it's assumed)
+
         # indices could be multiple dimensions
         # they are stored in a list in the natural order,
         # e.g. [ i, j ]
@@ -236,13 +262,7 @@ class ArrayNode(Node):
             self.indices = [ indices ]
 
     def deep_copy(self):
-        my_copy = None
-
-        if isinstance(Node, self.base_addr):
-            my_copy = ArrayNode(self.base_addr.deep_copy(), self.indices[:])
-        else:
-            # base address is a string
-            my_copy = ArrayNode(self.base_addr, self.indices[:])
+        my_copy = ArrayNode(self.copy(self.base_addr), self.indices[::])
 
         for child in self.children:
             child_copy = child.deep_copy()
@@ -275,13 +295,8 @@ class IndexNode(Node):
         assert len(self.indices) <= 2
 
     def deep_copy(self):
-        my_copy = None
-
-        if isinstance(Node, self.base_addr):
-            my_copy = IndexNode(self.base_addr.deep_copy(), self.indices[:], 
-                                self.stride)
-        else:
-            my_copy = IndexNode(self.base_addr, self.indices[:], self.stride)
+        my_copy = IndexNode(self.copy(self.base_addr), self.indices[:], 
+                            self.copy(self.stride))
 
         for child in self.children:
             child_copy = child.deep_copy()
@@ -350,13 +365,7 @@ class CallNode(Node):
         self.args_rw.append(rw)
 
     def deep_copy(self):
-        my_copy = None
-
-        if isinstance(Node, self.func):
-            my_copy = CallNode(self.func.deep_copy())
-        else:
-            # func is string
-            my_copy = CallNode(self.func)
+        my_copy = CallNode(self.copy(self.func))
 
         my_copy.args_rw = self.args_rw[:]
 
