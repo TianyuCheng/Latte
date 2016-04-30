@@ -498,7 +498,8 @@ def main(options, program_file, cpp_file):
     # TODO: output auxiliary function here
     for block in main_body_strs: 
         for statement in block:
-            cpp_out.writelines([statement, make_newlines(1)])
+            if statement is not None:
+                cpp_out.writelines([str(statement), make_newlines(1)])
         cpp_out.write(make_newlines(1))
     cpp_out.write("}") # ending bracket
     cpp_out.close()
