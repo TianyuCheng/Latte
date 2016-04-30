@@ -425,6 +425,11 @@ def main(options, program_file, cpp_file):
     # share_var_analyze (neuron_analyzers)
     #####################################################################
 
+    # if tiling flag is set, then run the tiling
+    if tiling_flag:
+        #TODO
+        pass
+
     # CODE GENERATION:
     main_body_strs = []
 
@@ -474,7 +479,7 @@ if __name__ == "__main__":
     parser.add_option("-b", "--batch-parallel", action="store_true", dest="DP_FLAG", \
                       default=False, help="option to turn on batch parallelization.")
     parser.add_option("-t", "--tiling-parallel", action="store_true", dest="TILING_FLAG", \
-                      default=False, help="option to turn on tiling parallelization.")
+                      default=False, help="option to turn on loop tiling.")
     parser.add_option("-w", "--numWorkers", action="store", type="int", dest="NWORKERS", \
                       default=1, help="Specify the allocated number of threads \
                       for parallel computing (needed when -b or -t is on)")
