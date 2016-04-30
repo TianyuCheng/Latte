@@ -313,6 +313,10 @@ class CallNode(Node):
         self.func = func
         self.args_rw = []
 
+        # unify all func to be constant node
+        if isinstance(self.func, str):
+            self.func = ConstantNode(self.func)
+
     def add_arg(self, arg, read, write):
         if not self.func.get_constant().startswith("sgemm"):
             if isinstance(arg, IndexNode):
