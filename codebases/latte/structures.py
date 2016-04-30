@@ -86,7 +86,7 @@ class ListNode(Node):
     def list_find_and_replace(self, the_list, to_find, replacement):
         to_return = []
 
-        for i in range(list_copy):
+        for i in range(len(the_list)):
             element = the_list[i]
 
             if isinstance(element, list):

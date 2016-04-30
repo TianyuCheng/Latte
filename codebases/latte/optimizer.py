@@ -11,7 +11,7 @@ class TilingOptimizer(Optimizer):
         super(TilingOptimizer, self).__init__(dict_of_trees, ensemble_order)
 
         # change this to change tile size
-        self.tile_size = 5;
+        self.tile_size = 3;
 
         self.num_left = 0;
     
@@ -26,6 +26,10 @@ class TilingOptimizer(Optimizer):
 
             # grab the node: will be a for loop node
             current_node = self.dict_of_trees[e_name]
+
+            # may not have a ndoe
+            if current_node == None:
+                continue
 
             for_nodes = [ current_node ]
 
@@ -81,7 +85,7 @@ class TilingOptimizer(Optimizer):
 
         # if loop bound is less than our tile size, ignore it
         if loop_bound < self.tile_size:
-            return
+            return ensembles_to_return
 
         tile_var_name = "_tile_" + loop_var_name
 

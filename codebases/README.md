@@ -242,11 +242,15 @@ Assumptions/Design Decisions
 
 - The function you use for add\_connection must be defined as a lambda function.
 
+- One should follow templates when creating new neurons or ensembles. However, 
+one should be free to reorder additions and multiplications as it should
+be possible to match reordered additions (we have a template for all 
+permutations).
+
 - The user won't define variables that begin with \_tile
 
 - No different ensemble types: fused ensembles with layers. (i.e. may not be
 exactly Latte)
-
 
 References
 --------

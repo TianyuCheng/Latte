@@ -78,9 +78,7 @@ class NeuronAnalyzer(object):
         for function in self.extract_functions():
             self.process_backward(function, enm_info)
         print self.enm, self.fp_codes
-        return ';\n'.join(map(str, self.fp_codes)) + "\n", \
-               ';\n'.join(map(str, self.bp_codes)) + "\n", \
-               None if len(self.fp_codes) == 0 else self.fp_codes[0], \
+        return None if len(self.fp_codes) == 0 else self.fp_codes[0], \
                None if len(self.bp_codes) == 0 else self.bp_codes[0]
 
     def extract_functions(self):
@@ -397,9 +395,9 @@ def process_lib(filename, ensemble_info, name2enm, conn_types, options):
         share_weights = False
         if _type in conn_types:
             _, conn_type, share_weights = conn_types[_type]
-        fp_code, bp_code, fp_code_node, bp_code_node = analyzer.analyze(ensemble, name2enm, conn_type, share_weights)
-        forward_codes[_name] = fp_code
-        backward_codes[_name] = bp_code
+        fp_code_node, bp_code_node = analyzer.analyze(ensemble, name2enm, conn_type, share_weights)
+        forward_codes[_name] = fp_code_node
+        backward_codes[_name] = bp_code_node
         fp_codes.append(fp_code_node)
         bp_codes.append(bp_code_node)
 

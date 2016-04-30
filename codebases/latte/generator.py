@@ -444,6 +444,10 @@ def main(options, program_file, cpp_file):
     #for x in bp_codes: print x, fp_codes[x]
     # share_var_analyze (neuron_analyzers)
     #####################################################################
+    # print "#####################################33"
+    # for key, value in fp_codes.iteritems():
+    #     print key, type(value)
+    # print "#####################################33"
 
     
     forwards_ensemble_order = []
@@ -506,7 +510,8 @@ def main(options, program_file, cpp_file):
     # TODO: output auxiliary function here
     for block in main_body_strs: 
         for statement in block:
-            cpp_out.writelines([statement, make_newlines(1)])
+            if statement is not None:
+                cpp_out.writelines([str(statement), make_newlines(1)])
         cpp_out.write(make_newlines(1))
     cpp_out.write("}") # ending bracket
     cpp_out.close()
