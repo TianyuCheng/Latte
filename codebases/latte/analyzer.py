@@ -77,9 +77,11 @@ class NeuronAnalyzer(object):
             self.process_forward(function, enm_info)
         for function in self.extract_functions():
             self.process_backward(function, enm_info)
+        print self.enm, self.fp_codes
         return ';\n'.join(map(str, self.fp_codes)) + "\n", \
                ';\n'.join(map(str, self.bp_codes)) + "\n", \
-               self.fp_codes, self.bp_codes
+               None if len(self.fp_codes) == 0 else self.fp_codes[0], \
+               None if len(self.bp_codes) == 0 else self.bp_codes[0]
 
     def extract_functions(self):
         """
