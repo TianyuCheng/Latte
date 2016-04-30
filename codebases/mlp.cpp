@@ -73,7 +73,7 @@ generate_shuffle_index(shuffle_index, train_features.size());
 // solve block
 for ( int iter = 0 ; iter < 100 ; iter = iter + 1 ) {
 
-#pragma omp for schedule(static, 1) private(tid, data_idx, cur_label, sumover)
+#pragma omp for collapse(2) schedule(static, 1) private(tid, data_idx, cur_label, sumover)
 for ( int si = 0 ; si < train_features.size() ; si = si + 1 ) {
 int tid = omp_get_thread_num();
 
@@ -82,37 +82,49 @@ sgemm_copy (data_enm_output[tid], train_features[data_idx], 1*4);
 vector<vector<int>> cur_label (1, vector<int>(3, 0));
 cur_label[0][train_labels[data_idx]] = 1;
 
-
-
-
 for (int x = 0; x < 1; x += 1) {
-for (int y = 0; y < 20; y += 1) {
+for (int _tile_y = 0; _tile_y < 20; _tile_y += 3) {
+for (int y = _tile_y; y < _tile_y + 3; y += 1) {
 (*(ip1_enm_output[tid]+x*20+y)) = 0.0;
 sgemm_dp((ip1_enm_output[tid]+x*20+y), ip1_enm_weights[x][y], data_enm_output[tid], 4);
 (*(ip1_enm_grad_activation[tid]+x*20+y)) = (1 - pow(tanh((*(ip1_enm_output[tid]+x*20+y))), 2));
 (*(ip1_enm_output[tid]+x*20+y)) = tanh((*(ip1_enm_output[tid]+x*20+y)));
 }
+for (int _remain_y = 18; _remain_y < 2; _remain_y += 1) {
+(*(ip1_enm_output[tid]+x*20+_remain_y)) = 0.0;
+sgemm_dp((ip1_enm_output[tid]+x*20+_remain_y), ip1_enm_weights[x][_remain_y], data_enm_output[tid], 4);
+(*(ip1_enm_grad_activation[tid]+x*20+_remain_y)) = (1 - pow(tanh((*(ip1_enm_output[tid]+x*20+_remain_y))), 2));
+(*(ip1_enm_output[tid]+x*20+_remain_y)) = tanh((*(ip1_enm_output[tid]+x*20+_remain_y)));
+}
+}
 }
 
-
 for (int x = 0; x < 1; x += 1) {
-for (int y = 0; y < 10; y += 1) {
+for (int _tile_y = 0; _tile_y < 10; _tile_y += 3) {
+for (int y = _tile_y; y < _tile_y + 3; y += 1) {
 (*(ip2_enm_output[tid]+x*10+y)) = 0.0;
 sgemm_dp((ip2_enm_output[tid]+x*10+y), ip2_enm_weights[x][y], ip1_enm_output[tid], 20);
 (*(ip2_enm_grad_activation[tid]+x*10+y)) = (1 - pow(tanh((*(ip2_enm_output[tid]+x*10+y))), 2));
 (*(ip2_enm_output[tid]+x*10+y)) = tanh((*(ip2_enm_output[tid]+x*10+y)));
 }
+for (int _remain_y = 9; _remain_y < 1; _remain_y += 1) {
+(*(ip2_enm_output[tid]+x*10+_remain_y)) = 0.0;
+sgemm_dp((ip2_enm_output[tid]+x*10+_remain_y), ip2_enm_weights[x][_remain_y], ip1_enm_output[tid], 20);
+(*(ip2_enm_grad_activation[tid]+x*10+_remain_y)) = (1 - pow(tanh((*(ip2_enm_output[tid]+x*10+_remain_y))), 2));
+(*(ip2_enm_output[tid]+x*10+_remain_y)) = tanh((*(ip2_enm_output[tid]+x*10+_remain_y)));
+}
+}
 }
 
-
 for (int x = 0; x < 1; x += 1) {
-for (int y = 0; y < 3; y += 1) {
+for (int _tile_y = 0; _tile_y < 3; _tile_y += 3) {
+for (int y = _tile_y; y < _tile_y + 3; y += 1) {
 (*(label_enm_output[tid]+x*3+y)) = 0.0;
 sgemm_dp((label_enm_output[tid]+x*3+y), label_enm_weights[x][y], ip2_enm_output[tid], 10);
 (*(label_enm_output[tid]+x*3+y)) = exp((*(label_enm_output[tid]+x*3+y)));
 }
 }
-
+}
 
 // annotate for loss layer
 float sumover = 0.0;
@@ -128,33 +140,42 @@ for (int x = 0; x < 1; x++) {
 }
 
 for (int x = 0; x < 1; x += 1) {
-for (int y = 0; y < 3; y += 1) {
+for (int _tile_y = 0; _tile_y < 3; _tile_y += 3) {
+for (int y = _tile_y; y < _tile_y + 3; y += 1) {
 (*(label_enm_grad_output[tid]+x*3+y)) = ((*(label_enm_output[tid]+x*3+y)) - cur_label[x][y]);
 sgemm_axpy(ip2_enm_grad_output[tid], (*(label_enm_grad_output[tid]+x*3+y)), label_enm_weights[x][y], 10);
 sgemm_axpy(label_enm_grad_weights[tid][x][y], (*(label_enm_grad_output[tid]+x*3+y)), ip2_enm_output[tid], 10);
 }
 }
-
+}
 
 for (int x = 0; x < 1; x += 1) {
-for (int y = 0; y < 10; y += 1) {
+for (int _tile_y = 0; _tile_y < 10; _tile_y += 3) {
+for (int y = _tile_y; y < _tile_y + 3; y += 1) {
 (*(ip2_enm_grad_output[tid]+x*10+y)) = ((*(ip2_enm_grad_output[tid]+x*10+y)) * (*(ip2_enm_grad_activation[tid]+x*10+y)));
 sgemm_axpy(ip1_enm_grad_output[tid], (*(ip2_enm_grad_output[tid]+x*10+y)), ip2_enm_weights[x][y], 20);
 sgemm_axpy(ip2_enm_grad_weights[tid][x][y], (*(ip2_enm_grad_output[tid]+x*10+y)), ip1_enm_output[tid], 20);
 }
+for (int _remain_y = 9; _remain_y < 1; _remain_y += 1) {
+(*(ip2_enm_grad_output[tid]+x*10+_remain_y)) = ((*(ip2_enm_grad_output[tid]+x*10+_remain_y)) * (*(ip2_enm_grad_activation[tid]+x*10+_remain_y)));
+sgemm_axpy(ip1_enm_grad_output[tid], (*(ip2_enm_grad_output[tid]+x*10+_remain_y)), ip2_enm_weights[x][_remain_y], 20);
+sgemm_axpy(ip2_enm_grad_weights[tid][x][_remain_y], (*(ip2_enm_grad_output[tid]+x*10+_remain_y)), ip1_enm_output[tid], 20);
+}
+}
 }
 
-
 for (int x = 0; x < 1; x += 1) {
-for (int y = 0; y < 20; y += 1) {
+for (int _tile_y = 0; _tile_y < 20; _tile_y += 3) {
+for (int y = _tile_y; y < _tile_y + 3; y += 1) {
 (*(ip1_enm_grad_output[tid]+x*20+y)) = ((*(ip1_enm_grad_output[tid]+x*20+y)) * (*(ip1_enm_grad_activation[tid]+x*20+y)));
 sgemm_axpy(ip1_enm_grad_weights[tid][x][y], (*(ip1_enm_grad_output[tid]+x*20+y)), data_enm_output[tid], 4);
 }
+for (int _remain_y = 18; _remain_y < 2; _remain_y += 1) {
+(*(ip1_enm_grad_output[tid]+x*20+_remain_y)) = ((*(ip1_enm_grad_output[tid]+x*20+_remain_y)) * (*(ip1_enm_grad_activation[tid]+x*20+_remain_y)));
+sgemm_axpy(ip1_enm_grad_weights[tid][x][_remain_y], (*(ip1_enm_grad_output[tid]+x*20+_remain_y)), data_enm_output[tid], 4);
 }
-
-
-
-
+}
+}
 
 // weights_update for ip1_enm
 for (int x = 0; x < 1; x++) {
@@ -195,37 +216,49 @@ int tid = 0;
 sgemm_copy (data_enm_output[tid], test_features[data_idx], 1*4);
 vector<vector<int>> cur_label (1, vector<int>(3, 0));
 cur_label[0][test_labels[data_idx]] = 1;
-
-
-
 for (int x = 0; x < 1; x += 1) {
-for (int y = 0; y < 20; y += 1) {
+for (int _tile_y = 0; _tile_y < 20; _tile_y += 3) {
+for (int y = _tile_y; y < _tile_y + 3; y += 1) {
 (*(ip1_enm_output[tid]+x*20+y)) = 0.0;
 sgemm_dp((ip1_enm_output[tid]+x*20+y), ip1_enm_weights[x][y], data_enm_output[tid], 4);
 (*(ip1_enm_grad_activation[tid]+x*20+y)) = (1 - pow(tanh((*(ip1_enm_output[tid]+x*20+y))), 2));
 (*(ip1_enm_output[tid]+x*20+y)) = tanh((*(ip1_enm_output[tid]+x*20+y)));
 }
+for (int _remain_y = 18; _remain_y < 2; _remain_y += 1) {
+(*(ip1_enm_output[tid]+x*20+_remain_y)) = 0.0;
+sgemm_dp((ip1_enm_output[tid]+x*20+_remain_y), ip1_enm_weights[x][_remain_y], data_enm_output[tid], 4);
+(*(ip1_enm_grad_activation[tid]+x*20+_remain_y)) = (1 - pow(tanh((*(ip1_enm_output[tid]+x*20+_remain_y))), 2));
+(*(ip1_enm_output[tid]+x*20+_remain_y)) = tanh((*(ip1_enm_output[tid]+x*20+_remain_y)));
+}
+}
 }
 
-
 for (int x = 0; x < 1; x += 1) {
-for (int y = 0; y < 10; y += 1) {
+for (int _tile_y = 0; _tile_y < 10; _tile_y += 3) {
+for (int y = _tile_y; y < _tile_y + 3; y += 1) {
 (*(ip2_enm_output[tid]+x*10+y)) = 0.0;
 sgemm_dp((ip2_enm_output[tid]+x*10+y), ip2_enm_weights[x][y], ip1_enm_output[tid], 20);
 (*(ip2_enm_grad_activation[tid]+x*10+y)) = (1 - pow(tanh((*(ip2_enm_output[tid]+x*10+y))), 2));
 (*(ip2_enm_output[tid]+x*10+y)) = tanh((*(ip2_enm_output[tid]+x*10+y)));
 }
+for (int _remain_y = 9; _remain_y < 1; _remain_y += 1) {
+(*(ip2_enm_output[tid]+x*10+_remain_y)) = 0.0;
+sgemm_dp((ip2_enm_output[tid]+x*10+_remain_y), ip2_enm_weights[x][_remain_y], ip1_enm_output[tid], 20);
+(*(ip2_enm_grad_activation[tid]+x*10+_remain_y)) = (1 - pow(tanh((*(ip2_enm_output[tid]+x*10+_remain_y))), 2));
+(*(ip2_enm_output[tid]+x*10+_remain_y)) = tanh((*(ip2_enm_output[tid]+x*10+_remain_y)));
+}
+}
 }
 
-
 for (int x = 0; x < 1; x += 1) {
-for (int y = 0; y < 3; y += 1) {
+for (int _tile_y = 0; _tile_y < 3; _tile_y += 3) {
+for (int y = _tile_y; y < _tile_y + 3; y += 1) {
 (*(label_enm_output[tid]+x*3+y)) = 0.0;
 sgemm_dp((label_enm_output[tid]+x*3+y), label_enm_weights[x][y], ip2_enm_output[tid], 10);
 (*(label_enm_output[tid]+x*3+y)) = exp((*(label_enm_output[tid]+x*3+y)));
 }
 }
-
+}
 
 // annotate for loss layer in testing stage
 int pred = argmax (label_enm_output[tid], 1*3);
