@@ -154,6 +154,10 @@ class TilingOptimizer(Optimizer):
         # returns "ensemble" names that should be appended
         return ensembles_to_return
 
+    def handle_remainder(self):
+        #TODO
+        pass
+
 class FusionOptimizer(Optimizer):
     def __init__(self, dict_of_trees, ensemble_order):
         super(FusionOptimizer, self).__init__(dict_of_trees, ensemble_order)
