@@ -208,6 +208,11 @@ Assumptions
 
 - The function you use for add\_connection must be defined as a lambda function.
 
+- One should follow templates when creating new neurons or ensembles. However, 
+one should be free to reorder additions and multiplications as it should
+be possible to match reordered additions (we have a template for all 
+permutations).
+
 References
 --------
 We primarily referred to the Latte Paper provided in the course CS380C Compilers.
