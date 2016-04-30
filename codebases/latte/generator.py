@@ -250,7 +250,7 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes,
     return test_block
 
 def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, 
-                     fp_codes, forwards_ensemble_order, backwards_ensemble_order)
+        fp_codes, forwards_ensemble_order, backwards_ensemble_order):
     solve_block = []
     iterations = str(solver_info["iter"])
     if solver_info["step"] > 0: step_size = str(solver_info["step"] * -1.0)
@@ -440,6 +440,7 @@ def main(options, program_file, cpp_file):
         backwards_ensemble_order.append(i[0])
 
     # if tiling flag is set, then run the tiling
+    tiling_flag = options.TILING_FLAG
     if tiling_flag:
         # forward
         opt1 = TilingOptimizer(fp_codes, forwards_ensemble_order)
