@@ -11,7 +11,7 @@ class TilingOptimizer(Optimizer):
         super(TilingOptimizer, self).__init__(dict_of_trees, ensemble_order)
 
         # change this to change tile size
-        self.tile_size = 5;
+        self.tile_size = 3;
 
         self.num_left = 0;
     
