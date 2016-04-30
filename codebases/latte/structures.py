@@ -77,16 +77,16 @@ class ForNode(Node):
         self.increment = increment
 
     def set_initial(self, i):
-        self.initial = i
+        self.initial.set_constant(i)
 
     def set_initial_name(self, i):
-        self.initial_name = i
+        self.initial_name.set_constant(i)
 
     def set_loop_bound(self, i):
-        self.loop_bound = i
+        self.loop_bound.set_constant(i)
 
     def set_increment(self, i):
-        self.increment = i
+        self.increment.set_constant(i)
 
     def get_initial(self):
         return self.initial
@@ -102,7 +102,7 @@ class ForNode(Node):
 
     def deep_copy(self):
         """returns a node that is a copy of this node"""
-        my_copy = ForNode(self.initial_name, self.initial, self.loop_bound,
+        my_copy = ForNode(self.initial_name.deep_copy(), self.initial, self.loop_bound,
                           self.increment)
 
         for child in self.children:
@@ -110,6 +110,11 @@ class ForNode(Node):
             my_copy.add_child(child_copy)
 
         return my_copy
+
+    def find_and_replace(self, to_find, replacement):
+        """look through self and all children to replace something"""
+        #TODO
+        pass
 
     def __str__(self):
         """Prints the ENTIRE loop including its children"""
@@ -130,6 +135,9 @@ class ConstantNode(Node):
 
     def get_constant(self):
         return self.constant
+
+    def set_constant(self, new_value):
+        self.constant = new_value
 
     def deep_copy(self):
         my_copy = ConstantNode(self.constant)
@@ -202,7 +210,7 @@ class ExpressionNode(Node):
         my_copy = ExpressionNode(self.left.deep_copy(), self.right.deep_copy(), 
                                  self.operator)
 
-        # shouldn't have children
+        # shouldn't have children, but whatever
         for child in self.children:
             child_copy = child.deep_copy()
             my_copy.add_child(child_copy)
@@ -228,7 +236,13 @@ class ArrayNode(Node):
             self.indices = [ indices ]
 
     def deep_copy(self):
-        my_copy = ArrayNode(self.base_addr, self.indices[:])
+        my_copy = None
+
+        if isinstance(Node, self.base_addr):
+            my_copy = ArrayNode(self.base_addr.deep_copy(), self.indices[:])
+        else:
+            # base address is a string
+            my_copy = ArrayNode(self.base_addr, self.indices[:])
 
         for child in self.children:
             child_copy = child.deep_copy()
@@ -257,10 +271,17 @@ class IndexNode(Node):
         else:
             self.indices = [ indices ]
 
+        # at this point only supports 2D arithmetic
         assert len(self.indices) <= 2
 
     def deep_copy(self):
-        my_copy = IndexNode(self.base_addr, self.indices[:], self.stride)
+        my_copy = None
+
+        if isinstance(Node, self.base_addr):
+            my_copy = IndexNode(self.base_addr.deep_copy(), self.indices[:], 
+                                self.stride)
+        else:
+            my_copy = IndexNode(self.base_addr, self.indices[:], self.stride)
 
         for child in self.children:
             child_copy = child.deep_copy()
@@ -325,7 +346,13 @@ class CallNode(Node):
         self.args_rw.append(rw)
 
     def deep_copy(self):
-        my_copy = CallNode(self.func)
+        my_copy = None
+
+        if isinstance(Node, self.func):
+            my_copy = CallNode(self.func.deep_copy())
+        else:
+            # func is string
+            my_copy = CallNode(self.func)
 
         my_copy.args_rw = self.args_rw[:]
 
