@@ -277,7 +277,7 @@ class DereferenceNode(Node):
         self.add_child(node)
 
     def deep_copy(self):
-        my_copy = DereferenceNode(self.children[0])
+        my_copy = DereferenceNode(self.children[0].deep_copy())
 
         return my_copy
 
@@ -321,7 +321,7 @@ class CallNode(Node):
     def deep_copy(self):
         my_copy = CallNode(self.func)
 
-        my_copy.args_rw = self.args_rw
+        my_copy.args_rw = self.args_rw[:]
 
         for child in self.children:
             child_copy = child.deep_copy()
