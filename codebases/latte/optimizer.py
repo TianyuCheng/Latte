@@ -45,17 +45,23 @@ class TilingOptimizer(Optimizer):
                 new_es = self.tile_loop(for_node)
 
                 # append any new for nodes to our handling
-                # if the for node we are tiling has a parent,
-                # add any new node as a child of that node
                 node_parent = for_node.get_parent()
 
                 if not node_parent == None:
-                    for i in new_es:
-                        # note this should be safe since we handle
-                        # all parents before their children in
-                        # tiling
-                        node_to_add = self.dict_of_trees[i]
-                        node_parent.add_child(node_to_add)
+                    parent_parent = node_parent.get_parent()
+                    if not parent_parent == None:
+                        # must add to parent of parent as parent
+                        # is the tile loop; needs to be on same level
+                        for i in new_es:
+                            # note this should be safe since we handle
+                            # all parents before their children in
+                            # tiling
+                            node_to_add = self.dict_of_trees[i]
+                            parent_parent.add_child(node_to_add)
+                    else:
+                        # tile loop is at the top: add to new_en_order
+                        for i in new_es:
+                            new_ensemble_order.append(i)
                 else:
                     # no parent, is root: append to new ensemble
                     # order

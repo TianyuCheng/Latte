@@ -320,16 +320,25 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes,
     # TODO: data parallel: use atomic sum grad_weights derived from batch instance 
     for enm in ensembles_info[1:]: 
         _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
+        prev_dim_x, prev_dim_y = name2enm[_prev][3], name2enm[_prev][4]
         weights_update_str = "// weights_update for " + enm[0] + "\n"
         weights_update_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
         weights_update_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
         if options.DP_FLAG: 
+            weights_update_str += "\t\tfor (int i = 0; i < %s ; i ++) {\n" % prev_dim_x
+            weights_update_str += "\t\tfor (int j = 0; j < %s ; j ++) {\n" % prev_dim_y
             weights_update_str += "#pragma omp atomic\n"
+            weights_update_str += \
+                    "*(%s[x][y]+i*%s+j) = *(%s[x][y]+i*%s+j) + (%s) * (*(%s[tid][x][y]+i*%d+j));\n" \
+                    % (_cur+"_weights", prev_dim_y, _cur+"_weights", prev_dim_y, \
+                       step_size, _cur+"_grad_weights", prev_dim_y) 
+            weights_update_str += "\t\t}\n\t\t}\n"
             subscript = "[tid]"
-        else: subscript = ""
-        weights_update_str += "\t\tsgemm_axpy(%s[x][y], %s, %s[x][y], %s*%s);\n" %\
+        else: 
+            subscript = ""
+            weights_update_str += "\t\tsgemm_axpy(%s[x][y], %s, %s[x][y], %s*%s);\n" %\
                 (_cur+"_weights", step_size, _cur+"_grad_weights"+subscript, \
-                    name2enm[_prev][3], name2enm[_prev][4])
+                    prev_dim_x, prev_dim_y)
         weights_update_str += "\t\tsgemm_zeros(%s[x][y], %s*%s);\n" % \
                 (_cur+"_grad_weights"+subscript, name2enm[_prev][3], name2enm[_prev][4])
         weights_update_str += "\t\tsgemm_zeros(%s, %s*%s);\n" % \
