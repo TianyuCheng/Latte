@@ -14,7 +14,7 @@ class Node(object):
             return
 
         # make sure it's a Node
-        if not isinstance(Node, child):
+        if not isinstance(child, Node):
             raise Exception("Trying to add non-node as child")
 
         child_number = len(self.children)
@@ -72,7 +72,7 @@ class Node(object):
 
     def copy(self, to_copy):
         """If to_copy is a node, do a deep copy, else just return it"""
-        if isinstance(Node, to_copy):
+        if isinstance(to_copy, Node):
             return to_copy.deep_copy()
         else:
             return to_copy
@@ -109,10 +109,10 @@ class ForNode(Node):
     def __init__(self, initial_name, initial, loop_bound, increment):
         super(ForNode, self).__init__()
 
-        if not (isinstance(Node, initial_name) and
-                isinstance(Node, initial) and
-                isinstance(Node, loop_bound) and
-                isinstance(Node, increment)):
+        if not (isinstance(initial_name, Node) and
+                isinstance(initial, Node) and
+                isinstance(loop_bound, Node) and
+                isinstance(increment, Node)):
             raise Exception("Everything pass into ForNode must be a node")
 
         # save initial variables
@@ -134,16 +134,16 @@ class ForNode(Node):
         self.increment.set_constant(i)
 
     def get_initial(self):
-        return self.initial
+        return self.initial.get_constant()
 
     def get_initial_name(self):
-        return self.initial_name
+        return self.initial_name.get_constant()
 
     def get_loop_bound(self):
-        return self.loop_bound
+        return self.loop_bound.get_constant()
 
     def get_increment(self):
-        return self.increment
+        return self.increment.get_constant()
 
     def deep_copy(self):
         """returns a node that is a copy of this node"""
@@ -161,7 +161,6 @@ class ForNode(Node):
     def find_and_replace(self, to_find, replacement):
         """look through self and all children to replace something"""
         # check through our stuff to see if anything needs to be changed
-
         self.initial_name.find_and_replace(to_find, replacement)
         self.initial.find_and_replace(to_find, replacement)
         self.loop_bound.find_and_replace(to_find, replacement)
@@ -218,8 +217,8 @@ class AssignmentNode(Node):
         super(AssignmentNode, self).__init__()
 
         # left right better be nodes
-        if not (isinstance(Node, left) and
-                isinstance(Node, right)):
+        if not (isinstance(left, Node) and
+                isinstance(right, Node)):
             raise Exception("Everything passed into Assignment must be a node")
 
         # left and right are nodes
@@ -259,8 +258,8 @@ class ExpressionNode(Node):
         super(ExpressionNode, self).__init__()
 
         # left right better be nodes
-        if not (isinstance(Node, left) and
-                isinstance(Node, right)):
+        if not (isinstance(left, Node) and
+                isinstance(right, Node)):
             raise Exception("left right in Expression must be nodes")
 
         # a node
@@ -327,7 +326,7 @@ class ArrayNode(ListNode):
 
     def find_and_replace(self, to_find, replacement):
         #TODO check?
-        if isinstance(Node, self.base_addr):
+        if isinstance(self.base_addr, Node):
             self.base_addr.find_and_replace(to_find, replacement)
         else:
             if self.base_addr == to_find:
@@ -377,13 +376,13 @@ class IndexNode(ListNode):
         return my_copy
 
     def find_and_replace(self, to_find, replacement):
-        if isinstance(Node, self.base_addr):
+        if isinstance(self.base_addr, Node):
             self.base_addr.find_and_replace(to_find, replacement)
         else:
             if self.base_addr == to_find:
                 self.base_addr = replacement
 
-        if isinstance(Node, self.stride):
+        if isinstance(self.stride, Node):
             self.stride.find_and_replace(to_find, replacement)
         else:
             if self.stride == to_find:
@@ -477,7 +476,7 @@ class CallNode(Node):
         return my_copy
 
     def find_and_replace(self, to_find, replacement):
-        if isinstance(Node, self.func):
+        if isinstance(self.func, Node):
             self.func.find_and_replace(to_find, replacement)
         else:
             if self.func == to_find:
@@ -489,6 +488,8 @@ class CallNode(Node):
 
     def __str__(self):
         args = ', '.join(map(str, self.children))
+
         if isinstance(self.parent, ForNode):
             return "%s(%s);" % (self.func, args)
+
         return "%s(%s)" % (self.func, args)
