@@ -436,6 +436,10 @@ def main(options, program_file, cpp_file):
     #for x in bp_codes: print x, fp_codes[x]
     # share_var_analyze (neuron_analyzers)
     #####################################################################
+    # print "#####################################33"
+    # for key, value in fp_codes.iteritems():
+    #     print key, type(value)
+    # print "#####################################33"
 
     
     forwards_ensemble_order = []
