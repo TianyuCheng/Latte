@@ -327,10 +327,11 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes,
         if options.DP_FLAG: 
             weights_update_str += "\t\tfor (int i = 0; i < %s ; i ++) {\n" % prev_dim_x
             weights_update_str += "\t\tfor (int j = 0; j < %s ; j ++) {\n" % prev_dim_y
-            weights_update_str += "float value = *(%s[x][y]+i*%d+j) + (%s) * (*(%s[tid][x][y]+i*%d+j));\n" \
-                    % (_cur+"_weights", prev_dim_y, step_size, _cur+"_grad_weights", prev_dim_y) 
             weights_update_str += "#pragma omp atomic\n"
-            weights_update_str += "*(%s[x][y]+i*%d+j) = value;\n" % (_cur+"_weights", prev_dim_y) 
+            weights_update_str += \
+                    "*(%s[x][y]+i*%s+j) = *(%s[x][y]+i*%s+j) + (%s) * (*(%s[tid][x][y]+i*%d+j));\n" \
+                    % (_cur+"_weights", prev_dim_y, _cur+"_weights", prev_dim_y, \
+                       step_size, _cur+"_grad_weights", prev_dim_y) 
             weights_update_str += "\t\t}\n\t\t}\n"
             subscript = "[tid]"
         else: 
