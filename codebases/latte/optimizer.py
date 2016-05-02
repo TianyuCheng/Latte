@@ -124,7 +124,7 @@ class TilingOptimizer(Optimizer):
             # for r = prev upper bound, r < remainder, increment 1
             leftover_for = ForNode(ConstantNode(leftover_loop_var), 
                                    ConstantNode(new_start),
-                                   ConstantNode(remainder), 
+                                   ConstantNode(int(loop_bound)), 
                                    ConstantNode(1))
 
             # clone children, add to our new for node
