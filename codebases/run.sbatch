@@ -1,9 +1,10 @@
 #!/bin/bash
-#SBATCH -J mlp            # job name
-#SBATCH -o omlp.out
-#SBATCH -e emlp.out
-#SBATCH -n 2              # total number of mpi tasks requested
-#SBATCH -p normal     
-#SBATCH -t 00:00:10        
+SBATCH -J latte
+SBATCH -o latte.out
+SBATCH -e latte.err
+SBATCH -n 2
+SBATCH -p normal
+SBATCH -t 00:00:20
 
-./mlp
+./fc-fc
+./fc-conv-fc

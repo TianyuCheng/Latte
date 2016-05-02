@@ -7,7 +7,17 @@ GEN_FLAGS  :=
 NUM_WORKERS:= 5
 tests      := fc-fc fc-conv-fc fc-meanp-fc
 
-all: clean $(tests)
+all: sbatch clean $(tests)
+
+sbatch:
+	@echo "#!/bin/bash"          > run.sbatch
+	@echo "SBATCH -J latte"     >> run.sbatch
+	@echo "SBATCH -o latte.out" >> run.sbatch
+	@echo "SBATCH -e latte.err" >> run.sbatch
+	@echo "SBATCH -n 2" 		   >> run.sbatch
+	@echo "SBATCH -p normal"    >> run.sbatch
+	@echo "SBATCH -t 00:00:20"  >> run.sbatch
+	@echo ""  				   >> run.sbatch
 
 mkl:
 	GEN_FLAGS := $(GEN_FLAGS) -m
@@ -24,6 +34,7 @@ fusion:
 %: %.cpp
 	$(CC) -c ${CXX_FLAGS} $< -o $<.o
 	$(CC) -o $@ $<.o ${LINK_FLAGS}
+	@echo "./$@" >> run.sbatch
 
 %.cpp: test/%.py
 	$(GEN) $(GEN_FLAGS) $< $@
