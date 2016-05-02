@@ -32,7 +32,7 @@ Status
 
     - [DONE] Implicit adjacency lists: lambda representation of functions
 
-- [] Share Variable Analysis
+- [DONE] Share Variable Analysis
 
     - [DONE] Determine uniform dependency of dimension
 
@@ -47,11 +47,11 @@ Status
 
     - [DONE] Library Kernel Pattern Matching
 
-    - [] Loop Tiling pass 
+    - [DONE] Loop Tiling pass 
 
     - [] Loop Fusion pass
 
-    - [] Data Parallelization: Parallel in Batch Items
+    - [DONE] Data Parallelization: Parallel in Batch Items
 
 
 - [DONE] Code Generation
