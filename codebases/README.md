@@ -47,11 +47,13 @@ Status
 
     - [DONE] Library Kernel Pattern Matching
 
-    - [DONE] Loop Tiling pass 
+    - [DONE] Model Parallelism: Loop Tiling pass 
 
     - [] Loop Fusion pass
 
-    - [DONE] Data Parallelization: Parallel in Batch Items
+    - [DONE] Data Parallelism: Parallel in Batch Items
+    
+    - [] Data+Model Parallelism: 
 
 
 - [DONE] Code Generation
