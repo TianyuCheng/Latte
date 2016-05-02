@@ -6,10 +6,7 @@ CC		   := icpc -std=c++0x
 CXX_FLAGS  := -DMKL_ILP64 -m64 -I${MKLROOT}/include -I${TACC_BOOST_INC} -openmp
 LINK_FLAGS := -Wl,--start-group -L${TACC_BOOST_LIB} ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm -ldl -openmp
 
-
-BUILD_DIR := bin
-
-all: bin CppLatte
+all: bin mlp
 
 bin:
 	@mkdir -p $(BUILD_DIR)
