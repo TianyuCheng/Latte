@@ -1,19 +1,32 @@
 CC		   := icpc -std=c++0x
-# CC		   := g++ -std=c++11 
-# TACC_BOOST_INC=/opt/apps/intel15/boost/1.55.0/x86_64/include
-# TACC_BOOST_LIB=/opt/apps/intel15/boost/1.55.0/x86_64/lib
-# MKLROOT    := /home/jimmylin/intel/compilers_and_libraries/linux/mkl
 CXX_FLAGS  := -DMKL_ILP64 -m64 -I${MKLROOT}/include -I${TACC_BOOST_INC} -openmp
 LINK_FLAGS := -Wl,--start-group -L${TACC_BOOST_LIB} ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm -ldl -openmp
 
-all: bin mlp
+GEN		   := ./latte/generator.py
+GEN_FLAGS  := 
+NUM_WORKERS:= 5
+tests      := fc-fc fc-conv-fc fc-meanp-fc
 
-bin:
-	@mkdir -p $(BUILD_DIR)
+all: clean $(tests)
 
-CppLatte: Latte.cpp
-	$(CC) -c ${CXX_FLAGS} $<
-	$(CC) -o Latte Latte.o ${LINK_FLAGS}
+mkl:
+	GEN_FLAGS := $(GEN_FLAGS) -m
+
+batch:
+	GEN_FLAGS := $(GEN_FLAGS) -b -w $(NUM_WORKERS)
+
+tiling:
+	GEN_FLAGS := $(GEN_FLAGS) -t
+
+fusion:
+	GEN_FLAGS := $(GEN_FLAGS) -f
+
+%: %.cpp
+	$(CC) -c ${CXX_FLAGS} $< -o $<.o
+	$(CC) -o $@ $<.o ${LINK_FLAGS}
+
+%.cpp: test/%.py
+	$(GEN) $(GEN_FLAGS) $< $@
 
 mlp: mlp.cpp
 	$(CC) -c ${CXX_FLAGS} $<
@@ -22,6 +35,4 @@ mlp: mlp.cpp
 clean:
 	rm -rf $(BUILD_DIR)
 	rm -rf *.o
-	rm -rf Latte mlp
-
-# $(CXX_FLAGS) $< -o $(BUILD_DIR)/$@
+	rm -rf $(tests)

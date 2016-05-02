@@ -393,6 +393,22 @@ def main(options, program_file, cpp_file):
                         assert False
                 networks2enms[net_name].append(layer)
     print "###########################################"
+    # put the layers in correct order by looking for their previous layer
+    for net_name in networks2enms.iterkeys():
+        layer_names = map(lambda x: x['name'], networks2enms[net_name])
+        layer_dict = dict(zip(layer_names, networks2enms[net_name]))
+        layers = filter(lambda x: x['prev'] == None, networks2enms[net_name])
+        assert len(layers) == 1
+        layer_name = layers[0]['name']
+        num_layers = len(networks2enms[net_name]) - 1
+        while num_layers > 0:
+            next_layer = filter(lambda x: x['prev'] == layer_name, networks2enms[net_name])
+            assert len(next_layer) == 1
+            num_layers -= 1
+            layers = layers + next_layer
+            layer_name = next_layer[0]['name']
+        networks2enms[net_name] = layers
+        print "Network %s:" % net_name, map(lambda x: x['name'], layers)
 
     # (c) Solvers
     solver = None
@@ -423,9 +439,10 @@ def main(options, program_file, cpp_file):
     name2enm = {}
     for x in ensembles_info: name2enm.update({ x[0] : x })
 
+    path = os.path.dirname(os.path.abspath(__file__))
     # parse the add_connection calls in stdlib
     # and perform the shared variable analysis
-    conn_types = process_add_connection("lib.py", name2enm)
+    conn_types = process_add_connection(path + "/lib.py", name2enm)
     for net, ensembles in networks2enms.iteritems():
         for ensemble in ensembles:
             layer_type = ensemble['type']
@@ -438,7 +455,7 @@ def main(options, program_file, cpp_file):
     # create the neuron analyzers and also pass in ensemble info in order to create
     # forward and backward propogation code
     neuron_analyzers, fp_codes, bp_codes, fp_code_list, bp_code_list = \
-            process_lib("lib.py", ensembles_info, name2enm, conn_types, options)
+            process_lib(path + "/lib.py", ensembles_info, name2enm, conn_types, options)
     # for x in neuron_analyzers: print x, neuron_analyzers[x].fields
 
     #for x in fp_codes: print x, fp_codes[x]
