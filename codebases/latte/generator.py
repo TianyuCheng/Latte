@@ -30,6 +30,16 @@ def usage():
 # cout << "iter: " << iter << ", data_idx: " << data_idx << endl;
 LATTE_H_PATH = '''"Latte.h"'''
 
+def make_define_header(options, networks2enms):
+    defines = []
+    for net, enms in networks2enms.iteritems():
+        for enm in enms:
+            if "pool_dim_x" in enm:
+                defines.append("#define %s_pool_dim_x   (%d)" % (enm['name'], enm['pool_dim_x']))
+            if "pool_dim_y" in enm:
+                defines.append("#define %s_pool_dim_y   (%d)" % (enm['name'], enm['pool_dim_y']))
+    return '\n'.join(defines)
+
 def make_include_header(options):
     """makes the C++ header"""
     header = ""
@@ -524,6 +534,7 @@ def main(options, program_file, cpp_file):
     # OUTPUT TO CPP FILE
     cpp_out = open(cpp_file, "w+")
     cpp_out.writelines([make_include_header(options), make_newlines(2)])
+    cpp_out.writelines([make_define_header(options, networks2enms), make_newlines(2)])
     cpp_out.writelines([make_main_header(), make_newlines(2)])
     # TODO: output auxiliary function here
     for block in main_body_strs: 
