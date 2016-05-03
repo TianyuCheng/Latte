@@ -229,7 +229,7 @@ class MeanPoolingNeuron(Neuron):
     def forward(self):
         self.output = 0.0
         for prev in self.backward_adj:
-            self.output += self.weights[prev.pos_x][prev.pos_y] * self.inputs[prev.pos_x][prev.pos_y]
+            self.output += self.inputs[prev.pos_x][prev.pos_y]
         self.output = self.output / (self.pool_dim_x * self.pool_dim_y) 
         # preset the gradient for back propagation
         self.grad_activation = 1.0 / (self.pool_dim_x * self.pool_dim_y) 
@@ -238,11 +238,8 @@ class MeanPoolingNeuron(Neuron):
         self.grad_output = self.grad_output * self.grad_activation
         # backpropagate error
         for prev in self.backward_adj:
-            prev.grad_output += self.grad_output * self.weights[prev.pos_x][prev.pos_y]
-        # weights to update
-        for prev in self.backward_adj:
-            self.grad_weights[i][j] += self.grad_output * self.inputs[prev.pos_x][prev.pos_y]
-
+            prev.grad_output += self.grad_output / (self.pool_dim_x * self.pool_dim_y) 
+        
 class DataNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):
         Neuron.__init__(self, enm, pos_x, pos_y)
