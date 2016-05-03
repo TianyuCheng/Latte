@@ -8,6 +8,7 @@
 #include <memory>
 #include <random>
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <cassert>
 #include <cstdio>
@@ -178,6 +179,70 @@ inline void sgemm_print (float* C, int dim_x, int dim_y) {
         }
         cout << endl;
     }
+}
+
+void read_mnist(string filename, vector<float*> features, vector<int> &labels,
+        size_t stride) {
+
+    // read file and check the validity of the input file
+    ifstream in(filename, std::ifstream::in);
+    if (!in.good()) {
+        cerr << "Error read file: " << filename << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    // getting the first line for feature dimension
+    string line;
+    getline(in, line);
+    size_t num_features = count(line.begin(), line.end(), ',');
+    assert (num_features % stride == 0 && "features not in rectangular shape");
+    size_t n_stride = num_features / stride;
+
+    int label;
+    char comma;
+    // read all data points
+    while (getline(in, line)) {
+        istringstream ss(line);
+        features.push_back(init_mkl_mat(n_stride, stride));
+        float *data_point = features.back();
+
+        // first read the label
+        ss >> label;
+        labels.push_back(label);
+
+        // start reading features
+        for (int i = 0; i < n_stride; i++) {
+            for (int j = 0; j < stride; j++) {
+                ss >> comma >> data_point[i * stride + j];
+            }
+        } // end of reading features
+
+    } // end of all reading while loop
+
+#if 0       // DBEUG the first record
+    float *data_point = features[0];
+    for (int i = 0; i < n_stride; i++) {
+        for (int j = 0; j < stride; j++) {
+            float value = data_point[i * stride + j];
+            cout << data_point[i * stride + j] << ", " ;
+        }
+    } // end of reading features
+    cout << endl;
+#endif
+
+    // start normalizing features
+    #pragma omp parallel for
+    for (int i = 0; i < features.size(); i++) {
+        float *data_point = features[i];
+        for (int i = 0; i < n_stride; i++) {
+            for (int j = 0; j < stride; j++) {
+                float value = data_point[i * stride + j];
+                assert(value >= 0 && value <= 255);
+                data_point[i * stride + j] = value / 255.0f;
+            }
+        } // end of reading features
+    }
+    // end normalizing features
 }
 
 void read_libsvm(string filename, vector<float*> &features, vector<int> &labels, 

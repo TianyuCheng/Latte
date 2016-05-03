@@ -6,5 +6,3 @@ SBATCH -n 2
 SBATCH -p normal
 SBATCH -t 00:00:20
 
-./fc-fc
-./fc-conv-fc
