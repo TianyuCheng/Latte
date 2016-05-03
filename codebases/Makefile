@@ -2,6 +2,11 @@ CC		   := icpc -std=c++0x
 CXX_FLAGS  := -DMKL_ILP64 -m64 -I${MKLROOT}/include -I${TACC_BOOST_INC} -openmp
 LINK_FLAGS := -Wl,--start-group -L${TACC_BOOST_LIB} ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm -ldl -openmp
 
+#CC		   := g++ -std=c++11
+#MKLROOT    := /home/jimmylin/intel/compilers_and_libraries/linux/mkl
+#CXX_FLAGS  := -DMKL_ILP64 -m64 -I${MKLROOT}/include -fopenmp
+#LINK_FLAGS := -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm -ldl -fopenmp
+
 GEN		   := ./latte/generator.py
 GEN_FLAGS  := 
 NUM_WORKERS:= 5
