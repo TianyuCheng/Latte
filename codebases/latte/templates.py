@@ -93,6 +93,12 @@ def template_fp_dp():
     for _prev in self.backward_adj:
         _C += _A[_i][_j] * _B[_i][_j] 
 
+
+@template
+def template_fp_sum():
+    for _prev in self.backward_adj:
+        _C += _A[_i][_j] 
+
 @template
 def template_bp_axpy():
     for _prev in self.backward_adj:

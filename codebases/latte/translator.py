@@ -158,12 +158,14 @@ class Translator(object):
             result = tmpl.wildcard
             elt, indices = self.process_adjacency([])
             index = indices[elt[0].get_constant()]
+            #print index
             for_i = ForNode(ConstantNode("i"), ConstantNode(index[0]),\
                             ConstantNode(index[1]), ConstantNode(index[2]))
             index = indices[elt[1].get_constant()]
             for_j = ForNode(ConstantNode("j"), ConstantNode(index[0]),\
                             ConstantNode(index[1]), ConstantNode(index[2]))
             for_i.add_child(for_j)
+            #print "=====>" , for_i
             for stmt in result['body']:
                 for_j.add_child(self.process_stmt(stmt))
             return for_i
