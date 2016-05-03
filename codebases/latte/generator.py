@@ -105,7 +105,7 @@ def make_FC_weights_free(name):
     return "free_weights_mats(%s);" % (name)
 
 # input list of ensembles name
-def make_allocate_block(options, ensembles_info, neuron_analyzers, allocate=True):
+def make_allocate_block(options, ensembles_info, neuron_analyzers, conn_types, allocate=True):
     """ 
     allocate = True -->  Does allocation
     allocate = False --> Does deallocation
@@ -115,7 +115,7 @@ def make_allocate_block(options, ensembles_info, neuron_analyzers, allocate=True
     for enm in ensembles_info:
         _cur, _type, _prev, _dim_x, _dim_y, _neurontype  = enm[:6]
         attributes = neuron_analyzers[_neurontype].fields
-        print _cur, attributes
+        if allocate: print _cur, _type, attributes
         if len(attributes) > 0:
             if allocate:
                 block.append("// allocating memory for specific fields of " + _cur)
@@ -123,7 +123,10 @@ def make_allocate_block(options, ensembles_info, neuron_analyzers, allocate=True
                 block.append("// deallocating memory for specific fields of " + _cur)
         for attr in attributes: 
             mat_name = _cur+ "_" +attr
-            # TODO: add differently for data parallelization -b
+            if _type in conn_types and conn_types[_type][2]:
+                if (attr == "weights" or attr == "grad_weights"):
+                    attributes[attr] = "float*"
+                    pass
             if allocate:
                 block.append(make_mkl_malloc(options, mat_name, _dim_x, _dim_y, attributes[attr])) 
             else:
@@ -131,12 +134,13 @@ def make_allocate_block(options, ensembles_info, neuron_analyzers, allocate=True
         #block.append("")
     return block
 
-def make_weights_init_block(options, ensembles_info, name2enm, allocate=True):
+def make_weights_init_block(options, ensembles_info, name2enm, conn_types, allocate=True):
     ''' Weights are shared by all threads, so nothing to do with data parallelism '''
     if allocate:
         block = ["// initialize weights of layers "]
     else:
         block = ["// deallocate weights of layers "]
+    ### for "weights"
     for enm in ensembles_info:
         _cur, _type, _prev, _dim_x, _dim_y, _neurontype  = enm[:6]
         attributes = neuron_analyzers[_neurontype].fields
@@ -145,10 +149,17 @@ def make_weights_init_block(options, ensembles_info, name2enm, allocate=True):
         prev_dim_x = name2enm[_prev][3]
         prev_dim_y = name2enm[_prev][4]
         if allocate:
-            init_str = "init_weights_mats(%s, %d, %d); " % (_cur+"_weights", prev_dim_x, prev_dim_y)
+            mat_name = _cur + "_weights"
+            if _type in conn_types and conn_types[_type][2]:
+                n_prev = str(prev_dim_x) + " * " + str(prev_dim_y)
+                n_cur = str(_dim_x) + " * " + str(_dim_y)
+                init_str = "Xaiver_initialize(%s, %s, %s)" % (mat_name, n_prev, n_cur)
+            else:
+                init_str = "init_weights_mats(%s, %d, %d); " % (mat_name, prev_dim_x, prev_dim_y)
         else:
             init_str = make_FC_weights_free(_cur+"_weights")
         block.append(init_str)
+    ### for "grad_weights"
     for enm in ensembles_info:
         _cur, _type, _prev, _dim_x, _dim_y, _neurontype  = enm[:6]
         attributes = neuron_analyzers[_neurontype].fields
@@ -446,7 +457,7 @@ def main(options, program_file, cpp_file):
                          x['prev'], \
                          x['dim_x'], \
                          x['dim_y'], 
-                         x['Neuron']) \
+                         x['Neuron'], {}) \
                       for x in networks2enms.values()[0] ]
 
     for x in ensembles_info: print x
@@ -517,8 +528,9 @@ def main(options, program_file, cpp_file):
     main_body_strs.append(make_layers(networks2enms))
     
     # allocating block 
-    main_body_strs.append(make_allocate_block(options, ensembles_info, neuron_analyzers))
-    main_body_strs.append(make_weights_init_block(options, ensembles_info, name2enm))
+    main_body_strs.append(make_allocate_block(options, ensembles_info, \
+                                              neuron_analyzers, conn_types))
+    main_body_strs.append(make_weights_init_block(options, ensembles_info, name2enm, conn_types))
 
     # load data
     main_body_strs.append(make_load_data(networks2enms))
@@ -535,8 +547,8 @@ def main(options, program_file, cpp_file):
 
     # deallocating block
     #main_body_strs.append(make_weights_init_block(ensembles_info, name2enm, False))
-    main_body_strs.append(make_allocate_block(options, ensembles_info, 
-                          neuron_analyzers, False))
+    main_body_strs.append(make_allocate_block(options, ensembles_info, \
+                          neuron_analyzers, conn_types, False))
 
     # OUTPUT TO CPP FILE
     cpp_out = open(cpp_file, "w+")
