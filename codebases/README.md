@@ -34,6 +34,8 @@ Status
 
 - [DONE] Share Variable Analysis
 
+    - [DONE] Parse Lambda Calculus
+
     - [DONE] Determine uniform dependency of dimension
 
 
