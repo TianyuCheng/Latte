@@ -113,7 +113,7 @@ def make_allocate_block(options, ensembles_info, neuron_analyzers, conn_types, a
     block = []
     # allocate for subtype of neuron
     for enm in ensembles_info:
-        _cur, _type, _prev, _dim_x, _dim_y, _neurontype  = enm[:6]
+        _cur, _type, _prev, _dim_x, _dim_y, _neurontype, _aux  = enm[:7]
         attributes = neuron_analyzers[_neurontype].fields
         if allocate: print _cur, _type, attributes
         if len(attributes) > 0:
@@ -123,11 +123,14 @@ def make_allocate_block(options, ensembles_info, neuron_analyzers, conn_types, a
                 block.append("// deallocating memory for specific fields of " + _cur)
         for attr in attributes: 
             mat_name = _cur+ "_" +attr
-            if _type in conn_types and conn_types[_type][2]:
-                if (attr == "weights" or attr == "grad_weights"):
-                    attributes[attr] = "float*"
-                    pass
+            
             if allocate:
+                if _type in conn_types and conn_types[_type][2]:
+                    if (attr == "weights" or attr == "grad_weights"):
+                        attributes[attr] = "float*"
+                        block.append(make_mkl_malloc(options, mat_name, \
+                                         _aux['ker_dim_x'], _aux['ker_dim_y'], attributes[attr])) 
+                        continue
                 block.append(make_mkl_malloc(options, mat_name, _dim_x, _dim_y, attributes[attr])) 
             else:
                 block.append(make_mkl_free(options, mat_name, attributes[attr])) 
@@ -153,7 +156,7 @@ def make_weights_init_block(options, ensembles_info, name2enm, conn_types, alloc
             if _type in conn_types and conn_types[_type][2]:
                 n_prev = str(prev_dim_x) + " * " + str(prev_dim_y)
                 n_cur = str(_dim_x) + " * " + str(_dim_y)
-                init_str = "Xaiver_initialize(%s, %s, %s)" % (mat_name, n_prev, n_cur)
+                init_str = "Xaiver_initialize(%s, %s, %s);" % (mat_name, n_prev, n_cur)
             else:
                 init_str = "init_weights_mats(%s, %d, %d, true); " % (mat_name, prev_dim_x, prev_dim_y)
         else:
@@ -284,7 +287,7 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes,
 
     return test_block
 
-def make_solve_block(options, neuron_analyzers, solver_info, ensembles_info, name2enm, bp_codes, 
+def make_solve_block(options, conn_types, neuron_analyzers, solver_info, ensembles_info, name2enm, bp_codes, 
                      fp_codes, forwards_ensemble_order, backwards_ensemble_order):
     solve_block = []
     iterations = str(solver_info["iter"])
@@ -350,15 +353,23 @@ def make_solve_block(options, neuron_analyzers, solver_info, ensembles_info, nam
         solve_block.append("")
         
     # weights_update
-    # TODO: data parallel: use atomic sum grad_weights derived from batch instance 
     for enm in ensembles_info[1:]: 
-        _cur, _type, _prev, _dim_x, _dim_y, _neurontype  = enm[:6]
+        _cur, _type, _prev, _dim_x, _dim_y, _neurontype, _aux  = enm[:7]
         attributes = neuron_analyzers[_neurontype].fields
         prev_dim_x, prev_dim_y = name2enm[_prev][3], name2enm[_prev][4]
+        is_shared_weights = _type in conn_types and conn_types[_type][2]
+
         weights_update_str = "// weights_update for " + enm[0] + "\n"
-        weights_update_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
-        weights_update_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
-        if "weights" in attributes: 
+        if is_shared_weights:
+            ker_dim_x, ker_dim_y = _aux['ker_dim_x'], _aux['ker_dim_y']
+            weights_update_str += "\t\tsgemm_axpy(%s, %s, %s, %s*%s);\n" %\
+                    (_cur+"_weights", step_size, _cur+"_grad_weights", \
+                         ker_dim_x, ker_dim_y)
+            weights_update_str += "\t\tsgemm_zeros(%s, %s*%s);\n" % \
+                        (_cur+"_grad_weights", ker_dim_x, ker_dim_y)
+        if "weights" in attributes and not is_shared_weights: 
+            weights_update_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
+            weights_update_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
             if options.DP_FLAG: 
                 weights_update_str += "\t\tfor (int i = 0; i < %s ; i ++) {\n" % prev_dim_x
                 weights_update_str += "\t\tfor (int j = 0; j < %s ; j ++) {\n" % prev_dim_y
@@ -376,10 +387,11 @@ def make_solve_block(options, neuron_analyzers, solver_info, ensembles_info, nam
                          prev_dim_x, prev_dim_y)
             weights_update_str += "\t\tsgemm_zeros(%s[x][y], %s*%s);\n" % \
                         (_cur+"_grad_weights"+subscript, name2enm[_prev][3], name2enm[_prev][4])
+            weights_update_str += "\t}\n}\n"
+
         if "grad_output" in attributes:
             weights_update_str += "\t\tsgemm_zeros(%s, %s*%s);\n" % \
                     (_cur+"_grad_output"+subscript, _dim_x, _dim_y)
-        weights_update_str += "\t}\n}"
         solve_block.append(weights_update_str)
     solve_block.append("")
 
@@ -465,7 +477,7 @@ def main(options, program_file, cpp_file):
                          x['prev'], \
                          x['dim_x'], \
                          x['dim_y'], 
-                         x['Neuron'], {}) \
+                         x['Neuron'], x) \
                       for x in networks2enms.values()[0] ]
 
     for x in ensembles_info: print x
@@ -545,7 +557,7 @@ def main(options, program_file, cpp_file):
 
     # run solver
     #main_body_strs.append([make_init_solver(solver)])
-    main_body_strs.append(make_solve_block(options, neuron_analyzers, solver, ensembles_info, 
+    main_body_strs.append(make_solve_block(options, conn_types, neuron_analyzers, solver, ensembles_info, 
                           name2enm, bp_codes, fp_codes, forwards_ensemble_order,
                           backwards_ensemble_order))
 
