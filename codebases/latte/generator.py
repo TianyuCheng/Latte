@@ -141,7 +141,7 @@ def make_weights_init_block(options, ensembles_info, name2enm, allocate=True):
         _cur, _type, _prev, _dim_x, _dim_y, _neurontype  = enm[:6]
         attributes = neuron_analyzers[_neurontype].fields
         if "DataLayer" in _type: continue
-        if _cur+"_weights" not in attributes: continue
+        if "weights" not in attributes: continue
         prev_dim_x = name2enm[_prev][3]
         prev_dim_y = name2enm[_prev][4]
         if allocate:
@@ -153,7 +153,7 @@ def make_weights_init_block(options, ensembles_info, name2enm, allocate=True):
         _cur, _type, _prev, _dim_x, _dim_y, _neurontype  = enm[:6]
         attributes = neuron_analyzers[_neurontype].fields
         if "DataLayer" in _type: continue
-        if _cur+"_grad_weights" not in attributes: continue
+        if "grad_weights" not in attributes: continue
         prev_dim_x = name2enm[_prev][3]
         prev_dim_y = name2enm[_prev][4]
         if allocate:
