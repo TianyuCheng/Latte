@@ -29,16 +29,16 @@ sbatch:
 	@echo ""  				   >> run.sbatch
 
 mkl:
-	GEN_FLAGS := $(GEN_FLAGS) -m
+	$(eval GEN_FLAGS := $(GEN_FLAGS) -m)
 
 batch:
-	GEN_FLAGS := $(GEN_FLAGS) -b -w $(NUM_WORKERS)
+	$(eval GEN_FLAGS := $(GEN_FLAGS) -b -w $(NUM_WORKERS))
 
 tiling:
-	GEN_FLAGS := $(GEN_FLAGS) -t
+	$(eval GEN_FLAGS := $(GEN_FLAGS) -t)
 
 fusion:
-	GEN_FLAGS := $(GEN_FLAGS) -f
+	$(eval GEN_FLAGS := $(GEN_FLAGS) -f)
 
 %: %.cpp
 	$(CC) -c ${CXX_FLAGS} $< -o $<.o
@@ -56,3 +56,6 @@ clean:
 	rm -rf $(BUILD_DIR)
 	rm -rf *.o
 	rm -rf Latte $(tests)
+	rm -rf ./fc-fc.cpp ./fc-conv-fc.cpp ./fc-meanp-fc.cpp
+
+.PRECIOUS: %.cpp
