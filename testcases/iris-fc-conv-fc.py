@@ -15,7 +15,7 @@ data_enm = LibsvmDataLayer(net, \
                     '../datasets/iris-scale-train.libsvm',  \
                     '../datasets/iris-scale-test.libsvm', 1, 4, 3)
 ip1_enm = FullyConnectedLayer(net, data_enm, 1, 20, FCNeuron)
-ip2_enm = ConvolutionLayer(net, ip1_enm, 1, 10, WeightedNeuron, 1, 10)
+ip2_enm = ConvolutionLayer(net, ip1_enm, 1, 15, WeightedNeuron, 1, 5)
 ip3_enm = FullyConnectedLayer(net, ip2_enm, 1, 10, FCNeuron)
 label_enm = SoftmaxLossLayer(net, ip3_enm, 1, 3)
 

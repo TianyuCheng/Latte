@@ -70,7 +70,7 @@ class NeuronAnalyzer(object):
         self.name2enm = name2enm
         self.conn_type = conn_type
         self.share_weights = share_weights
-        self.enm, _, self.enm_prev, _dim_x, _dim_y  = enm_info[:5]
+        self.enm, _, self.enm_prev, _dim_x, _dim_y, _, self.aux  = enm_info[:7]
         self.fp_codes = []
         self.bp_codes = []
         for function in self.extract_functions():
