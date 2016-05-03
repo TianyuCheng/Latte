@@ -358,6 +358,7 @@ class Translator(object):
         body = self.connection.body
         elt = map(self.process_node, body.elt.elts)
         gen = body.generators
+        # print ast.dump(body)
         assert len(gen) == 2
         assert isinstance(gen[0].target, ast.Name)
         assert isinstance(gen[1].target, ast.Name)
@@ -366,11 +367,13 @@ class Translator(object):
         assert gen[0].iter.func.id == "range"
         assert gen[1].iter.func.id == "range"
         indices = {
-            gen[0].target.id: map(lambda x: x.n, gen[0].iter.args),
-            gen[1].target.id: map(lambda x: x.n, gen[1].iter.args)
+            gen[0].target.id: map(self.process_node, gen[0].iter.args),
+            gen[1].target.id: map(self.process_node, gen[1].iter.args)
         }
         # transform the loop bound into range format
         for key in indices.iterkeys():
             if len(indices[key]) == 1:
                 indices[key] = [0] + indices[key] + [1]
+            elif len(indices[key]) == 2:
+                indices[key] = indices[key] + [1]
         return elt, indices

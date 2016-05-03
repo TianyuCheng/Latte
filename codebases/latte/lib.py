@@ -241,7 +241,7 @@ class MeanPoolingNeuron(Neuron):
             prev.grad_output += self.grad_output * self.weights[prev.pos_x][prev.pos_y]
         # weights to update
         for prev in self.backward_adj:
-            self.grad_weights[pi][pj] += self.grad_output * self.inputs[prev.pos_x][prev.pos_y]
+            self.grad_weights[i][j] += self.grad_output * self.inputs[prev.pos_x][prev.pos_y]
 
 class DataNeuron(Neuron):
     def __init__(self, enm, pos_x, pos_y):

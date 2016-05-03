@@ -40,5 +40,8 @@ bin/
 *.pyc
 
 mlp.cpp
+fc-fc
+fc-conv-fc
+fc-meanp-fc
 
 *.sbatch

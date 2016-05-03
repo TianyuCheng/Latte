@@ -293,6 +293,34 @@ We primarily referred to the Latte Paper provided in the course CS380C Compilers
 
    http://www.tablesgenerator.com/markdown\_tables
 
+Errors
+------
+fc-meanp-fc does not compile:
+```
+fc-meanp-fc.cpp(47): error: identifier "ip2_enm_weights" is undefined
+init_weights_mats(ip2_enm_weights, 1, 20);
+^
+
+fc-meanp-fc.cpp(51): error: identifier "ip2_enm_grad_weights" is undefined
+init_weights_mats(ip2_enm_grad_weights, 1, 20); 
+^
+
+fc-meanp-fc.cpp(96): error: identifier "ip2_enm_pool_dim_x" is undefined
+(*(ip2_enm_output+x*5+y)) = ((*(ip2_enm_output+x*5+y))  /  (ip2_enm_pool_dim_x * ip2_enm_pool_dim_y));
+^
+
+fc-meanp-fc.cpp(96): error: identifier "ip2_enm_pool_dim_y" is undefined
+(*(ip2_enm_output+x*5+y)) = ((*(ip2_enm_output+x*5+y))  /  (ip2_enm_pool_dim_x * ip2_enm_pool_dim_y));
+^
+
+(*(ip2_enm_output+x*5+y)) = ((*(ip2_enm_output+x*5+y))  /  (ip2_enm_pool_dim_x * ip2_enm_pool_dim_y));
+```
+
+fc-fc and fc-conv-fc have some memory issues regarding free. The invalid free is triggered after testing.
+fc-fc has the correct testing accuracy. fc-conv-fc seems to have extremely bad accuracy, which I believe is wrong.
+
+                                                                                                                                                                                                                                                                                                                                                      fc-meanp-fc.cpp(268): error: identifier "ip2_enm_pool_dim_y" is undefined
+                                                                                                                                                                                                                                                                                                                                                                              (*(ip2_enm_output+x*5+y)) = ((*(ip2_enm_output+x*5+y))  /  (ip2_enm_pool_dim_x * ip2_enm_pool_dim_y));
 
 Acknowledgements
 -------

@@ -273,10 +273,6 @@ def ast2lambda(mapping, args, ensemble, name2enm):
             )
         ]
     )
-    # # substitue args
-    # for arg in args:
-    #     if arg in ensemble:
-    #         mapping = SubstituteNameToNum(arg, ensemble[arg]).visit(mapping)
     # some fields that will be used in the lambda
     dim_x, dim_y = ensemble['dim_x'], ensemble['dim_y']
     if "prev" in ensemble:
@@ -285,6 +281,10 @@ def ast2lambda(mapping, args, ensemble, name2enm):
         mapping = SubstituteAttributeToNum('self', 'dim_y', dim_y).visit(mapping)
         mapping = SubstituteAttributeToNum('prev', 'dim_x', prev_dim_x).visit(mapping)
         mapping = SubstituteAttributeToNum('prev', 'dim_y', prev_dim_y).visit(mapping)
+    # substitue args
+    for arg in args:
+        if arg in ensemble:
+            mapping = SubstituteNameToNum(arg, ensemble[arg]).visit(mapping)
     # compile the ast
     mapping = ast.fix_missing_locations(mapping)
     # print ast.dump(mapping)

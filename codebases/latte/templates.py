@@ -22,11 +22,11 @@ def template_SoftmaxLossLayer():
 
 @template
 def template_ConvolutionLayer():
-    _name = ConvolutionLayer(_net, _prev, _dim_x, _dim_y, _TYPE, _ker_dim_x, _ker_dim_y)
+    _name = ConvolutionLayer(_net, _prev, _dim_x, _dim_y, _Neuron, _ker_dim_x, _ker_dim_y)
 
 @template
 def template_PoolingLayer():
-    _name = PoolingLayer(_net, _prev, _dim_x, _dim_y, _TYPE, _pool_dim_x, _pool_dim_y)
+    _name = PoolingLayer(_net, _prev, _dim_x, _dim_y, _Neuron, _pool_dim_x, _pool_dim_y)
 
 @template
 def template_Ensemble():
