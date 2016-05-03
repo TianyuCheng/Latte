@@ -56,7 +56,7 @@ Status
 
     - [DONE] Data Parallelism: Parallel in Batch Items
     
-    - [] Data+Model Parallelism: 
+    - [] Memory-efficient Computation After Fusion: 
 
 
 - [DONE] Code Generation
