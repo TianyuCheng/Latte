@@ -317,10 +317,13 @@ fc-meanp-fc.cpp(96): error: identifier "ip2_enm_pool_dim_y" is undefined
 ```
 
 fc-fc and fc-conv-fc have some memory issues regarding free. The invalid free is triggered after testing.
-fc-fc has the correct testing accuracy. fc-conv-fc seems to have extremely bad accuracy, which I believe is wrong.
+fc-fc has the correct testing accuracy. 
 
-                                                                                                                                                                                                                                                                                                                                                      fc-meanp-fc.cpp(268): error: identifier "ip2_enm_pool_dim_y" is undefined
-                                                                                                                                                                                                                                                                                                                                                                              (*(ip2_enm_output+x*5+y)) = ((*(ip2_enm_output+x*5+y))  /  (ip2_enm_pool_dim_x * ip2_enm_pool_dim_y));
+fc-conv-fc seems to have extremely bad accuracy, which I believe is wrong.
+
+fc-meanp-fc.cpp(268): error: identifier "ip2_enm_pool_dim_y" is undefined
+
+    (*(ip2_enm_output+x*5+y)) = ((*(ip2_enm_output+x*5+y))  /  (ip2_enm_pool_dim_x * ip2_enm_pool_dim_y));
 
 Acknowledgements
 -------
