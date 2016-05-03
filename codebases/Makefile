@@ -14,6 +14,10 @@ tests      := fc-fc fc-conv-fc fc-meanp-fc
 
 all: sbatch clean $(tests)
 
+Latte: Latte.cpp
+	$(CC) -c ${CXX_FLAGS} $<
+	$(CC) -o Latte Latte.o ${LINK_FLAGS}
+
 sbatch:
 	@echo "#!/bin/bash"          > run.sbatch
 	@echo "SBATCH -J latte"     >> run.sbatch
@@ -51,4 +55,4 @@ mlp: mlp.cpp
 clean:
 	rm -rf $(BUILD_DIR)
 	rm -rf *.o
-	rm -rf $(tests)
+	rm -rf Latte $(tests)
