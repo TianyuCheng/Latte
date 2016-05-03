@@ -265,7 +265,7 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes,
 
     return test_block
 
-def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes, 
+def make_solve_block(options, neuron_analyzers, solver_info, ensembles_info, name2enm, bp_codes, 
                      fp_codes, forwards_ensemble_order, backwards_ensemble_order):
     solve_block = []
     iterations = str(solver_info["iter"])
@@ -333,30 +333,33 @@ def make_solve_block(options, solver_info, ensembles_info, name2enm, bp_codes,
     # weights_update
     # TODO: data parallel: use atomic sum grad_weights derived from batch instance 
     for enm in ensembles_info[1:]: 
-        _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
+        _cur, _type, _prev, _dim_x, _dim_y, _neurontype  = enm[:6]
+        attributes = neuron_analyzers[_neurontype].fields
         prev_dim_x, prev_dim_y = name2enm[_prev][3], name2enm[_prev][4]
         weights_update_str = "// weights_update for " + enm[0] + "\n"
         weights_update_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
         weights_update_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
-        if options.DP_FLAG: 
-            weights_update_str += "\t\tfor (int i = 0; i < %s ; i ++) {\n" % prev_dim_x
-            weights_update_str += "\t\tfor (int j = 0; j < %s ; j ++) {\n" % prev_dim_y
-            weights_update_str += "#pragma omp atomic\n"
-            weights_update_str += \
-                    "*(%s[x][y]+i*%s+j) = *(%s[x][y]+i*%s+j) + (%s) * (*(%s[tid][x][y]+i*%d+j));\n" \
-                    % (_cur+"_weights", prev_dim_y, _cur+"_weights", prev_dim_y, \
-                       step_size, _cur+"_grad_weights", prev_dim_y) 
-            weights_update_str += "\t\t}\n\t\t}\n"
-            subscript = "[tid]"
-        else: 
-            subscript = ""
-            weights_update_str += "\t\tsgemm_axpy(%s[x][y], %s, %s[x][y], %s*%s);\n" %\
-                (_cur+"_weights", step_size, _cur+"_grad_weights"+subscript, \
-                    prev_dim_x, prev_dim_y)
-        weights_update_str += "\t\tsgemm_zeros(%s[x][y], %s*%s);\n" % \
-                (_cur+"_grad_weights"+subscript, name2enm[_prev][3], name2enm[_prev][4])
-        weights_update_str += "\t\tsgemm_zeros(%s, %s*%s);\n" % \
-                (_cur+"_grad_output"+subscript, _dim_x, _dim_y)
+        if "weights" in attributes: 
+            if options.DP_FLAG: 
+                weights_update_str += "\t\tfor (int i = 0; i < %s ; i ++) {\n" % prev_dim_x
+                weights_update_str += "\t\tfor (int j = 0; j < %s ; j ++) {\n" % prev_dim_y
+                weights_update_str += "#pragma omp atomic\n"
+                weights_update_str += \
+                        "*(%s[x][y]+i*%s+j) = *(%s[x][y]+i*%s+j) + (%s) * (*(%s[tid][x][y]+i*%d+j));\n" \
+                        % (_cur+"_weights", prev_dim_y, _cur+"_weights", prev_dim_y, \
+                           step_size, _cur+"_grad_weights", prev_dim_y) 
+                weights_update_str += "\t\t}\n\t\t}\n"
+                subscript = "[tid]"
+            else: 
+                subscript = ""
+                weights_update_str += "\t\tsgemm_axpy(%s[x][y], %s, %s[x][y], %s*%s);\n" %\
+                        (_cur+"_weights", step_size, _cur+"_grad_weights"+subscript, \
+                         prev_dim_x, prev_dim_y)
+            weights_update_str += "\t\tsgemm_zeros(%s[x][y], %s*%s);\n" % \
+                        (_cur+"_grad_weights"+subscript, name2enm[_prev][3], name2enm[_prev][4])
+        if "grad_output" in attributes:
+            weights_update_str += "\t\tsgemm_zeros(%s, %s*%s);\n" % \
+                    (_cur+"_grad_output"+subscript, _dim_x, _dim_y)
         weights_update_str += "\t}\n}"
         solve_block.append(weights_update_str)
     solve_block.append("")
@@ -447,7 +450,6 @@ def main(options, program_file, cpp_file):
                       for x in networks2enms.values()[0] ]
 
     for x in ensembles_info: print x
-    for x in networks2enms.values()[0]: print x
     print "###########################################"
 
     # given an ensemble name, point it to the information tuple
@@ -523,7 +525,7 @@ def main(options, program_file, cpp_file):
 
     # run solver
     #main_body_strs.append([make_init_solver(solver)])
-    main_body_strs.append(make_solve_block(options, solver, ensembles_info, 
+    main_body_strs.append(make_solve_block(options, neuron_analyzers, solver, ensembles_info, 
                           name2enm, bp_codes, fp_codes, forwards_ensemble_order,
                           backwards_ensemble_order))
 
