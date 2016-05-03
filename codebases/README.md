@@ -32,12 +32,13 @@ Status
 
     - [DONE] Implicit adjacency lists: lambda representation of functions
 
-- [DONE] Share Variable Analysis
-
     - [DONE] Parse Lambda Calculus
 
-    - [DONE] Determine uniform dependency of dimension
+- [DONE] Share Variable Analysis
 
+    - [DONE] Interpret Lambda Calculus
+
+    - [DONE] Determine uniform dependency of dimension
 
 - [DONE] Synthesis
 
@@ -47,7 +48,7 @@ Status
 
 - [] Optimization
 
-    - [DONE] Library Kernel Pattern Matching
+    - [DONE] Library Kernel Pattern Matching: FC, Conv, Pooling
 
     - [DONE] Model Parallelism: Loop Tiling pass 
 
