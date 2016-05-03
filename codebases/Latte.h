@@ -88,14 +88,14 @@ void Xaiver_initialize (float* mat, int n_j, int n_jp) {
 float* init_mkl_mat (int dim_x, int dim_y) {
     return (float*) mkl_malloc ( dim_x*dim_y*sizeof(float), 64);
 }
-void init_weights_mats (vector<vector<float*>>& mat, int prev_dim_x, int prev_dim_y) {
+void init_weights_mats (vector<vector<float*>>& mat, int prev_dim_x, int prev_dim_y, bool rand) {
     assert(mat.size() > 0 && "mat.size should be greater than 0");
     int dim_x = mat.size(), dim_y = mat[0].size();
     int n_j = prev_dim_x * prev_dim_y, n_jp = dim_x * dim_y;
     for (int i = 0; i < dim_x; i ++) {
         for (int j = 0; j < dim_y; j ++) {
             mat[i][j] = init_mkl_mat(prev_dim_x, prev_dim_y);
-            Xaiver_initialize(mat[i][j], n_j, n_jp);
+            if (rand) Xaiver_initialize(mat[i][j], n_j, n_jp);
         }
     }
 }

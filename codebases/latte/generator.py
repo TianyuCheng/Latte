@@ -155,7 +155,7 @@ def make_weights_init_block(options, ensembles_info, name2enm, conn_types, alloc
                 n_cur = str(_dim_x) + " * " + str(_dim_y)
                 init_str = "Xaiver_initialize(%s, %s, %s)" % (mat_name, n_prev, n_cur)
             else:
-                init_str = "init_weights_mats(%s, %d, %d); " % (mat_name, prev_dim_x, prev_dim_y)
+                init_str = "init_weights_mats(%s, %d, %d, true); " % (mat_name, prev_dim_x, prev_dim_y)
         else:
             init_str = make_FC_weights_free(_cur+"_weights")
         block.append(init_str)
@@ -172,7 +172,11 @@ def make_weights_init_block(options, ensembles_info, name2enm, conn_types, alloc
             if options.DP_FLAG:
                 init_str += "for (int i = 0; i < %d; i ++) " % options.NWORKERS
                 subscript += "[i]"
-            init_str += "init_weights_mats(%s, %d, %d); " % (_cur+"_grad_weights"+subscript, prev_dim_x, prev_dim_y)
+            mat_name = _cur + "_grad_weights"
+            if _type in conn_types and conn_types[_type][2]: pass
+            else: 
+                init_str += "init_weights_mats(%s, %d, %d, false); " \
+                        % (_cur+"_grad_weights"+subscript, prev_dim_x, prev_dim_y)
         else:
             init_str = make_FC_weights_free(_cur+"_grad_weights")
         block.append(init_str)   
