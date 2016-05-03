@@ -170,16 +170,20 @@ def make_weights_init_block(options, ensembles_info, name2enm, allocate=True):
 def make_load_data(networks2enms):
     for net, ensembles in networks2enms.iteritems():
         enm = ensembles[0]
-        assert enm["type"] == "LibsvmDataLayer"
         load_block = []
-        load_block.append("// load libsvm data")
+        if enm["type"] == "LibsvmDataLayer": data_format = "libsvm"
+        elif enm["type"] == "MnistDataLayer": data_format = "mnist"
+
+        load_block.append("// load " + data_format + " data")
         load_block.append("vector<float*> train_features, test_features;");
         load_block.append("vector<int> train_labels, test_labels;");
+
         # we need number of features
         load_block.append("""read_libsvm("%s", train_features, train_labels, %d, %d, %d);""" % (\
             enm["train_file"], enm["dim_x"], enm["dim_y"], enm['nLabels']))
         load_block.append("""read_libsvm("%s", test_features, test_labels, %d, %d, %d);""" % (\
             enm["test_file"], enm["dim_x"], enm["dim_y"], enm['nLabels']))
+        
         load_block.append("assert (train_features.size() == train_labels.size());")
         load_block.append("assert (test_features.size() == test_labels.size());")
         load_block.append("vector<int> shuffle_index;" )
