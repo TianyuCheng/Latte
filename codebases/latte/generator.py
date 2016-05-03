@@ -128,8 +128,10 @@ def make_weights_init_block(options, ensembles_info, name2enm, allocate=True):
     else:
         block = ["// deallocate weights of layers "]
     for enm in ensembles_info:
-        _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
+        _cur, _type, _prev, _dim_x, _dim_y, _neurontype  = enm[:6]
+        attributes = neuron_analyzers[_neurontype].fields
         if "DataLayer" in _type: continue
+        if _cur+"_weights" not in attributes: continue
         prev_dim_x = name2enm[_prev][3]
         prev_dim_y = name2enm[_prev][4]
         if allocate:
@@ -138,8 +140,10 @@ def make_weights_init_block(options, ensembles_info, name2enm, allocate=True):
             init_str = make_FC_weights_free(_cur+"_weights")
         block.append(init_str)
     for enm in ensembles_info:
-        _cur, _type, _prev, _dim_x, _dim_y  = enm[:5]
+        _cur, _type, _prev, _dim_x, _dim_y, _neurontype  = enm[:6]
+        attributes = neuron_analyzers[_neurontype].fields
         if "DataLayer" in _type: continue
+        if _cur+"_grad_weights" not in attributes: continue
         prev_dim_x = name2enm[_prev][3]
         prev_dim_y = name2enm[_prev][4]
         if allocate:
@@ -433,6 +437,7 @@ def main(options, program_file, cpp_file):
                       for x in networks2enms.values()[0] ]
 
     for x in ensembles_info: print x
+    for x in networks2enms.values()[0]: print x
     print "###########################################"
 
     # given an ensemble name, point it to the information tuple
