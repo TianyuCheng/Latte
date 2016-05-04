@@ -10,7 +10,8 @@ LINK_FLAGS := -Wl,--start-group -L${TACC_BOOST_LIB} ${MKLROOT}/lib/intel64/libmk
 GEN		   := ./latte/generator.py
 GEN_FLAGS  := 
 NUM_WORKERS:= 5
-tests      := fc-fc fc-conv-fc fc-meanp-fc
+test_dir   := ../testcases
+tests      := $(patsubst %.py, %, $(shell (cd $(test_dir); ls *.py)))
 
 all: sbatch clean $(tests)
 
@@ -45,7 +46,7 @@ fusion:
 	$(CC) -o $@ $<.o ${LINK_FLAGS}
 	@echo "./$@" >> run.sbatch
 
-%.cpp: test/%.py
+%.cpp: $(test_dir)/%.py
 	$(GEN) $(GEN_FLAGS) $< $@
 
 mlp: mlp.cpp
