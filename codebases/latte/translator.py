@@ -323,6 +323,13 @@ class Translator(object):
                     return ArrayNode(ArrayNode(\
                             ConstantNode(var_name), ['tid']), ['x', 'y'])
 
+            # special case during shared weights:
+            if self.neuron_analyzer.share_weights and attr.endswith("weights"):
+                var_name = "%s_%s" % (enm_name, attr)
+                # for ensembles that share weights, we just need to return
+                # the weight itself, not weight[x][y]
+                return ConstantNode(var_name)
+
             # general process based on the type of field
             if field_type is None:
                 return ConstantNode(enm_name + "_" + attr)

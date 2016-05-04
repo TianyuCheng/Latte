@@ -12,6 +12,7 @@ GEN_FLAGS  :=
 NUM_WORKERS:= 5
 test_dir   := ../testcases
 tests      := $(patsubst %.py, %, $(shell (cd $(test_dir); ls *.py)))
+deletes    := $(patsubst %, %.cpp, $(tests))
 
 all: sbatch clean $(tests)
 
@@ -57,6 +58,6 @@ clean:
 	rm -rf $(BUILD_DIR)
 	rm -rf *.o
 	rm -rf Latte $(tests)
-	rm -rf ./fc-fc.cpp ./fc-conv-fc.cpp ./fc-meanp-fc.cpp
+	rm -rf $(deletes)
 
 .PRECIOUS: %.cpp

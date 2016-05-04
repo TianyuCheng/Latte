@@ -451,6 +451,7 @@ def main(options, program_file, cpp_file):
         num_layers = len(networks2enms[net_name]) - 1
         while num_layers > 0:
             next_layer = filter(lambda x: x['prev'] == layer_name, networks2enms[net_name])
+            print next_layer
             assert len(next_layer) == 1
             num_layers -= 1
             layers = layers + next_layer
