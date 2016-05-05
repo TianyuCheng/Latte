@@ -57,7 +57,7 @@ mlp: mlp.cpp
 clean:
 	rm -rf $(BUILD_DIR)
 	rm -rf *.o
-	rm -rf Latte $(tests)
+	rm -rf $(tests)
 	rm -rf $(deletes)
 	rm -rf latte.out latte.err
 
