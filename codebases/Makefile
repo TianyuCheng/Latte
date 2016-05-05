@@ -22,13 +22,13 @@ Latte: Latte.cpp
 
 sbatch:
 	@echo "#!/bin/bash"          > run.sbatch
-	@echo "SBATCH -J latte"     >> run.sbatch
-	@echo "SBATCH -o latte.out" >> run.sbatch
-	@echo "SBATCH -e latte.err" >> run.sbatch
-	@echo "SBATCH -n 2" 		   >> run.sbatch
-	@echo "SBATCH -p normal"    >> run.sbatch
-	@echo "SBATCH -t 00:00:20"  >> run.sbatch
-	@echo ""  				   >> run.sbatch
+	@echo "#SBATCH -J latte"     >> run.sbatch
+	@echo "#SBATCH -o latte.out" >> run.sbatch
+	@echo "#SBATCH -e latte.err" >> run.sbatch
+	@echo "#SBATCH -n 2" 	     >> run.sbatch
+	@echo "#SBATCH -p normal"    >> run.sbatch
+	@echo "#SBATCH -t 00:00:20"  >> run.sbatch
+	@echo ""  				     >> run.sbatch
 
 mkl:
 	$(eval GEN_FLAGS := $(GEN_FLAGS) -m)
@@ -59,5 +59,6 @@ clean:
 	rm -rf *.o
 	rm -rf Latte $(tests)
 	rm -rf $(deletes)
+	rm -rf latte.out latte.err
 
 .PRECIOUS: %.cpp
