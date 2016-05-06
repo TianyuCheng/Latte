@@ -65,16 +65,18 @@ Status
 Performance Evaluation
 -----------------------
 
-| Optimization \ Network   | FC+FC+Softmax | FC+ReLU+FC+Softmax | FC+ReLU+MeanPool+Softmax | Conv+FC+ReLU+Softmax | Conv+ReLU+MeanPool+Softmax |
-|--------------------------|---------------|--------------------|--------------------------|----------------------|----------------------------|
-| None                     |               |                    |                          |                      |                            |
-| MKL-SGEMM                |               |                    |                          |                      |                            |
-| MKL-SGEMM + Tiling       |               |                    |                          |                      |                            |
-| MKL-SGEMM+ Tiling+Fusion |               |                    |                          |                      |                            |
-| MKL-SGEMM+ Tiling+Fusion |               |                    |                          |                      |                            |
-| MKL-SGEMM+BatchPara      |               |                    |                          |                      |                            |
-| All Above                |               |                    |                          |                      |                            |
-
+| Optimization \ Network        | Data(28,28)+FC(50,50)+Softmax(1,10) | 
+|-------------------------------|-------------------------------------|
+| None                          | 6.94                                | 
+| MKL(-m)                       | 5.63                                | 
+| Tiling(-t)                    | 6.14                                | 
+| MKL+Tiling (-m -t)            | 4.90                                | 
+|                               |                                     | 
+| DP (-b -w 4)                  | 4.70                                | 
+| DP-MKL (-b -w 4 -m)           | 3.13                                | 
+| DP-Tiling (-b -w 4 -t)        | 4.83                                | 
+| DP-MKL-Tiling (-b -w 4 -t -m) | 3.23                                | 
+|                               |                                     | 
 
 Installation (Stampede)
 -----------------------
