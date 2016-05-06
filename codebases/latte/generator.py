@@ -439,11 +439,12 @@ def main(options, program_file, cpp_file):
                 if 'Neuron' not in layer: 
                     if layer['type'] == 'LibsvmDataLayer':
                         layer['Neuron'] = 'DataNeuron'
-                    if layer['type'] == 'MnistDataLayer':
+                    elif layer['type'] == 'MnistDataLayer':
                         layer['Neuron'] = 'DataNeuron'
                     elif layer['type'] == 'SoftmaxLossLayer':
                         layer['Neuron'] = 'SoftmaxNeuron'
                     else:
+                        # print "##", layer
                         assert False
                 networks2enms[net_name].append(layer)
     print "###########################################"
