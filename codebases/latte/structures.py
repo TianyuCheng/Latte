@@ -197,6 +197,10 @@ class ConstantNode(Node):
         if self.constant == to_find:
             self.constant = replacement
 
+    def is_var(self):
+        """returns if the constant is a var; i.e. a string"""
+        return isinstance(self.constant, str)
+
     def deep_copy(self):
         my_copy = ConstantNode(self.constant)
 
@@ -207,9 +211,16 @@ class ConstantNode(Node):
 
         return my_copy
 
+    def get_writes(self):
+        """assumes constant nodes have no children"""
+        if self.is_var():
+            # only a write if we represent a variable
+            return [self.constant], []
+        else:
+            return [], []
+
     def __str__(self):
         return str(self.constant)
-
 
 class AssignmentNode(Node):
     """Top level: holds an assignment statement: needs a left and a right"""
@@ -246,6 +257,13 @@ class AssignmentNode(Node):
 
         for child in self.children:
             child.find_and_replace(to_find, replacement)
+
+    def get_writes(self):
+        """assumes no children"""
+        # only left hand side is written to
+        variable_names, array_accesses = self.left.get_writes()
+
+        return variable_names, array_accesses
 
     def __str__(self):
         return "%s = %s;" % (str(self.left), str(self.right))
@@ -290,6 +308,10 @@ class ExpressionNode(Node):
 
         for child in self.children:
             child.find_and_replace(to_find, replacement)
+
+    def get_writes(self):
+        """expressions have no writes, only reads (I hope): return nothing"""
+        return [], []
 
     def __str__(self):
         if self.operator == "pow":
@@ -339,6 +361,10 @@ class ArrayNode(ListNode):
         for child in self.children:
             child.find_and_replace(to_find, replacement)
 
+    def get_writes(self):
+        # returns nothing for a variable name, but returns a tuple
+        # with the array name first then a list of the indices
+        return [], [(self.base_addr, copy.deepcopy(self.indices))]
 
     def __str__(self):
         indices = ''.join(map(lambda x: "[%s]" % str(x), self.indices))
@@ -396,6 +422,14 @@ class IndexNode(ListNode):
         for child in self.children:
             child.find_and_replace(to_find, replacement)
 
+    def get_writes(self):
+        array_name = self.base_addr
+
+        if len(self.indices) == 1: 
+            return [], [(array_name, [self.indices[0]])]
+        else:
+            return [], [(array_name, [self.indices[0], self.indices[1]])]
+
     def __str__(self):
         if len(self.indices) == 1:
             # single dimension pointer arithmetic
@@ -418,6 +452,9 @@ class DereferenceNode(Node):
     def find_and_replace(self, to_find, replacement):
         child = self.children[0]
         child.find_and_replace(to_find, replacement)
+
+    def get_writes(self):
+        return self.children[0].get_writes()
 
     def __str__(self):
         return "(*%s)" % str(self.children[0])

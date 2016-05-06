@@ -307,7 +307,7 @@ class FusionOptimizer(Optimizer):
                     continue
 
                 # otherwise we move onto the variable dependency checks,
-                # the non-trivial part of this
+                # the non-trivial part of the fusion check
 
                 # do checks from current loop to the loop we want to fuse first
 
