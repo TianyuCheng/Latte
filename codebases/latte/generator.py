@@ -497,8 +497,13 @@ def main(options, program_file, cpp_file):
             layer_type = ensemble['type']
             if layer_type in conn_types:
                 args, mapping, _ = conn_types[layer_type]
+                uniform_dep = check_uniform_dependency(args, mapping, ensemble, name2enm)
+                one2one = check_one_to_one(args, mapping, ensemble, name2enm)
                 term.dump("Layer %s uniform dependency? %s" % (layer_type, \
-                        check_uniform_dependency(args, mapping, ensemble, name2enm)), \
+                        uniform_dep), \
+                        term.OKBLUE)
+                term.dump("Layer %s One-to-One? %s" % (layer_type, \
+                        one2one), \
                         term.OKBLUE)
 
     # create the neuron analyzers and also pass in ensemble info in order to create

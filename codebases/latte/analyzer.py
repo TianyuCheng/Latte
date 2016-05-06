@@ -308,6 +308,21 @@ def check_uniform_dependency(args, mapping, ensemble_info, name2enm):
                     return False
     return True
 
+def check_one_to_one(args, mapping, ensemble_info, name2enm):
+    dim_x, dim_y = ensemble_info['dim_x'], ensemble_info['dim_y']
+    mapping = ast2lambda(mapping, args, ensemble_info, name2enm)
+    # number of dimension
+    dim = 2
+ 
+    mapped_indices = sorted(mapping(*tuple([ 0 for i in range(dim) ])))
+    # print mapped_indices
+    for i in range(dim_x):
+        for j in range(dim_y):
+            # double dimension
+            if len(mapping(i, j)) != 1:
+                return False
+    return True
+
 def process_ensemble_share_weight(all_functions, function_ast):
     # find directly in the function
     for tmpl in new_ensemble_templates:
