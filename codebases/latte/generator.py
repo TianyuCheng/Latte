@@ -599,11 +599,13 @@ def main(options, program_file, cpp_file):
     # if fusion set, do fusion
     if fusion_flag:
         # forward
-        opt1 = FusionOptimizer(fp_codes, forwards_ensemble_order, ensembles_info)
+        opt1 = FusionOptimizer(fp_codes, forwards_ensemble_order, 
+                               ensembles_info, name2enm, tiling_flag)
         forwards_ensemble_order = opt1.optimize()
 
         # backward
-        opt2 = FusionOptimizer(bp_codes, backwards_ensemble_order, ensembles_info)
+        opt2 = FusionOptimizer(bp_codes, backwards_ensemble_order, 
+                               ensembles_info, name2enm, tiling_flag)
         backwards_ensemble_order = opt2.optimize()
 
     # CODE GENERATION:

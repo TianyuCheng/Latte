@@ -122,7 +122,8 @@ class TilingOptimizer(Optimizer):
         tile_node = ForNode(ConstantNode(tile_var_name), 
                             ConstantNode(for_node.get_initial()), 
                             ConstantNode(altered_loop_bound), 
-                            ConstantNode(used_tile_size))
+                            ConstantNode(used_tile_size),
+                            True)
 
         top_level = current_top_level[0]
 
@@ -198,9 +199,12 @@ class TilingOptimizer(Optimizer):
 
 
 class FusionOptimizer(Optimizer):
-    def __init__(self, dict_of_trees, ensemble_order, ensembles_info):
+    def __init__(self, dict_of_trees, ensemble_order, ensembles_info, name2enm,
+                 tiled):
         super(FusionOptimizer, self).__init__(dict_of_trees, ensemble_order)
         self.ensembles_info = ensembles_info
+        self.name2enm = name2enm
+        self.tiled = tiled
 
     def optimize(self):
         # copy the order: this copy will represent the nodes that haven't
@@ -221,17 +225,16 @@ class FusionOptimizer(Optimizer):
             if my_for_node == None:
                 continue
 
-
             # loop over ensemble that comes after this 1
             self_location = ensemble_order_copy.index(current_ensemble)
 
             to_loop_over = None
+            to_loop_over = ensemble_order_copy[self_location + 1:]
 
-            if self_location + 1 >= len(ensemble_order_copy):
-                to_loop_over = []
-            else:
-                to_loop_over = [ensemble_order_copy[self_location + 1]]
-                
+            # get if this current ensemble is 1 to 1
+            layer_type = self.name2enm[current_ensemble]
+            one2one = layer_type[-1]["one2one"]
+
 
             for other_ensemble in to_loop_over:
                 # shouldn't be ourselves in the new list we are looping over
@@ -241,14 +244,22 @@ class FusionOptimizer(Optimizer):
                 other_for_node = self.dict_of_trees[other_ensemble]
 
                 if other_for_node == None:
-                    # no for loop, ignore it
-                    continue
+                    # no for loop, ignore 
+                    break
 
                 # deep copy it so we can mess with it
                 other_for_node = other_for_node.deep_copy()
 
                 current1 = my_for_node
                 current2 = other_for_node
+
+                layer_type2 = self.name2enm[other_ensemble]
+                one2one2 = layer_type2[-1]["one2one"]
+
+                if self.tiled:
+                    # cannot tile; break
+                    if not current1.is_tile() or not current2.is_tile():
+                        break
 
                 inner_for = None
                 other_body = []
@@ -301,7 +312,11 @@ class FusionOptimizer(Optimizer):
                             current1 = children1[0]
 
                             if (isinstance(current1, ForNode)):
-                                forchild1 = True
+                                if self.tiled:
+                                    # must be a tiled node
+                                    forchild1 = current1.is_tile()
+                                else:
+                                    forchild1 = True
                             else:
                                 forchild1 = False
 
@@ -311,7 +326,10 @@ class FusionOptimizer(Optimizer):
                             current2 = children2[0]
 
                             if (isinstance(current2, ForNode)):
-                                forchild2 = True
+                                if self.tiled:
+                                    forchild2 = current2.is_tile()
+                                else:
+                                    forchild2 = True
                             else:
                                 forchild2 = False
 
@@ -342,9 +360,9 @@ class FusionOptimizer(Optimizer):
                     print "loop bounds/structure for", current_ensemble, other_ensemble,\
                            "do not match"
                     #print "\n\nfail\n\n"
-                    print current_ensemble, other_ensemble
-                    print my_for_node, other_for_node
-                    continue
+                    #print current_ensemble, other_ensemble
+                    #print my_for_node, other_for_node
+                    break
 
                 # otherwise we move onto the variable dependency checks,
                 # the non-trivial part of the fusion check
@@ -366,6 +384,7 @@ class FusionOptimizer(Optimizer):
                 print "going to check", current_ensemble, other_ensemble,\
                       "dependencies"
 
+                one2one = True
                 for var_name in w_variable_names:
                     if var_name in r_variable_names:
                         print var_name, "is written in for loop 1 but read in 2nd loop"
@@ -378,17 +397,29 @@ class FusionOptimizer(Optimizer):
                     # if there is a read of it in the r_array_accesses
                     # as well
 
-                    r_accesses = set()
+                    #r_accesses = set()
 
-                    for r in r_array_accesses:
-                        r_accesses.add(r[0])
-
-                    if var_name in r_accesses:
-                        print var_name, "is written in for loop 1 but read in 2nd loop"
-                        print my_for_node, other_for_node
-                        fusion_good = False
-                        break
-
+                    #for r in r_array_accesses:
+                    #    r_accesses.add(r[0])
+                    for indices in [x for (a, x) in r_array_accesses if a == var_name]:
+                        if one2one:
+                            # this var name is an array, and if the layer is 1 to 1, it
+                            # apparently means it only affects the area x, y: compare
+                            # again with this knowledge
+                            array_indices = ["x", "y"]
+                            if not array_indices == indices:
+                                print "accesses to", array_name, "in loop 1 and 2",\
+                                      "do not match", array_indices, indices,\
+                                      "(1 to 2)"
+                                   
+                                fusion_good = False
+                                break
+                        else:
+                            print var_name, "is written in for loop 1 but read in for loop 2"
+                            print my_for_node, other_for_node
+                            fusion_good = False
+                            break
+                       
                 if not fusion_good:
                     # if fusion isn't good, continue to the next loop
                     continue
@@ -430,8 +461,8 @@ class FusionOptimizer(Optimizer):
                         break
 
                 if not fusion_good:
-                    # if fusion isn't good, continue to the next loop
-                    continue
+                    # if fusion isn't good, end fusion 
+                    break
                 
                 # now checks from loop we want to fuse to current loop
                 w_variable_names, w_array_accesses = other_for_node.get_writes()
@@ -463,17 +494,24 @@ class FusionOptimizer(Optimizer):
                     # function call or something of the sort: check to see
                     # if there is a read of it in the r_array_accesses
                     # as well
-
-                    r_accesses = set()
-
-                    for r in r_array_accesses:
-                        r_accesses.add(r[0])
-
-                    if var_name in r_accesses:
-                        print var_name, "is written in for loop 2 but read in",\
-                              "for loop 1, which could be bad"
-                        fusion_good = False
-                        break
+                    for indices in [x for (a, x) in r_array_accesses if a == var_name]:
+                        if one2one2:
+                            # this var name is an array, and if the layer is 1 to 1, it
+                            # apparently means it only affects the area x, y: compare
+                            # again with this knowledge
+                            array_indices = ["x", "y"]
+                            if not array_indices == indices:
+                                print "accesses to", array_name, "in loop 1 and 2",\
+                                      "do not match", array_indices, indices,\
+                                      "(2 to 1)"
+                                   
+                                fusion_good = False
+                                break
+                        else:
+                            print var_name, "is written in for loop 2 but read in for loop 1"
+                            print my_for_node, other_for_node
+                            fusion_good = False
+                            break
 
                 for array_access in w_array_accesses:
                     array_name = array_access[0]
@@ -507,13 +545,15 @@ class FusionOptimizer(Optimizer):
                     # i.e as a var name
                     if array_name in r_variable_names:
                         print "the first loop is reading an array 2nd loop",\
-                              "writes to"
+                              "writes to:", array_name
+                        print my_for_node
+                        print other_for_node
                         fusion_good = False
                         break
 
                 if not fusion_good:
                     # if fusion isn't good, continue to the next loop
-                    continue
+                    break
 
                 # if fusion is still good at this point, do the fusion
                 # get the entire other loop body and add it as a child to the
