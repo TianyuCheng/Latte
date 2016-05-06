@@ -13,6 +13,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <limits>
 #include <algorithm>    // std::random_shuffle
 #include <mkl.h>
 
@@ -68,14 +69,17 @@ inline int argmax (float* vec, int size) {
     assert(size > 0 && "empty vector input.");
     int max_index = 0;
     float max_value = *vec;
-    for (int i = 1; i < size; i++) 
+    for (int i = 1; i < size; i++) {
+        if (!(*(vec+i) < INFINITY)) return i;
         if (*(vec+i) > max_value) {
             max_index = i;
             max_value = *(vec+i);
         }
+    }
     return max_index;
 }
 void Xaiver_initialize (float* mat, int n_j, int n_jp) {
+    // n_j  = 4; n_jp = 3;
     float high = sqrt(6.0 / (n_j+n_jp)), low = -1.0 * high;
     // boost::random::random_device generator;
     // boost::random::mt19937 generator ();
@@ -175,14 +179,14 @@ inline void sgemm_copy (float* sink, float* source, int n) {
 inline void sgemm_print (float* C, int dim_x, int dim_y) {
     for (int i = 0; i < dim_x; i ++) {
         for (int j = 0; j < dim_y; j ++) {
-            cout << *(C+5*i+j) << " ";
+            cout << *(C+dim_y*i+j) << " ";
         }
         cout << endl;
     }
 }
 
-void read_mnist(string filename, vector<float*> features, vector<int> &labels,
-        size_t stride) {
+void read_mnist(string filename, vector<float*> &features, vector<int> &labels,
+        size_t fea_dim_x, size_t fea_dim_y, int n_classes) {
 
     // read file and check the validity of the input file
     ifstream in(filename, std::ifstream::in);
@@ -195,15 +199,16 @@ void read_mnist(string filename, vector<float*> features, vector<int> &labels,
     string line;
     getline(in, line);
     size_t num_features = count(line.begin(), line.end(), ',');
-    assert (num_features % stride == 0 && "features not in rectangular shape");
-    size_t n_stride = num_features / stride;
+    assert (num_features % fea_dim_x == 0 && "features not in rectangular shape");
+    size_t n_fea_dim_x = num_features / fea_dim_x;
+    cout << fea_dim_x << ","  << n_fea_dim_x << endl;
 
     int label;
     char comma;
     // read all data points
     while (getline(in, line)) {
         istringstream ss(line);
-        features.push_back(init_mkl_mat(n_stride, stride));
+        features.push_back(init_mkl_mat(n_fea_dim_x, fea_dim_x));
         float *data_point = features.back();
 
         // first read the label
@@ -211,9 +216,9 @@ void read_mnist(string filename, vector<float*> features, vector<int> &labels,
         labels.push_back(label);
 
         // start reading features
-        for (int i = 0; i < n_stride; i++) {
-            for (int j = 0; j < stride; j++) {
-                ss >> comma >> data_point[i * stride + j];
+        for (int i = 0; i < n_fea_dim_x; i++) {
+            for (int j = 0; j < fea_dim_x; j++) {
+                ss >> comma >> data_point[i * fea_dim_x + j];
             }
         } // end of reading features
 
@@ -221,24 +226,24 @@ void read_mnist(string filename, vector<float*> features, vector<int> &labels,
 
 #if 0       // DBEUG the first record
     float *data_point = features[0];
-    for (int i = 0; i < n_stride; i++) {
-        for (int j = 0; j < stride; j++) {
-            float value = data_point[i * stride + j];
-            cout << data_point[i * stride + j] << ", " ;
+    for (int i = 0; i < n_fea_dim_x; i++) {
+        for (int j = 0; j < fea_dim_x; j++) {
+            float value = data_point[i * fea_dim_x + j];
+            cout << data_point[i * fea_dim_x + j] << ", " ;
         }
     } // end of reading features
     cout << endl;
 #endif
 
     // start normalizing features
-    #pragma omp parallel for
+    // #pragma omp parallel for
     for (int i = 0; i < features.size(); i++) {
         float *data_point = features[i];
-        for (int i = 0; i < n_stride; i++) {
-            for (int j = 0; j < stride; j++) {
-                float value = data_point[i * stride + j];
+        for (int i = 0; i < n_fea_dim_x; i++) {
+            for (int j = 0; j < fea_dim_x; j++) {
+                float value = data_point[i * fea_dim_x + j];
                 assert(value >= 0 && value <= 255);
-                data_point[i * stride + j] = value / 255.0f;
+                data_point[i * fea_dim_x + j] = value / 255.0f;
             }
         } // end of reading features
     }
@@ -297,46 +302,23 @@ void generate_shuffle_index(vector<int> &shuffle_index, int size) {
             */
 }
 
+timespec time_diff(timespec start, timespec end)
+{
+    timespec temp;
+    if ((end.tv_nsec-start.tv_nsec)<0) {
+        temp.tv_sec = end.tv_sec-start.tv_sec-1;
+        temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
+    } else {
+        temp.tv_sec = end.tv_sec-start.tv_sec;
+        temp.tv_nsec = end.tv_nsec-start.tv_nsec;
+    }
+    return temp;
+}
 
 typedef struct Index {
     int r = 1;
     int c;
 } Dim;
-
-/**
- * Connection
- * Functor for connection mappings from ensemble to ensemble
- * */
-class Connection
-{
-public:
-    virtual Index operator() (Index index) = 0;
-};
-
-/**
- * Neuron class
- * Base class for Neuron subtyping
- * */
-class Neuron
-{
-public:
-    // constructor and destructor
-    Neuron(Ensemble &ensemble, int pos_x, int pos_y) : x(pos_x), y(pos_y) {
-    }
-    virtual ~Neuron() {
-    }
-
-    // initialization functions
-    void init_inputs_dim(int dim_x, int dim_y, int prev_enm_size);
-    void init_grad_inputs_dim(int dim_x, int dim_y);
-    
-    // forward and backward propagation functions
-    void forward();
-    void backward();
-private:
-    int x;
-    int y;
-};
 
 /**
  * Ensemble class
@@ -354,24 +336,24 @@ public:
         if (prev != NULL) prev->next = this;
     }
     Ensemble(Dim s) : size(s) {
-        neurons.resize(size.r * size.c);
+        // neurons.resize(size.r * size.c);
         // all neurons constructions are independent
         // #pragma omp parallel for
-        for (int i = 0; i < neurons.size(); ++i)
-            neurons[i] = new Neuron(*this, i / s.r, i % s.c);
+        // for (int i = 0; i < neurons.size(); ++i)
+        //     neurons[i] = new Neuron(*this, i / s.r, i % s.c);
     }
     virtual ~Ensemble() {
         // all neurons destructions are independent
         // #pragma omp parallel for
-        for (int i = 0; i < neurons.size(); ++i)
-            delete neurons[i];
+        // for (int i = 0; i < neurons.size(); ++i)
+        //     delete neurons[i];
     }
-    int get_size() { return neurons.size(); }
-    void set_forward_adj(Connection &forward_adj);
-    void set_backward_adj(Connection &backward_adj);
+    // int get_size() { return neurons.size(); }
+    // void set_forward_adj(Connection &forward_adj);
+    // void set_backward_adj(Connection &backward_adj);
 private:
     Dim size;
-    vector<Neuron*> neurons;
+    // vector<Neuron*> neurons;
 };
 
 /**
@@ -403,34 +385,6 @@ private:
     vector<vector<float>> test_features;
     vector<int> train_labels;
     vector<int> test_labels;
-};
-
-/**
- * Base Solver class
- * */
-class Solver
-{
-public:
-    // constructor and destructor
-    Solver() { }
-    virtual ~Solver();
-    // need to override this abstract function: solve
-    virtual void solve(Network &net) = 0;
-};
-
-/**
- * Stochastic Gradient Descent
- * Solver for Deep Neural Network
- * */
-class SGDSolver : public Solver
-{
-public:
-    SGDSolver(int iter, float step) : iterations(iter) {
-    }
-    virtual ~SGDSolver ();
-    void solve(Network &net);
-private:
-    int iterations;
 };
 
 #endif

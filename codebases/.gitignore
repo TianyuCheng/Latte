@@ -45,3 +45,6 @@ fc-conv-fc
 fc-meanp-fc
 
 *.sbatch
+*.out
+*.err
+sbatches/*
