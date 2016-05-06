@@ -181,8 +181,8 @@ inline void sgemm_print (float* C, int dim_x, int dim_y) {
     }
 }
 
-void read_mnist(string filename, vector<float*> features, vector<int> &labels,
-        size_t stride) {
+void read_mnist(string filename, vector<float*> &features, vector<int> &labels,
+        size_t fea_dim_x, size_t fea_dim_y, int n_classes) {
 
     // read file and check the validity of the input file
     ifstream in(filename, std::ifstream::in);
@@ -195,15 +195,15 @@ void read_mnist(string filename, vector<float*> features, vector<int> &labels,
     string line;
     getline(in, line);
     size_t num_features = count(line.begin(), line.end(), ',');
-    assert (num_features % stride == 0 && "features not in rectangular shape");
-    size_t n_stride = num_features / stride;
+    assert (num_features % fea_dim_x == 0 && "features not in rectangular shape");
+    size_t n_fea_dim_x = num_features / fea_dim_x;
 
     int label;
     char comma;
     // read all data points
     while (getline(in, line)) {
         istringstream ss(line);
-        features.push_back(init_mkl_mat(n_stride, stride));
+        features.push_back(init_mkl_mat(n_fea_dim_x, fea_dim_x));
         float *data_point = features.back();
 
         // first read the label
@@ -211,9 +211,9 @@ void read_mnist(string filename, vector<float*> features, vector<int> &labels,
         labels.push_back(label);
 
         // start reading features
-        for (int i = 0; i < n_stride; i++) {
-            for (int j = 0; j < stride; j++) {
-                ss >> comma >> data_point[i * stride + j];
+        for (int i = 0; i < n_fea_dim_x; i++) {
+            for (int j = 0; j < fea_dim_x; j++) {
+                ss >> comma >> data_point[i * fea_dim_x + j];
             }
         } // end of reading features
 
@@ -221,10 +221,10 @@ void read_mnist(string filename, vector<float*> features, vector<int> &labels,
 
 #if 0       // DBEUG the first record
     float *data_point = features[0];
-    for (int i = 0; i < n_stride; i++) {
-        for (int j = 0; j < stride; j++) {
-            float value = data_point[i * stride + j];
-            cout << data_point[i * stride + j] << ", " ;
+    for (int i = 0; i < n_fea_dim_x; i++) {
+        for (int j = 0; j < fea_dim_x; j++) {
+            float value = data_point[i * fea_dim_x + j];
+            cout << data_point[i * fea_dim_x + j] << ", " ;
         }
     } // end of reading features
     cout << endl;
@@ -234,11 +234,11 @@ void read_mnist(string filename, vector<float*> features, vector<int> &labels,
     #pragma omp parallel for
     for (int i = 0; i < features.size(); i++) {
         float *data_point = features[i];
-        for (int i = 0; i < n_stride; i++) {
-            for (int j = 0; j < stride; j++) {
-                float value = data_point[i * stride + j];
+        for (int i = 0; i < n_fea_dim_x; i++) {
+            for (int j = 0; j < fea_dim_x; j++) {
+                float value = data_point[i * fea_dim_x + j];
                 assert(value >= 0 && value <= 255);
-                data_point[i * stride + j] = value / 255.0f;
+                data_point[i * fea_dim_x + j] = value / 255.0f;
             }
         } // end of reading features
     }

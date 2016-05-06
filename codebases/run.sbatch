@@ -16,3 +16,12 @@
 ./mnist-fc-conv-fc
 ./mnist-fc-fc
 ./mnist-fc-meanp-fc
+./mnist-fc-fc
+./mnist-fc-fc
+./mnist-fc-fc
+./mnist-fc-fc
+./mnist-fc-fc
+./mnist-fc-fc
+./mnist-fc-fc
+./mnist-fc-fc
+./mnist-fc-fc

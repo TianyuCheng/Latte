@@ -17,6 +17,10 @@ def template_LibsvmDataLayer():
     _name = LibsvmDataLayer(_net, _train_file, _test_file, _dim_x, _dim_y, _nLabels)
 
 @template
+def template_MnistDataLayer():
+    _name = MnistDataLayer(_net, _train_file, _test_file, _dim_x, _dim_y, _nLabels)
+
+@template
 def template_SoftmaxLossLayer():
     _name = SoftmaxLossLayer(_net, _prev, _dim_x, _dim_y)
 
@@ -56,6 +60,7 @@ def template_add_connection():
 ''' list of templates for layers '''
 layer_templates = [
         template_LibsvmDataLayer(),
+        template_MnistDataLayer(),
         template_FullyConnectedLayer(),
         template_PoolingLayer(),
         template_ConvolutionLayer(),
