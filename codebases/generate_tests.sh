@@ -2,26 +2,57 @@
 
 EXE="mnist-fc-fc"
 
-make clean sbatch mini $EXE SBATCH="mnist-none"
-mv $EXE $EXE-none
-echo "./$EXE-none" >> ./mnist-none.sbatch
+function generate() { 
+    make clean sbatch mini $FLAGS $EXE SBATCH=${EXE}${SUFFIX}
+    mv $EXE ${EXE}${SUFFIX}
+    echo ./${EXE}${SFFIX} >> ./${EXE}${SUFFIX}.sbatch
+    sbatch ./${EXE}${SUFFIX}.sbatch
+} 
 
-make clean sbatch mini tiling $EXE SBATCH="mnist-t"
-mv $EXE $EXE-t
-echo "./$EXE-t" >> ./mnist-t.sbatch
+FLAGS=""
+SUFFIX=""
+generate
 
-make clean sbatch mini tiling fusion $EXE SBATCH="mnist-t-f"
-mv $EXE $EXE-t-f
-echo "./$EXE-t-f" >> ./mnist-t-f.sbatch
+FLAGS="tiling"
+SUFFIX="-t"
+generate
 
-make clean sbatch mini batch $EXE SBATCH="mnist-b"
-mv $EXE $EXE-b
-echo "./$EXE-b" >> ./mnist-b.sbatch
+FLAGS="tiling fusion"
+SUFFIX="-t-f"
+generate
 
-make clean sbatch mini batch tiling $EXE SBATCH="mnist-b-t"
-mv $EXE $EXE-b-t
-echo "./$EXE-b-t" >> ./mnist-b-t.sbatch
+FLAGS="batch"
+SUFFIX="-b"
+generate
 
-make clean sbatch mini batch tiling fusion $EXE SBATCH="mnist-b-t-f"
-mv $EXE $EXE-b-t-f
-echo "./$EXE-b-t-f" >> ./mnist-b-t-f.sbatch
+FLAGS="batch tiling"
+SUFFIX="-b-t"
+generate
+
+FLAGS="batch tiling fusion"
+SUFFIX="-b-t-f"
+generate
+
+FLAGS="mkl"
+SUFFIX="-m"
+generate
+
+FLAGS="mkl tiling"
+SUFFIX="-m-t"
+generate
+
+FLAGS="mkl tiling fusion"
+SUFFIX="-m-t-f"
+generate
+
+FLAGS="mkl batch"
+SUFFIX="-m-b"
+generate
+
+FLAGS="mkl batch tiling"
+SUFFIX="-m-b-t"
+generate
+
+FLAGS="mkl batch tiling fusion"
+SUFFIX="-m-b-t-f"
+generate
