@@ -170,6 +170,16 @@ class ForNode(Node):
         for child in self.children:
             child.find_and_replace(to_find, replacement)
 
+    def get_writes(self):
+        variable_names = []
+        array_accesses = []
+
+        for child in self.children:
+            v, a = child.get_writes()
+
+            variable_names = variable_names + v
+            array_accesses = array_accesses + v
+            
     def __str__(self):
         """Prints the ENTIRE loop including its children"""
         for_fmt = "for (int {i} = {initial}; {i} < {bound}; {i} += {increment}) {{\n{code}\n}}"
