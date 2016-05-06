@@ -178,8 +178,18 @@ class ForNode(Node):
             v, a = child.get_writes()
 
             variable_names = variable_names + v
-            array_accesses = array_accesses + v
-            
+            array_accesses = array_accesses + a
+
+    def get_reads(self):
+        variable_names = []
+        array_accesses = []
+
+        for child in self.children:
+            v, a = child.get_reads()
+
+            variable_names = variable_names + v
+            array_accesses = array_accesses + a
+          
     def __str__(self):
         """Prints the ENTIRE loop including its children"""
         for_fmt = "for (int {i} = {initial}; {i} < {bound}; {i} += {increment}) {{\n{code}\n}}"
@@ -221,13 +231,19 @@ class ConstantNode(Node):
 
         return my_copy
 
-    def get_writes(self):
+    def get_use(self):
         """assumes constant nodes have no children"""
         if self.is_var():
             # only a write if we represent a variable
             return [self.constant], []
         else:
             return [], []
+
+    def get_writes(self):
+        return self.get_use()
+
+    def get_reads(self):
+        return self.get_use()
 
     def __str__(self):
         return str(self.constant)
@@ -271,6 +287,13 @@ class AssignmentNode(Node):
     def get_writes(self):
         """assumes no children"""
         # only left hand side is written to
+        variable_names, array_accesses = self.left.get_writes()
+
+        return variable_names, array_accesses
+
+    def get_reads(self):
+        """assumes no children"""
+        # only right hand side is read
         variable_names, array_accesses = self.left.get_writes()
 
         return variable_names, array_accesses
@@ -320,8 +343,42 @@ class ExpressionNode(Node):
             child.find_and_replace(to_find, replacement)
 
     def get_writes(self):
-        """expressions have no writes, only reads (I hope): return nothing"""
-        return [], []
+        """expressions may have function calls as 1 of the operands; if
+        so, call get writes on the function call"""
+        variable_names = []
+        array_accesses = []
+
+        # if operand is a call, get the writes from the call
+        if isinstance(self.left, CallNode):
+            v, a = self.left.get_writes()
+            variable_names = variable_names + v
+            array_accesses = array_accesses + a
+
+        if isinstance(self.right, CallNode):
+            v, a = self.right.get_writes()
+            variable_names = variable_names + v
+            array_accesses = array_accesses + a
+        # otherwise we don't want to call get writes since usually
+        # operands are only read from
+        
+        return variable_names, array_accesses
+
+    def get_reads(self):
+        # an expression reads its left and right operands: call get reads on
+        # both of them
+        variable_names = []
+        array_accesses = []
+
+        v, a = self.left.get_reads()
+        variable_names = variable_names + v
+        array_accesses = array_accesses + a
+
+        v, a = self.right.get_reads()
+        variable_names = variable_names + v
+        array_accesses = array_accesses + a
+
+        return variable_names, array_accesses
+
 
     def __str__(self):
         if self.operator == "pow":
@@ -371,10 +428,34 @@ class ArrayNode(ListNode):
         for child in self.children:
             child.find_and_replace(to_find, replacement)
 
-    def get_writes(self):
+    def get_base_addr(self):
+        return self.base_addr
+
+    def get_indices(self):
+        return self.indices
+
+
+    def get_use(self):
+        base_string = self.base_addr
+        indices = []
+
+        # it's possible that the base address could be another array node;
+        # I'm told this only goes at most 1 level deep
+        if isinstance(self.base_addr, ArrayNode):
+            base_string = self.base_addr.get_base_addr()
+            indices = copy.deepcopy(self.base_addr.get_indices())
+
+        indices = indices + copy.deepcopy(self.indices)
+
         # returns nothing for a variable name, but returns a tuple
         # with the array name first then a list of the indices
-        return [], [(self.base_addr, copy.deepcopy(self.indices))]
+        return [], [(base_string, indices)]
+
+    def get_writes(self):
+        return self.get_use()
+
+    def get_reads(self):
+        return self.get_use()
 
     def __str__(self):
         indices = ''.join(map(lambda x: "[%s]" % str(x), self.indices))
@@ -432,13 +513,19 @@ class IndexNode(ListNode):
         for child in self.children:
             child.find_and_replace(to_find, replacement)
 
-    def get_writes(self):
+    def get_use(self):
         array_name = self.base_addr
 
         if len(self.indices) == 1: 
             return [], [(array_name, [self.indices[0]])]
         else:
             return [], [(array_name, [self.indices[0], self.indices[1]])]
+
+    def get_writes(self):
+        return self.get_use()
+
+    def get_reads(self):
+        return self.get_use()
 
     def __str__(self):
         if len(self.indices) == 1:
@@ -466,6 +553,9 @@ class DereferenceNode(Node):
     def get_writes(self):
         return self.children[0].get_writes()
 
+    def get_reads(self):
+        return self.children[0].get_reads()
+
     def __str__(self):
         return "(*%s)" % str(self.children[0])
 
@@ -485,6 +575,9 @@ class GetPointerNode(Node):
 
     def get_writes(self):
         return self.children[0].get_writes()
+
+    def get_reads(self):
+        return self.children[0].get_reads()
 
     def __str__(self):
         return "(&%s)" % str(self.children[0])
@@ -553,11 +646,34 @@ class CallNode(Node):
                 # get var names and or array accesses for that child
                 a, b = child.get_writes();
                 
-                # append the corresponding things to the right arrays
-                for j in a:
-                    variable_names.append(j)
-                for j in b:
-                    array_accesses.append(j)
+                # add the corresponding things to the right arrays
+                variable_names = variable_names + a
+                array_accesses = array_accesses + b
+            else:
+                continue
+
+        return variable_names, array_accesses
+
+    def get_reads(self):
+        variable_names = []
+        array_accesses = []
+
+        # get the number of arguments
+        num_args = len(self.args_rw)
+
+        for i in range(num_args):
+            rw_bit = self.args_rw[i]
+
+            # if an argument is potentially read from...
+            if 0x1 & rw_bit:
+                child = self.children[i]
+
+                # get var names and or array accesses for that child
+                a, b = child.get_reads();
+                
+                # add the corresponding things to the right arrays
+                variable_names = variable_names + a
+                array_accesses = array_accesses + b
             else:
                 continue
 
