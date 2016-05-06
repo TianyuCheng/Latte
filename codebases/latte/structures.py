@@ -439,7 +439,6 @@ class ArrayNode(ListNode):
     def get_indices(self):
         return self.indices
 
-
     def get_use(self):
         base_string = self.base_addr
         indices = []
@@ -451,6 +450,9 @@ class ArrayNode(ListNode):
             indices = copy.deepcopy(self.base_addr.get_indices())
 
         indices = indices + copy.deepcopy(self.indices)
+
+        while isinstance(base_string, ConstantNode):
+            base_string = base_string.get_constant()
 
         # returns nothing for a variable name, but returns a tuple
         # with the array name first then a list of the indices
@@ -520,11 +522,13 @@ class IndexNode(ListNode):
 
     def get_use(self):
         array_name = self.base_addr
+        while isinstance(array_name, ConstantNode):
+            array_name = array_name.get_constant()
 
         if len(self.indices) == 1: 
-            return [], [(array_name.get_constant(), [self.indices[0]])]
+            return [], [(array_name, [self.indices[0]])]
         else:
-            return [], [(array_name.get_constant(), [self.indices[0], self.indices[1]])]
+            return [], [(array_name, [self.indices[0], self.indices[1]])]
 
     def get_writes(self):
         return self.get_use()

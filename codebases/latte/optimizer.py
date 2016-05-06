@@ -206,9 +206,9 @@ class FusionOptimizer(Optimizer):
         # been fused over yet
         ensemble_order_copy = self.ensemble_order[:]
 
-        print ensemble_order_copy
+        #print ensemble_order_copy
         for current_ensemble in self.ensemble_order:
-            print current_ensemble
+            #print current_ensemble
             # if the ensemble we are looking at doesn't exist anymore
             # ignore it
             if current_ensemble not in ensemble_order_copy:
@@ -220,9 +220,17 @@ class FusionOptimizer(Optimizer):
             if my_for_node == None:
                 continue
 
-            # loop over ensembles that come after this one
-            to_loop_over = ensemble_order_copy[ensemble_order_copy.index(current_ensemble) + 1:]
-            removal_queue = []
+
+            # loop over ensemble that comes after this 1
+            self_location = ensemble_order_copy.index(current_ensemble)
+
+            to_loop_over = None
+
+            if self_location + 1 >= len(ensemble_order_copy):
+                to_loop_over = []
+            else:
+                to_loop_over = [ensemble_order_copy[self_location + 1]]
+                
 
             for other_ensemble in to_loop_over:
                 # shouldn't be ourselves in the new list we are looping over
@@ -231,18 +239,23 @@ class FusionOptimizer(Optimizer):
                 # get the top level for node we are considering fusing
                 other_for_node = self.dict_of_trees[other_ensemble]
 
+                if other_for_node == None:
+                    # no for loop, ignore it
+                    continue
+
+                # deep copy it so we can mess with it
+                other_for_node = other_for_node.deep_copy()
+
                 current1 = my_for_node
                 current2 = other_for_node
+
+                inner_for = None
+                other_body = []
 
                 loops_good = True
 
                 while True:
-                    print "yay"
-                    if not isinstance(current1, ForNode) and\
-                       not isinstance(current2, ForNode):
-                        # done matching for nodes; break
-                        break
-                    elif (not isinstance(current1, ForNode) and\
+                    if (not isinstance(current1, ForNode) and\
                           isinstance(current2, ForNode)) or\
                          (isinstance(current1, ForNode) and\
                           not isinstance(current2, ForNode)):
@@ -271,11 +284,17 @@ class FusionOptimizer(Optimizer):
                             loops_good = False
                             break
 
+                        # everything matches: go ahead and begin replacing for loop
+                        # names with our own stuff just in case...
+                        other_for_node.find_and_replace(other_for_node.get_initial_name(),
+                                                my_for_node.get_initial_name())
+
                         forchild1 = False
                         forchild2 = False
 
                         # check next children for another possible for node
                         children1 = current1.get_children()
+                        prev_for = current1
 
                         if len(children1) >= 1:
                             current1 = children1[0]
@@ -302,15 +321,28 @@ class FusionOptimizer(Optimizer):
                             loops_good = False
                             break
                         # if both do not have for children anymore, structure
-                        # must match; break
+                        # must match
                         elif not forchild1 and not forchild2:
+                            # save the inner most for loop so we know where to add
+                            # during fusion
+                            inner_for = prev_for
+
+                            # grab the remaining body of the second for loop (i.e.
+                            # the children) and save it for later: we might 
+                            # fuse it
+                            other_body = children2
+                            # get out
                             break
                         # otherwise it will continue into the next iteration
-
 
                 # if loops_good is not true, we cannot fuse; continue to the
                 # next loop 
                 if not loops_good:
+                    print "loop bounds/structure for", current_ensemble, other_ensemble,\
+                           "do not match"
+                    #print "\n\nfail\n\n"
+                    print current_ensemble, other_ensemble
+                    print my_for_node, other_for_node
                     continue
 
                 # otherwise we move onto the variable dependency checks,
@@ -320,11 +352,176 @@ class FusionOptimizer(Optimizer):
 
                 w_variable_names, w_array_accesses = my_for_node.get_writes()
                 r_variable_names, r_array_accesses = other_for_node.get_reads()
-                
+
+                # if there is a write to a variable name in the first loop, it
+                # can't be the case that the second loop reads it as fusion may
+                # result in it reading a value that isn't good yet
+                fusion_good = True
+
+                #print "Starting analysis"
                 #print my_for_node
-                #print variable_names
-                #print array_accesses
+                #print other_for_node
 
+                print "going to check", current_ensemble, other_ensemble,\
+                      "dependencies"
+
+                for var_name in w_variable_names:
+                    if var_name in r_variable_names:
+                        print var_name, "is written in for loop 1 but read in 2nd loop"
+                        fusion_good = False
+                        break
+
+                    # it's also possible that the var in question is actually
+                    # an array that is being completely overwritten by a 
+                    # function call or something of the sort: check to see
+                    # if there is a read of it in the r_array_accesses
+                    # as well
+
+                    r_accesses = set()
+
+                    for r in r_array_accesses:
+                        r_accesses.add(r[0])
+
+                    if var_name in r_accesses:
+                        print var_name, "is written in for loop 1 but read in 2nd loop"
+                        print my_for_node, other_for_node
+                        fusion_good = False
+                        break
+
+                if not fusion_good:
+                    # if fusion isn't good, continue to the next loop
+                    continue
+
+                for array_access in w_array_accesses:
+                    array_name = array_access[0]
+                    array_indices = array_access[1]
+
+                    good = True
+
+                    #print "sanity"
+                    #print r_array_accesses
+                    #print array_name
+                    #print "check"
+
+                    for indices in [x for (a, x) in r_array_accesses if a == array_name]:
+                        # right now, assume that indices can only be x, y type 
+                        # deals as in no x + 1 or y - 1 or that kind of stuff
+
+                        # if we are accessing something in the second, it must be that we are 
+                        # accessing the exact same things, i.e array_indices must match
+                        if not array_indices == indices:
+                            print "accesses to", array_name, "in loop 1 and 2",\
+                                  "do not match", array_indices, indices
+                                
+                            fusion_good = False
+                            good = False
+                            break
+
+                    if not good:
+                        break
+
+                    # also make sure that the array isn't being read as a whole
+                    # i.e as a var name
+                    if array_name in r_variable_names:
+                        print "the second loop is reading an array 1st loop",\
+                              "writes to"
+                        fusion_good = False
+                        break
+
+                if not fusion_good:
+                    # if fusion isn't good, continue to the next loop
+                    continue
+                
                 # now checks from loop we want to fuse to current loop
+                w_variable_names, w_array_accesses = other_for_node.get_writes()
+                r_variable_names, r_array_accesses = my_for_node.get_reads()
 
-                #ensemble_order_copy.remove(other_ensemble)
+                print "now analyzing loop 2 to loop 1 dependencies"
+                print w_variable_names, w_array_accesses
+                print r_variable_names, r_array_accesses
+
+                # the only problems that could exist are if the second for loop
+                # writes to an index that the first 1 is going to read in a later
+                # itereation or if the second for loop writes a variable that
+                # is used the by the first
+                # e.g.
+                # first reads array[x], second writes array[x+1]; 
+                # fusion is illegal
+                # first reads some var x, but second writes to it every 
+                # iteration; fusion is illegal
+
+                for var_name in w_variable_names:
+                    if var_name in r_variable_names:
+                        print var_name, "is written in for loop 2 but read in",\
+                              "for loop 1, which could be bad"
+                        fusion_good = False
+                        break
+
+                    # it's also possible that the var in question is actually
+                    # an array that is being completely overwritten by a 
+                    # function call or something of the sort: check to see
+                    # if there is a read of it in the r_array_accesses
+                    # as well
+
+                    r_accesses = set()
+
+                    for r in r_array_accesses:
+                        r_accesses.add(r[0])
+
+                    if var_name in r_accesses:
+                        print var_name, "is written in for loop 2 but read in",\
+                              "for loop 1, which could be bad"
+                        fusion_good = False
+                        break
+
+                for array_access in w_array_accesses:
+                    array_name = array_access[0]
+                    array_indices = array_access[1]
+
+                    good = True
+
+                    for indices in [x for (a, x) in r_array_accesses if a == array_name]:
+                        # right now, assume that indices can only be x, y type 
+                        # deals as in no x + 1 or y - 1 or that kind of stuff
+
+                        # since we are assuming that, we can't really check for
+                        # x+1 or things like that, meaning we'll just be conservative
+                        # and force the acccesses to be the same
+
+                        # if we are accessing something in the second, it must be that we are 
+                        # accessing the exact same things, i.e array_indices must match
+                        if not array_indices == indices:
+                            print "accesses to", array_name, "in loop 1 and 2",\
+                                  "do not match", array_indices, indices,\
+                                  "(2 to 1)"
+                                
+                            fusion_good = False
+                            good = False
+                            break
+
+                    if not good:
+                        break
+
+                    # also make sure that the array isn't being read as a whole
+                    # i.e as a var name
+                    if array_name in r_variable_names:
+                        print "the first loop is reading an array 2nd loop",\
+                              "writes to"
+                        fusion_good = False
+                        break
+
+                if not fusion_good:
+                    # if fusion isn't good, continue to the next loop
+                    continue
+
+                # if fusion is still good at this point, do the fusion
+                # get the entire other loop body and add it as a child to the
+                # inner most for loop
+                print "commencing fusion of", current_ensemble, other_ensemble
+
+                for child in other_body:
+                    inner_for.add_child(child)
+
+                # remove from ensembles we need to check
+                ensemble_order_copy.remove(other_ensemble)
+        return ensemble_order_copy
