@@ -103,6 +103,13 @@ def SoftmaxLossLayer(net, prev, dim_x, dim_y):
     label_enm = Ensemble(1, nLabels, SoftmaxNeuron)
     return FullyConnectedLayer(net, prev, dim_x, dim_y, SoftmaxNeuron)
 
+def One2OneLayer(net, prev, dim_x, dim_y, TYPE):
+    cur_enm = Ensemble(dim_x, dim_y, TYPE)
+    add_connection(net, prev, cur_enm, lambda x, y: \
+         [ (i,j) for i in range(x, x+1) \
+                 for j in range(y, y+1) ])
+    return cur_enm
+
 class Neuron:
     def __init__(self, enm, pos_x, pos_y):
         # management info

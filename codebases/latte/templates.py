@@ -25,6 +25,10 @@ def template_SoftmaxLossLayer():
     _name = SoftmaxLossLayer(_net, _prev, _dim_x, _dim_y)
 
 @template
+def template_One2OneLayer():
+    _name = One2OneLayer(_net, _prev, _dim_x, _dim_y, _Neuron)
+
+@template
 def template_ConvolutionLayer():
     _name = ConvolutionLayer(_net, _prev, _dim_x, _dim_y, _Neuron, _ker_dim_x, _ker_dim_y)
 
@@ -63,6 +67,7 @@ layer_templates = [
         template_MnistDataLayer(),
         template_FullyConnectedLayer(),
         template_PoolingLayer(),
+        template_One2OneLayer(),
         template_ConvolutionLayer(),
         template_SoftmaxLossLayer()
 ]

@@ -198,8 +198,9 @@ class TilingOptimizer(Optimizer):
 
 
 class FusionOptimizer(Optimizer):
-    def __init__(self, dict_of_trees, ensemble_order):
+    def __init__(self, dict_of_trees, ensemble_order, ensembles_info):
         super(FusionOptimizer, self).__init__(dict_of_trees, ensemble_order)
+        self.ensembles_info = ensembles_info
 
     def optimize(self):
         # copy the order: this copy will represent the nodes that haven't

@@ -522,6 +522,7 @@ def main(options, program_file, cpp_file):
     name2enm = {}
     for x in ensembles_info: name2enm.update({ x[0] : x })
 
+    layer_info = {}
     path = os.path.dirname(os.path.abspath(__file__))
     # parse the add_connection calls in stdlib
     # and perform the shared variable analysis
@@ -539,6 +540,21 @@ def main(options, program_file, cpp_file):
                 term.dump("Layer %s One-to-One? %s" % (layer_type, \
                         one2one), \
                         term.OKBLUE)
+                layer_info[layer_type] = (uniform_dep, one2one)
+
+    # update ensemble layer info
+    for x in ensembles_info:
+        layer_type = x[1]
+        if layer_type in layer_info:
+            uniform_dep, one2one = layer_info[layer_type]
+            x[-1]['uniform_dep'] = uniform_dep
+            x[-1]['one2one'] = one2one
+        else:
+            x[-1]['uniform_dep'] = False
+            x[-1]['one2one'] = False
+
+    for x in ensembles_info:
+        print x
 
     # create the neuron analyzers and also pass in ensemble info in order to create
     # forward and backward propogation code
@@ -583,11 +599,11 @@ def main(options, program_file, cpp_file):
     # if fusion set, do fusion
     if fusion_flag:
         # forward
-        opt1 = FusionOptimizer(fp_codes, forwards_ensemble_order)
+        opt1 = FusionOptimizer(fp_codes, forwards_ensemble_order, ensembles_info)
         forwards_ensemble_order = opt1.optimize()
 
         # backward
-        opt2 = FusionOptimizer(bp_codes, backwards_ensemble_order)
+        opt2 = FusionOptimizer(bp_codes, backwards_ensemble_order, ensembles_info)
         backwards_ensemble_order = opt2.optimize()
 
     # CODE GENERATION:
