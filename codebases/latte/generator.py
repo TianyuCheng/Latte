@@ -420,8 +420,8 @@ def make_solve_block(options, conn_types, neuron_analyzers, solver_info, ensembl
     solve_block.append("clock_gettime(CLOCK_MONOTONIC, &stop);");
     solve_block.append("timespec t = time_diff(start, stop);");
     solve_block.append("times.push_back(t.tv_sec);");
-    solve_block.append('cout << "time for iter(s): " << t.tv_sec << endl;');
-    solve_block.append('cout << "time for iter(ns): " << t.tv_nsec << endl;');
+    solve_block.append('cerr << "time for iter(s): " << t.tv_sec << endl;');
+    solve_block.append('cerr << "time for iter(ns): " << t.tv_nsec << endl;');
 
     solve_block.append("} // end of iterative traversal") # end the iteration loop
     return solve_block

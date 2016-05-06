@@ -9,7 +9,7 @@ LINK_FLAGS := -O3 -Wl,--start-group -L${TACC_BOOST_LIB} ${MKLROOT}/lib/intel64/l
 
 GEN		   := ./latte/generator.py
 GEN_FLAGS  := 
-NUM_WORKERS:= 5
+NUM_WORKERS:= 4
 test_dir   := ../testcases
 tests      := $(patsubst %.py, %, $(shell (cd $(test_dir); ls *.py)))
 deletes    := $(patsubst %, %.cpp, $(tests))
