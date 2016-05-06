@@ -185,7 +185,7 @@ def make_weights_init_block(options, ensembles_info, name2enm, conn_types, alloc
         block.append(init_str)   
     return block
 
-def make_load_data(networks2enms):
+def make_load_data(options, networks2enms):
     for net, ensembles in networks2enms.iteritems():
         enm = ensembles[0]
         load_block = []
@@ -196,9 +196,13 @@ def make_load_data(networks2enms):
         load_block.append("vector<float*> train_features, test_features;");
         load_block.append("vector<int> train_labels, test_labels;");
 
+        sub = ""
+        if options.mini:
+            sub = ".mini"
+
         # we need number of features
         load_block.append("""read_%s("%s", train_features, train_labels, %d, %d, %d);""" % (\
-            data_format, enm["train_file"], enm["dim_x"], enm["dim_y"], enm['nLabels']))
+            data_format, enm["train_file"] + sub, enm["dim_x"], enm["dim_y"], enm['nLabels']))
         load_block.append("""read_%s("%s", test_features, test_labels, %d, %d, %d);""" % (\
             data_format, enm["test_file"], enm["dim_x"], enm["dim_y"], enm['nLabels']))
         
@@ -560,7 +564,7 @@ def main(options, program_file, cpp_file):
     main_body_strs.append(make_weights_init_block(options, ensembles_info, name2enm, conn_types))
 
     # load data
-    main_body_strs.append(make_load_data(networks2enms))
+    main_body_strs.append(make_load_data(options, networks2enms))
 
     # run solver
     #main_body_strs.append([make_init_solver(solver)])
@@ -607,6 +611,7 @@ if __name__ == "__main__":
     parser.add_option("-f", "--fusion", action="store_true", dest="FUSION_FLAG", \
                       default=False, help="option to turn on fusion functionality.")
     parser.add_option("-v", "--verbose", action="store_true", dest="verbose", help="verbose")
+    parser.add_option("", "--mini", action="store_true", dest="mini", help="mini")
     (options, args) = parser.parse_args()
     if len(args) != 2: 
         parser.print_help()
