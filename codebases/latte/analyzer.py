@@ -7,6 +7,7 @@ from templates import *
 from copy import deepcopy
 from translator import *
 from lib import *
+from term import *
 
 neuron_analyzers = { }
 
@@ -177,7 +178,7 @@ class NeuronAnalyzer(object):
         var_name = node.targets[0].attr
         var_type = self.parse_var_type(node)
         if var_type is None or var_name in field_blacklist:
-            print "ignore %s.%s" % (self.name, var_name)
+            term.dump("ignore %s.%s" % (self.name, var_name), term.WARNING)
         else:
             self.fields[var_name] = var_type
 
@@ -260,7 +261,7 @@ def process_add_connection_helper(all_functions, function_ast):
                                     mappings = RewriteName(old_name, new_name).visit(mappings)
                                 # return layer_name, args, mapping
                                 return layer_name, args, mappings
-            print layer_name, "NO MATCH FOR ADD_CONNECTION"
+            term.dump("NO MATCH FOR ADD_CONNECTION: %s" % layer_name, term.FAIL)
     return None, None, None
 
 def ast2lambda(mapping, args, ensemble, name2enm):
@@ -348,7 +349,7 @@ def process_add_connection(filename, name2enm):
     # review the mapping functions for layer connections
     for layer, (args, mappings, share_weights) in conn_types.iteritems():
         print ""
-        print "layer:", layer
+        term.dump("layer: %s" % layer, term.OKGREEN)
         print "args: ", args
         print "share weights: ", share_weights
         print "conn: ", ast_dump(mappings)

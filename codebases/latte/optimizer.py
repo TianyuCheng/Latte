@@ -206,7 +206,9 @@ class FusionOptimizer(Optimizer):
         # been fused over yet
         ensemble_order_copy = self.ensemble_order[:]
 
+        print ensemble_order_copy
         for current_ensemble in self.ensemble_order:
+            print current_ensemble
             # if the ensemble we are looking at doesn't exist anymore
             # ignore it
             if current_ensemble not in ensemble_order_copy:
@@ -214,9 +216,12 @@ class FusionOptimizer(Optimizer):
 
             my_for_node = self.dict_of_trees[current_ensemble]
 
+            # ignore if it has no for node
+            if my_for_node == None:
+                continue
+
             # loop over ensembles that come after this one
             to_loop_over = ensemble_order_copy[ensemble_order_copy.index(current_ensemble) + 1:]
-
             removal_queue = []
 
             for other_ensemble in to_loop_over:
@@ -232,6 +237,7 @@ class FusionOptimizer(Optimizer):
                 loops_good = True
 
                 while True:
+                    print "yay"
                     if not isinstance(current1, ForNode) and\
                        not isinstance(current2, ForNode):
                         # done matching for nodes; break
@@ -301,16 +307,24 @@ class FusionOptimizer(Optimizer):
                             break
                         # otherwise it will continue into the next iteration
 
+
                 # if loops_good is not true, we cannot fuse; continue to the
                 # next loop 
                 if not loops_good:
                     continue
 
                 # otherwise we move onto the variable dependency checks,
-                # the non-trivial part of this
+                # the non-trivial part of the fusion check
 
                 # do checks from current loop to the loop we want to fuse first
 
+                w_variable_names, w_array_accesses = my_for_node.get_writes()
+                r_variable_names, r_array_accesses = other_for_node.get_reads()
+                
+                #print my_for_node
+                #print variable_names
+                #print array_accesses
+
                 # now checks from loop we want to fuse to current loop
 
-                ensemble_order_copy.remove(other_ensemble)
+                #ensemble_order_copy.remove(other_ensemble)
