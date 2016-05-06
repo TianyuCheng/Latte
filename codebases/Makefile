@@ -23,7 +23,7 @@ Latte: Latte.cpp
 	$(CC) -o Latte Latte.o ${LINK_FLAGS}
 
 sbatch:
-	@echo "#!/bin/bash"              > $(SBATCH).sbatch
+	@echo "#!/bin/bash"              >  $(SBATCH).sbatch
 	@echo "#SBATCH -J $(SBATCH)"     >> $(SBATCH).sbatch 
 	@echo "#SBATCH -o $(SBATCH).out" >> $(SBATCH).sbatch 
 	@echo "#SBATCH -e $(SBATCH).err" >> $(SBATCH).sbatch 
@@ -57,6 +57,11 @@ mini:
 mfc: mnist-fc-fc.cpp
 	$(CC) -c ${CXX_FLAGS} $<
 	$(CC) -o mnist-fc-fc mnist-fc-fc.o ${LINK_FLAGS}
+
+clean_sbatch:
+	rm -rf *.sbatch
+	rm -rf *.out
+	rm -rf *.err
 
 clean:
 	rm -rf $(BUILD_DIR)
