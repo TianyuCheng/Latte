@@ -106,7 +106,7 @@ class ListNode(Node):
 
 class ForNode(Node):
     """Holds information for a for loop"""
-    def __init__(self, initial_name, initial, loop_bound, increment):
+    def __init__(self, initial_name, initial, loop_bound, increment, tile=False):
         super(ForNode, self).__init__()
 
         if not (isinstance(initial_name, Node) and
@@ -121,6 +121,8 @@ class ForNode(Node):
         self.loop_bound = loop_bound
         self.increment = increment
 
+        self.tile = tile
+
     def set_initial(self, i):
         self.initial.set_constant(i)
 
@@ -132,6 +134,9 @@ class ForNode(Node):
 
     def set_increment(self, i):
         self.increment.set_constant(i)
+
+    def is_tile(self):
+        return self.tile
 
     def get_initial(self):
         return self.initial.get_constant()
@@ -150,7 +155,8 @@ class ForNode(Node):
         my_copy = ForNode(self.initial_name.deep_copy(), 
                           self.initial.deep_copy(), 
                           self.loop_bound.deep_copy(),
-                          self.increment.deep_copy())
+                          self.increment.deep_copy(),
+                          self.tile)
 
         for child in self.children:
             child_copy = child.deep_copy()
