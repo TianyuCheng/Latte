@@ -29,7 +29,7 @@ sbatch:
 	@echo "#SBATCH -e $(SBATCH).err" >> $(SBATCH).sbatch 
 	@echo "#SBATCH -n 2" 	     	 >> $(SBATCH).sbatch 
 	@echo "#SBATCH -p normal"    	 >> $(SBATCH).sbatch 
-	@echo "#SBATCH -t 01:00:00"  	 >> $(SBATCH).sbatch 
+	@echo "#SBATCH -t 00:15:00"  	 >> $(SBATCH).sbatch 
 	@echo ""  				     	 >> $(SBATCH).sbatch 
 
 mkl:
