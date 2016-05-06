@@ -419,6 +419,7 @@ def make_solve_block(options, conn_types, neuron_analyzers, solver_info, ensembl
     solve_block.append("timespec t = time_diff(start, stop);");
     solve_block.append("times.push_back(t.tv_sec);");
     solve_block.append('cout << "time for iter(s): " << t.tv_sec << endl;');
+    solve_block.append('cout << "time for iter(ns): " << t.tv_nsec << endl;');
 
     solve_block.append("} // end of iterative traversal") # end the iteration loop
     return solve_block
@@ -586,6 +587,7 @@ def main(options, program_file, cpp_file):
 
     # load data
     main_body_strs.append(make_load_data(options, networks2enms))
+    main_body_strs.append(['cout << "Loaded Data Successfully" << endl;'])
 
     # run solver
     #main_body_strs.append([make_init_solver(solver)])
