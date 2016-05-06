@@ -1,9 +1,29 @@
 #/bin/bash
 
-make clean sbatch mini mnist-fc-fc SBATCH="mnist-none"
-make clean sbatch mini tiling mnist-fc-fc SBATCH="mnist-t"
-make clean sbatch mini tiling fusion mnist-fc-fc SBATCH="mnist-t-f"
+EXE="mnist-fc-fc"
 
-make clean sbatch mini batch mnist-fc-fc SBATCH="mnist-b"
-make clean sbatch mini batch tiling mnist-fc-fc SBATCH="mnist-b-t"
-make clean sbatch mini batch tiling fusion mnist-fc-fc SBATCH="mnist-b-t-f"
+mkdir -p sbatch
+
+make clean sbatch mini $EXE SBATCH="./sbatch/mnist-none"
+mv $EXE ./sbatch/$EXE-none
+echo "./$EXE-none" >> ./sbatch/mnist-none.sbatch
+
+make clean sbatch mini tiling $EXE SBATCH="./sbatch/mnist-t"
+mv $EXE ./sbatch/$EXE-t
+echo "./$EXE-t" >> ./sbatch/mnist-t.sbatch
+
+make clean sbatch mini tiling fusion $EXE SBATCH="./sbatch/mnist-t-f"
+mv $EXE ./sbatch/$EXE-t-f
+echo "./$EXE-t-f" >> ./sbatch/mnist-t-f.sbatch
+
+make clean sbatch mini batch $EXE SBATCH="./sbatch/mnist-b"
+mv $EXE ./sbatch/$EXE-b
+echo "./$EXE-b" >> ./sbatch/mnist-b.sbatch
+
+make clean sbatch mini batch tiling $EXE SBATCH="./sbatch/mnist-b-t"
+mv $EXE ./sbatch/$EXE-b-t
+echo "./$EXE-b-t" >> ./sbatch/mnist-b-t.sbatch
+
+make clean sbatch mini batch tiling fusion $EXE SBATCH="./sbatch/mnist-b-t-f"
+mv $EXE ./sbatch/$EXE-b-t-f
+echo "./$EXE-b-t-f" >> ./sbatch/mnist-b-t-f.sbatch

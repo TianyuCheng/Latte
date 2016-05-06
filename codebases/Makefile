@@ -50,7 +50,6 @@ mini:
 %: %.cpp
 	$(CC) -c ${CXX_FLAGS} $< -o $<.o
 	$(CC) -o $@ $<.o ${LINK_FLAGS}
-	@echo "./$@" >> $(SBATCH).sbatch
 
 %.cpp: $(test_dir)/%.py
 	$(GEN) $(GEN_FLAGS) $< $@
@@ -66,4 +65,5 @@ clean:
 	rm -rf $(deletes)
 	rm -rf latte.out latte.err
 
+.PHONY: batch fusion tiling mini sbatch
 .PRECIOUS: %.cpp
