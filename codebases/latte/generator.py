@@ -583,6 +583,7 @@ def main(options, program_file, cpp_file):
 
     # load data
     main_body_strs.append(make_load_data(options, networks2enms))
+    main_body_strs.append(['cout << "Loaded Data Successfully" << endl;'])
 
     # run solver
     #main_body_strs.append([make_init_solver(solver)])
