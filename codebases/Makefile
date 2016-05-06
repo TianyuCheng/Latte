@@ -1,11 +1,11 @@
-#CC		   := icpc -std=c++0x
-#CXX_FLAGS  := -DMKL_ILP64 -m64 -I${MKLROOT}/include -I${TACC_BOOST_INC} -openmp -lrt
-#LINK_FLAGS := -Wl,--start-group -L${TACC_BOOST_LIB} ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm -ldl -openmp -lrt
+CC		   := icpc -std=c++0x
+CXX_FLAGS  := -DMKL_ILP64 -m64 -I${MKLROOT}/include -I${TACC_BOOST_INC} -openmp -lrt
+LINK_FLAGS := -Wl,--start-group -L${TACC_BOOST_LIB} ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm -ldl -openmp -lrt
 
-CC		   := g++ -std=c++11
-MKLROOT    := /home/jimmylin/intel/compilers_and_libraries/linux/mkl
-CXX_FLAGS  := -DMKL_ILP64 -m64 -I${MKLROOT}/include -fopenmp -lrt
-LINK_FLAGS := -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm -ldl -fopenmp -lrt
+# CC		   := g++ -std=c++11
+# MKLROOT    := /home/jimmylin/intel/compilers_and_libraries/linux/mkl
+# CXX_FLAGS  := -DMKL_ILP64 -m64 -I${MKLROOT}/include -fopenmp -lrt
+# LINK_FLAGS := -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm -ldl -fopenmp -lrt
 
 GEN		   := ./latte/generator.py
 GEN_FLAGS  := 
@@ -23,14 +23,14 @@ Latte: Latte.cpp
 	$(CC) -o Latte Latte.o ${LINK_FLAGS}
 
 sbatch:
-	@echo "#!/bin/bash"              > $(SBATCH).batch
-	@echo "#SBATCH -J $(SBATCH)"     >> $(SBATCH).batch 
-	@echo "#SBATCH -o $(SBATCH).out" >> $(SBATCH).batch 
-	@echo "#SBATCH -e $(SBATCH).err" >> $(SBATCH).batch 
-	@echo "#SBATCH -n 2" 	     	 >> $(SBATCH).batch 
-	@echo "#SBATCH -p normal"    	 >> $(SBATCH).batch 
-	@echo "#SBATCH -t 01:00:00"  	 >> $(SBATCH).batch 
-	@echo ""  				     	 >> $(SBATCH).batch 
+	@echo "#!/bin/bash"              > $(SBATCH).sbatch
+	@echo "#SBATCH -J $(SBATCH)"     >> $(SBATCH).sbatch 
+	@echo "#SBATCH -o $(SBATCH).out" >> $(SBATCH).sbatch 
+	@echo "#SBATCH -e $(SBATCH).err" >> $(SBATCH).sbatch 
+	@echo "#SBATCH -n 2" 	     	 >> $(SBATCH).sbatch 
+	@echo "#SBATCH -p normal"    	 >> $(SBATCH).sbatch 
+	@echo "#SBATCH -t 01:00:00"  	 >> $(SBATCH).sbatch 
+	@echo ""  				     	 >> $(SBATCH).sbatch 
 
 mkl:
 	$(eval GEN_FLAGS := $(GEN_FLAGS) -m)
@@ -50,7 +50,7 @@ mini:
 %: %.cpp
 	$(CC) -c ${CXX_FLAGS} $< -o $<.o
 	$(CC) -o $@ $<.o ${LINK_FLAGS}
-	@echo "./$@" >> $(SBATCH).batch
+	@echo "./$@" >> $(SBATCH).sbatch
 
 %.cpp: $(test_dir)/%.py
 	$(GEN) $(GEN_FLAGS) $< $@
