@@ -311,6 +311,12 @@ class FusionOptimizer(Optimizer):
 
                 # do checks from current loop to the loop we want to fuse first
 
+                variable_names, array_accesses = my_for_node.get_writes()
+                print my_for_node
+                print variable_names
+                print array_accesses
+                raise Exception()
+
                 # now checks from loop we want to fuse to current loop
 
                 ensemble_order_copy.remove(other_ensemble)

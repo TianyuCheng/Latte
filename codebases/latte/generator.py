@@ -570,6 +570,19 @@ def main(options, program_file, cpp_file):
         opt2 = TilingOptimizer(bp_codes, backwards_ensemble_order)
         backwards_ensemble_order = opt2.optimize()
 
+    fusion_flag = options.FUSION_FLAG
+
+    #TODO check this later for correctness
+    # if fusion set, do fusion
+    if fusion_flag:
+        # forward
+        opt1 = FusionOptimizer(fp_codes, forwards_ensemble_order)
+        forwards_ensemble_order = opt1.optimize()
+
+        # backward
+        opt2 = FusionOptimizer(bp_codes, backwards_ensemble_order)
+        backwards_ensemble_order = opt2.optimize()
+
     # CODE GENERATION:
     main_body_strs = []
 
