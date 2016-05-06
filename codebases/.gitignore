@@ -27,7 +27,6 @@ bin/
 
 # Executables
 *.exe
-*.out
 *.app
 
 # vim temp
@@ -45,3 +44,4 @@ fc-conv-fc
 fc-meanp-fc
 
 *.sbatch
+sbatches/*

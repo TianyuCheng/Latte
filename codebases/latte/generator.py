@@ -16,6 +16,7 @@ from analyzer import *
 NARGS = 3
 
 from optimizer import TilingOptimizer
+from optimizer import FusionOptimizer
 
 '''
 def usage():
@@ -73,9 +74,9 @@ def make_newlines(num=1):
 # def make_indent(num=indent):
 #     return "    " * num
 
-def make_mkl_malloc(options, mat_name, dim_x, dim_y, tp):
+def make_mkl_malloc(options, mat_name, dim_x, dim_y, tp, share=False):
     if tp == "float*":
-        if options.DP_FLAG: 
+        if options.DP_FLAG and not share: 
             string = "vector<%s> %s (%d, NULL); \n" % (tp, mat_name, options.NWORKERS)
             string += "for (int i = 0; i < %d; i ++) %s[i] = init_mkl_mat(%s, %s);" \
                     % (options.NWORKERS, mat_name, dim_x, dim_y)
@@ -129,7 +130,7 @@ def make_allocate_block(options, ensembles_info, neuron_analyzers, conn_types, a
                     if (attr == "weights" or attr == "grad_weights"):
                         attributes[attr] = "float*"
                         block.append(make_mkl_malloc(options, mat_name, \
-                                         _aux['ker_dim_x'], _aux['ker_dim_y'], attributes[attr])) 
+                                         _aux['ker_dim_x'], _aux['ker_dim_y'], attributes[attr], True)) 
                         continue
                 block.append(make_mkl_malloc(options, mat_name, _dim_x, _dim_y, attributes[attr])) 
             else:
@@ -185,7 +186,7 @@ def make_weights_init_block(options, ensembles_info, name2enm, conn_types, alloc
         block.append(init_str)   
     return block
 
-def make_load_data(networks2enms):
+def make_load_data(options, networks2enms):
     for net, ensembles in networks2enms.iteritems():
         enm = ensembles[0]
         load_block = []
@@ -196,11 +197,15 @@ def make_load_data(networks2enms):
         load_block.append("vector<float*> train_features, test_features;");
         load_block.append("vector<int> train_labels, test_labels;");
 
+        sub = ""
+        if options.mini:
+            sub = ".mini"
+
         # we need number of features
-        load_block.append("""read_libsvm("%s", train_features, train_labels, %d, %d, %d);""" % (\
-            enm["train_file"], enm["dim_x"], enm["dim_y"], enm['nLabels']))
-        load_block.append("""read_libsvm("%s", test_features, test_labels, %d, %d, %d);""" % (\
-            enm["test_file"], enm["dim_x"], enm["dim_y"], enm['nLabels']))
+        load_block.append("""read_%s("%s", train_features, train_labels, %d, %d, %d);""" % (\
+            data_format, enm["train_file"] + sub, enm["dim_x"], enm["dim_y"], enm['nLabels']))
+        load_block.append("""read_%s("%s", test_features, test_labels, %d, %d, %d);""" % (\
+            data_format, enm["test_file"], enm["dim_x"], enm["dim_y"], enm['nLabels']))
         
         load_block.append("assert (train_features.size() == train_labels.size());")
         load_block.append("assert (test_features.size() == test_labels.size());")
@@ -290,11 +295,21 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes,
 def make_solve_block(options, conn_types, neuron_analyzers, solver_info, ensembles_info, name2enm, bp_codes, 
                      fp_codes, forwards_ensemble_order, backwards_ensemble_order):
     solve_block = []
+
+    # store time for each iteration
+    solve_block.append("vector<float> times;")
+    solve_block.append("timespec start;")
+    solve_block.append("timespec stop;")
+
     iterations = str(solver_info["iter"])
     if solver_info["step"] > 0: step_size = str(solver_info["step"] * -1.0)
     solve_block.append("// solve block")
-    solve_block.append(make_loop_header("iter", 0, str(iterations), 1) + "{")
+    # solve_block.append(make_loop_header("iter", 0, str(iterations), 1) + "{")
+    solve_block.append(make_loop_header("iter", 0, 1, 1) + "{")
     solve_block.append("")
+
+    # measure iteration time time
+    solve_block.append("clock_gettime(CLOCK_MONOTONIC, &start);");
 
     # Data parallel: add pragma directive here (a new nested loop with batch)
     numWorkers = options.NWORKERS
@@ -332,16 +347,19 @@ def make_solve_block(options, conn_types, neuron_analyzers, solver_info, ensembl
 
     # annotate
     _cur, _type, _prev, _dim_x, _dim_y  = ensembles_info[-1][:5]
+    mat_name = _cur+"_output"+subscript
     annotate_str = "// annotate for loss layer\n"
     annotate_str += "float sumover = 0.0;\n"
     annotate_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
     annotate_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
-    annotate_str += "\t\tsumover += *(%s+x*%s+y);\n" % (_cur+"_output"+subscript, _dim_y)
+    annotate_str += "\t\tsumover += *(%s+x*%s+y);\n" % (mat_name, _dim_y)
     annotate_str += "\t}\n}\n"
     annotate_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
     annotate_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
     annotate_str += "\t\t*(%s+x*%s+y) = *(%s+x*%s+y) / sumover;\n" % \
             (_cur+"_output"+subscript, _dim_y, _cur+"_output"+subscript, _dim_y)
+    annotate_str += "if (!(*(%s+x*%s+y) <= 1)) *(%s+x*%d+y) = 1;" \
+            % (mat_name, _dim_y, mat_name, _dim_y)
     annotate_str += "\t}\n}\n"
     solve_block.append(annotate_str)
 
@@ -371,14 +389,15 @@ def make_solve_block(options, conn_types, neuron_analyzers, solver_info, ensembl
             weights_update_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
             weights_update_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
             if options.DP_FLAG: 
+                weights_update_str += "#pragma omp critical\n{\n"
                 weights_update_str += "\t\tfor (int i = 0; i < %s ; i ++) {\n" % prev_dim_x
                 weights_update_str += "\t\tfor (int j = 0; j < %s ; j ++) {\n" % prev_dim_y
-                weights_update_str += "#pragma omp atomic\n"
+                #weights_update_str += "#pragma omp atomic\n"
                 weights_update_str += \
                         "*(%s[x][y]+i*%s+j) = *(%s[x][y]+i*%s+j) + (%s) * (*(%s[tid][x][y]+i*%d+j));\n" \
                         % (_cur+"_weights", prev_dim_y, _cur+"_weights", prev_dim_y, \
                            step_size, _cur+"_grad_weights", prev_dim_y) 
-                weights_update_str += "\t\t}\n\t\t}\n"
+                weights_update_str += "}\n\t\t}\n\t\t}\n"
                 subscript = "[tid]"
             else: 
                 subscript = ""
@@ -396,6 +415,14 @@ def make_solve_block(options, conn_types, neuron_analyzers, solver_info, ensembl
     solve_block.append("")
 
     solve_block.append("} // end of data instances traversal") # end the train data sets loop
+
+    # time measurement
+    solve_block.append("clock_gettime(CLOCK_MONOTONIC, &stop);");
+    solve_block.append("timespec t = time_diff(start, stop);");
+    solve_block.append("times.push_back(t.tv_sec);");
+    solve_block.append('cerr << "time for iter(s): " << t.tv_sec << endl;');
+    solve_block.append('cerr << "time for iter(ns): " << t.tv_nsec << endl;');
+
     solve_block.append("} // end of iterative traversal") # end the iteration loop
     return solve_block
 
@@ -435,9 +462,12 @@ def main(options, program_file, cpp_file):
                 if 'Neuron' not in layer: 
                     if layer['type'] == 'LibsvmDataLayer':
                         layer['Neuron'] = 'DataNeuron'
+                    elif layer['type'] == 'MnistDataLayer':
+                        layer['Neuron'] = 'DataNeuron'
                     elif layer['type'] == 'SoftmaxLossLayer':
                         layer['Neuron'] = 'SoftmaxNeuron'
                     else:
+                        # print "##", layer
                         assert False
                 networks2enms[net_name].append(layer)
     print "###########################################"
@@ -446,12 +476,16 @@ def main(options, program_file, cpp_file):
         layer_names = map(lambda x: x['name'], networks2enms[net_name])
         layer_dict = dict(zip(layer_names, networks2enms[net_name]))
         layers = filter(lambda x: x['prev'] == None, networks2enms[net_name])
+        if len(layers) != 1:
+            print "ERROR (NEXT LAYER): ", layers
         assert len(layers) == 1
         layer_name = layers[0]['name']
         num_layers = len(networks2enms[net_name]) - 1
         while num_layers > 0:
             next_layer = filter(lambda x: x['prev'] == layer_name, networks2enms[net_name])
             print next_layer
+            if len(next_layer) != 1:
+                print "ERROR (NEXT LAYER): ", next_layer
             assert len(next_layer) == 1
             num_layers -= 1
             layers = layers + next_layer
@@ -543,6 +577,19 @@ def main(options, program_file, cpp_file):
         opt2 = TilingOptimizer(bp_codes, backwards_ensemble_order)
         backwards_ensemble_order = opt2.optimize()
 
+    fusion_flag = options.FUSION_FLAG
+
+    #TODO check this later for correctness
+    # if fusion set, do fusion
+    if fusion_flag:
+        # forward
+        opt1 = FusionOptimizer(fp_codes, forwards_ensemble_order)
+        forwards_ensemble_order = opt1.optimize()
+
+        # backward
+        opt2 = FusionOptimizer(bp_codes, backwards_ensemble_order)
+        backwards_ensemble_order = opt2.optimize()
+
     # CODE GENERATION:
     main_body_strs = []
 
@@ -559,7 +606,8 @@ def main(options, program_file, cpp_file):
     main_body_strs.append(make_weights_init_block(options, ensembles_info, name2enm, conn_types))
 
     # load data
-    main_body_strs.append(make_load_data(networks2enms))
+    main_body_strs.append(make_load_data(options, networks2enms))
+    main_body_strs.append(['cout << "Loaded Data Successfully" << endl;'])
 
     # run solver
     #main_body_strs.append([make_init_solver(solver)])
@@ -571,10 +619,10 @@ def main(options, program_file, cpp_file):
     main_body_strs.append(make_test_block(solver, ensembles_info, name2enm, fp_codes,
                           forwards_ensemble_order, backwards_ensemble_order))
 
-    # deallocating block
-    #main_body_strs.append(make_weights_init_block(ensembles_info, name2enm, False))
-    main_body_strs.append(make_allocate_block(options, ensembles_info, \
-                          neuron_analyzers, conn_types, False))
+    # # deallocating block
+    # #main_body_strs.append(make_weights_init_block(ensembles_info, name2enm, False))
+    # main_body_strs.append(make_allocate_block(options, ensembles_info, \
+    #                       neuron_analyzers, conn_types, False))
 
     # OUTPUT TO CPP FILE
     cpp_out = open(cpp_file, "w+")
@@ -606,6 +654,7 @@ if __name__ == "__main__":
     parser.add_option("-f", "--fusion", action="store_true", dest="FUSION_FLAG", \
                       default=False, help="option to turn on fusion functionality.")
     parser.add_option("-v", "--verbose", action="store_true", dest="verbose", help="verbose")
+    parser.add_option("", "--mini", action="store_true", dest="mini", help="mini")
     (options, args) = parser.parse_args()
     if len(args) != 2: 
         parser.print_help()
