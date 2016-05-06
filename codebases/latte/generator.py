@@ -16,6 +16,7 @@ from analyzer import *
 NARGS = 3
 
 from optimizer import TilingOptimizer
+from optimizer import FusionOptimizer
 
 '''
 def usage():
