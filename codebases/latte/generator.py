@@ -346,16 +346,19 @@ def make_solve_block(options, conn_types, neuron_analyzers, solver_info, ensembl
 
     # annotate
     _cur, _type, _prev, _dim_x, _dim_y  = ensembles_info[-1][:5]
+    mat_name = _cur+"_output"+subscript
     annotate_str = "// annotate for loss layer\n"
     annotate_str += "float sumover = 0.0;\n"
     annotate_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
     annotate_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
-    annotate_str += "\t\tsumover += *(%s+x*%s+y);\n" % (_cur+"_output"+subscript, _dim_y)
+    annotate_str += "\t\tsumover += *(%s+x*%s+y);\n" % (mat_name, _dim_y)
     annotate_str += "\t}\n}\n"
     annotate_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
     annotate_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
     annotate_str += "\t\t*(%s+x*%s+y) = *(%s+x*%s+y) / sumover;\n" % \
             (_cur+"_output"+subscript, _dim_y, _cur+"_output"+subscript, _dim_y)
+    annotate_str += "if (!(*(%s+x*%s+y) <= 1)) *(%s+x*%d+y) = 1;" \
+            % (mat_name, _dim_y, mat_name, _dim_y)
     annotate_str += "\t}\n}\n"
     solve_block.append(annotate_str)
 
