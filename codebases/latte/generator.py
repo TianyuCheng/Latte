@@ -73,9 +73,9 @@ def make_newlines(num=1):
 # def make_indent(num=indent):
 #     return "    " * num
 
-def make_mkl_malloc(options, mat_name, dim_x, dim_y, tp):
+def make_mkl_malloc(options, mat_name, dim_x, dim_y, tp, share=False):
     if tp == "float*":
-        if options.DP_FLAG: 
+        if options.DP_FLAG and not share: 
             string = "vector<%s> %s (%d, NULL); \n" % (tp, mat_name, options.NWORKERS)
             string += "for (int i = 0; i < %d; i ++) %s[i] = init_mkl_mat(%s, %s);" \
                     % (options.NWORKERS, mat_name, dim_x, dim_y)
@@ -129,7 +129,7 @@ def make_allocate_block(options, ensembles_info, neuron_analyzers, conn_types, a
                     if (attr == "weights" or attr == "grad_weights"):
                         attributes[attr] = "float*"
                         block.append(make_mkl_malloc(options, mat_name, \
-                                         _aux['ker_dim_x'], _aux['ker_dim_y'], attributes[attr])) 
+                                         _aux['ker_dim_x'], _aux['ker_dim_y'], attributes[attr], True)) 
                         continue
                 block.append(make_mkl_malloc(options, mat_name, _dim_x, _dim_y, attributes[attr])) 
             else:
