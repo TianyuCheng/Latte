@@ -297,46 +297,23 @@ void generate_shuffle_index(vector<int> &shuffle_index, int size) {
             */
 }
 
+timespec time_diff(timespec start, timespec end)
+{
+    timespec temp;
+    if ((end.tv_nsec-start.tv_nsec)<0) {
+        temp.tv_sec = end.tv_sec-start.tv_sec-1;
+        temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
+    } else {
+        temp.tv_sec = end.tv_sec-start.tv_sec;
+        temp.tv_nsec = end.tv_nsec-start.tv_nsec;
+    }
+    return temp;
+}
 
 typedef struct Index {
     int r = 1;
     int c;
 } Dim;
-
-/**
- * Connection
- * Functor for connection mappings from ensemble to ensemble
- * */
-class Connection
-{
-public:
-    virtual Index operator() (Index index) = 0;
-};
-
-/**
- * Neuron class
- * Base class for Neuron subtyping
- * */
-class Neuron
-{
-public:
-    // constructor and destructor
-    Neuron(Ensemble &ensemble, int pos_x, int pos_y) : x(pos_x), y(pos_y) {
-    }
-    virtual ~Neuron() {
-    }
-
-    // initialization functions
-    void init_inputs_dim(int dim_x, int dim_y, int prev_enm_size);
-    void init_grad_inputs_dim(int dim_x, int dim_y);
-    
-    // forward and backward propagation functions
-    void forward();
-    void backward();
-private:
-    int x;
-    int y;
-};
 
 /**
  * Ensemble class
@@ -354,24 +331,24 @@ public:
         if (prev != NULL) prev->next = this;
     }
     Ensemble(Dim s) : size(s) {
-        neurons.resize(size.r * size.c);
+        // neurons.resize(size.r * size.c);
         // all neurons constructions are independent
         // #pragma omp parallel for
-        for (int i = 0; i < neurons.size(); ++i)
-            neurons[i] = new Neuron(*this, i / s.r, i % s.c);
+        // for (int i = 0; i < neurons.size(); ++i)
+        //     neurons[i] = new Neuron(*this, i / s.r, i % s.c);
     }
     virtual ~Ensemble() {
         // all neurons destructions are independent
         // #pragma omp parallel for
-        for (int i = 0; i < neurons.size(); ++i)
-            delete neurons[i];
+        // for (int i = 0; i < neurons.size(); ++i)
+        //     delete neurons[i];
     }
-    int get_size() { return neurons.size(); }
-    void set_forward_adj(Connection &forward_adj);
-    void set_backward_adj(Connection &backward_adj);
+    // int get_size() { return neurons.size(); }
+    // void set_forward_adj(Connection &forward_adj);
+    // void set_backward_adj(Connection &backward_adj);
 private:
     Dim size;
-    vector<Neuron*> neurons;
+    // vector<Neuron*> neurons;
 };
 
 /**
@@ -403,34 +380,6 @@ private:
     vector<vector<float>> test_features;
     vector<int> train_labels;
     vector<int> test_labels;
-};
-
-/**
- * Base Solver class
- * */
-class Solver
-{
-public:
-    // constructor and destructor
-    Solver() { }
-    virtual ~Solver();
-    // need to override this abstract function: solve
-    virtual void solve(Network &net) = 0;
-};
-
-/**
- * Stochastic Gradient Descent
- * Solver for Deep Neural Network
- * */
-class SGDSolver : public Solver
-{
-public:
-    SGDSolver(int iter, float step) : iterations(iter) {
-    }
-    virtual ~SGDSolver ();
-    void solve(Network &net);
-private:
-    int iterations;
 };
 
 #endif

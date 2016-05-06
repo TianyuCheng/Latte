@@ -294,11 +294,20 @@ def make_test_block(solver_info, ensembles_info, name2enm, fp_codes,
 def make_solve_block(options, conn_types, neuron_analyzers, solver_info, ensembles_info, name2enm, bp_codes, 
                      fp_codes, forwards_ensemble_order, backwards_ensemble_order):
     solve_block = []
+
+    # store time for each iteration
+    solve_block.append("vector<float> times;")
+    solve_block.append("timespec start;")
+    solve_block.append("timespec stop;")
+
     iterations = str(solver_info["iter"])
     if solver_info["step"] > 0: step_size = str(solver_info["step"] * -1.0)
     solve_block.append("// solve block")
     solve_block.append(make_loop_header("iter", 0, str(iterations), 1) + "{")
     solve_block.append("")
+
+    # measure iteration time time
+    solve_block.append("clock_gettime(CLOCK_MONOTONIC, &start);");
 
     # Data parallel: add pragma directive here (a new nested loop with batch)
     numWorkers = options.NWORKERS
@@ -400,6 +409,13 @@ def make_solve_block(options, conn_types, neuron_analyzers, solver_info, ensembl
     solve_block.append("")
 
     solve_block.append("} // end of data instances traversal") # end the train data sets loop
+
+    # time measurement
+    solve_block.append("clock_gettime(CLOCK_MONOTONIC, &stop);");
+    solve_block.append("timespec t = time_diff(start, stop);");
+    solve_block.append("times.push_back(t.tv_sec);");
+    solve_block.append('cout << "time for iter(s): " << t.tv_sec << endl;');
+
     solve_block.append("} // end of iterative traversal") # end the iteration loop
     return solve_block
 

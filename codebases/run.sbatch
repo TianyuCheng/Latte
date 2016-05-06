@@ -25,3 +25,9 @@
 ./mnist-fc-fc
 ./mnist-fc-fc
 ./mnist-fc-fc
+./mnist-fc-fc
+./mnist-fc-fc
+./iris-fc-fc
+./mnist-fc-fc
+./mnist-fc-fc
+./iris-fc-fc
