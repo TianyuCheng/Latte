@@ -296,6 +296,10 @@ We primarily referred to the Latte Paper provided in the course CS380C Compilers
 
    http://www.tablesgenerator.com/markdown\_tables
 
+- [Other] Loop Fusion
+
+   https://www.cs.utexas.edu/users/lin/cs380c/handout27.pdf
+
 Errors
 ------
 
