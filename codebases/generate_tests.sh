@@ -10,7 +10,7 @@ function generate() {
 } 
 
 FLAGS=""
-SUFFIX=""
+SUFFIX="-none"
 generate
 
 FLAGS="tiling"

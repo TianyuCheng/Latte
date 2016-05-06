@@ -303,7 +303,8 @@ def make_solve_block(options, conn_types, neuron_analyzers, solver_info, ensembl
     iterations = str(solver_info["iter"])
     if solver_info["step"] > 0: step_size = str(solver_info["step"] * -1.0)
     solve_block.append("// solve block")
-    solve_block.append(make_loop_header("iter", 0, str(iterations), 1) + "{")
+    # solve_block.append(make_loop_header("iter", 0, str(iterations), 1) + "{")
+    solve_block.append(make_loop_header("iter", 0, 1, 1) + "{")
     solve_block.append("")
 
     # measure iteration time time
@@ -593,10 +594,10 @@ def main(options, program_file, cpp_file):
     main_body_strs.append(make_test_block(solver, ensembles_info, name2enm, fp_codes,
                           forwards_ensemble_order, backwards_ensemble_order))
 
-    # deallocating block
-    #main_body_strs.append(make_weights_init_block(ensembles_info, name2enm, False))
-    main_body_strs.append(make_allocate_block(options, ensembles_info, \
-                          neuron_analyzers, conn_types, False))
+    # # deallocating block
+    # #main_body_strs.append(make_weights_init_block(ensembles_info, name2enm, False))
+    # main_body_strs.append(make_allocate_block(options, ensembles_info, \
+    #                       neuron_analyzers, conn_types, False))
 
     # OUTPUT TO CPP FILE
     cpp_out = open(cpp_file, "w+")
