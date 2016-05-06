@@ -206,7 +206,9 @@ class FusionOptimizer(Optimizer):
         # been fused over yet
         ensemble_order_copy = self.ensemble_order[:]
 
+        print ensemble_order_copy
         for current_ensemble in self.ensemble_order:
+            print current_ensemble
             # if the ensemble we are looking at doesn't exist anymore
             # ignore it
             if current_ensemble not in ensemble_order_copy:
@@ -214,9 +216,12 @@ class FusionOptimizer(Optimizer):
 
             my_for_node = self.dict_of_trees[current_ensemble]
 
+            # ignore if it has no for node
+            if my_for_node == None:
+                continue
+
             # loop over ensembles that come after this one
             to_loop_over = ensemble_order_copy[ensemble_order_copy.index(current_ensemble) + 1:]
-
             removal_queue = []
 
             for other_ensemble in to_loop_over:
@@ -232,6 +237,7 @@ class FusionOptimizer(Optimizer):
                 loops_good = True
 
                 while True:
+                    print "yay"
                     if not isinstance(current1, ForNode) and\
                        not isinstance(current2, ForNode):
                         # done matching for nodes; break
@@ -300,6 +306,11 @@ class FusionOptimizer(Optimizer):
                         elif not forchild1 and not forchild2:
                             break
                         # otherwise it will continue into the next iteration
+                print "here"
+                variable_names, array_accesses = my_for_node.get_writes()
+                print my_for_node
+                print variable_names
+                print array_accesses
 
                 # if loops_good is not true, we cannot fuse; continue to the
                 # next loop 
