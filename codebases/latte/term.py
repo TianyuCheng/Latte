@@ -14,4 +14,4 @@ class term:
 
     @staticmethod
     def dump(thing, color=NORMAL):
-        print color, thing, term.ENDC
+        print "%s%s%s" % (color, thing, term.ENDC)

@@ -1,6 +1,6 @@
 CC		   := icpc -std=c++0x
-CXX_FLAGS  := -O3 -DMKL_ILP64 -m64 -I${MKLROOT}/include -I${TACC_BOOST_INC} -openmp -lrt
-LINK_FLAGS := -O3 -Wl,--start-group -L${TACC_BOOST_LIB} ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm -ldl -openmp -lrt
+CXX_FLAGS  := -O3 -DMKL_ILP64 -m64 -I${MKLROOT}/include -I${TACC_BOOST_INC} -openmp -lrt -xhost
+LINK_FLAGS := -O3 -Wl,--start-group -L${TACC_BOOST_LIB} ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm -ldl -openmp -lrt -xhost
 
 # CC		   := g++ -std=c++11
 # MKLROOT    := /home/jimmylin/intel/compilers_and_libraries/linux/mkl
@@ -9,7 +9,7 @@ LINK_FLAGS := -O3 -Wl,--start-group -L${TACC_BOOST_LIB} ${MKLROOT}/lib/intel64/l
 
 GEN		   := ./latte/generator.py
 GEN_FLAGS  := 
-NUM_WORKERS:= 5
+NUM_WORKERS:= 4
 test_dir   := ../testcases
 tests      := $(patsubst %.py, %, $(shell (cd $(test_dir); ls *.py)))
 deletes    := $(patsubst %, %.cpp, $(tests))

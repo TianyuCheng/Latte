@@ -389,14 +389,15 @@ def make_solve_block(options, conn_types, neuron_analyzers, solver_info, ensembl
             weights_update_str += "for (int x = 0; x < %s; x++) {\n" % _dim_x
             weights_update_str += "\tfor (int y = 0; y < %s; y++) {\n" % _dim_y
             if options.DP_FLAG: 
+                weights_update_str += "#pragma omp critical\n{\n"
                 weights_update_str += "\t\tfor (int i = 0; i < %s ; i ++) {\n" % prev_dim_x
                 weights_update_str += "\t\tfor (int j = 0; j < %s ; j ++) {\n" % prev_dim_y
-                weights_update_str += "#pragma omp atomic\n"
+                #weights_update_str += "#pragma omp atomic\n"
                 weights_update_str += \
                         "*(%s[x][y]+i*%s+j) = *(%s[x][y]+i*%s+j) + (%s) * (*(%s[tid][x][y]+i*%d+j));\n" \
                         % (_cur+"_weights", prev_dim_y, _cur+"_weights", prev_dim_y, \
                            step_size, _cur+"_grad_weights", prev_dim_y) 
-                weights_update_str += "\t\t}\n\t\t}\n"
+                weights_update_str += "}\n\t\t}\n\t\t}\n"
                 subscript = "[tid]"
             else: 
                 subscript = ""
@@ -419,8 +420,8 @@ def make_solve_block(options, conn_types, neuron_analyzers, solver_info, ensembl
     solve_block.append("clock_gettime(CLOCK_MONOTONIC, &stop);");
     solve_block.append("timespec t = time_diff(start, stop);");
     solve_block.append("times.push_back(t.tv_sec);");
-    solve_block.append('cout << "time for iter(s): " << t.tv_sec << endl;');
-    solve_block.append('cout << "time for iter(ns): " << t.tv_nsec << endl;');
+    solve_block.append('cerr << "time for iter(s): " << t.tv_sec << endl;');
+    solve_block.append('cerr << "time for iter(ns): " << t.tv_nsec << endl;');
 
     solve_block.append("} // end of iterative traversal") # end the iteration loop
     return solve_block
