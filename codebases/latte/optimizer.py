@@ -306,11 +306,7 @@ class FusionOptimizer(Optimizer):
                         elif not forchild1 and not forchild2:
                             break
                         # otherwise it will continue into the next iteration
-                print "here"
-                variable_names, array_accesses = my_for_node.get_writes()
-                print my_for_node
-                print variable_names
-                print array_accesses
+
 
                 # if loops_good is not true, we cannot fuse; continue to the
                 # next loop 
@@ -322,12 +318,13 @@ class FusionOptimizer(Optimizer):
 
                 # do checks from current loop to the loop we want to fuse first
 
-                variable_names, array_accesses = my_for_node.get_writes()
-                print my_for_node
-                print variable_names
-                print array_accesses
-                raise Exception()
+                w_variable_names, w_array_accesses = my_for_node.get_writes()
+                r_variable_names, r_array_accesses = other_for_node.get_reads()
+                
+                #print my_for_node
+                #print variable_names
+                #print array_accesses
 
                 # now checks from loop we want to fuse to current loop
 
-                ensemble_order_copy.remove(other_ensemble)
+                #ensemble_order_copy.remove(other_ensemble)

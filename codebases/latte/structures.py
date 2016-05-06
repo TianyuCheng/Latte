@@ -180,6 +180,8 @@ class ForNode(Node):
             variable_names = variable_names + v
             array_accesses = array_accesses + a
 
+        return variable_names, array_accesses
+
     def get_reads(self):
         variable_names = []
         array_accesses = []
@@ -189,6 +191,9 @@ class ForNode(Node):
 
             variable_names = variable_names + v
             array_accesses = array_accesses + a
+
+        return variable_names, array_accesses
+
           
     def __str__(self):
         """Prints the ENTIRE loop including its children"""
@@ -234,7 +239,7 @@ class ConstantNode(Node):
     def get_use(self):
         """assumes constant nodes have no children"""
         if self.is_var():
-            # only a write if we represent a variable
+            # only matters if we represent a variable
             return [self.constant], []
         else:
             return [], []
@@ -294,7 +299,7 @@ class AssignmentNode(Node):
     def get_reads(self):
         """assumes no children"""
         # only right hand side is read
-        variable_names, array_accesses = self.left.get_writes()
+        variable_names, array_accesses = self.right.get_reads()
 
         return variable_names, array_accesses
 
@@ -517,9 +522,9 @@ class IndexNode(ListNode):
         array_name = self.base_addr
 
         if len(self.indices) == 1: 
-            return [], [(array_name, [self.indices[0]])]
+            return [], [(array_name.get_constant(), [self.indices[0]])]
         else:
-            return [], [(array_name, [self.indices[0], self.indices[1]])]
+            return [], [(array_name.get_constant(), [self.indices[0], self.indices[1]])]
 
     def get_writes(self):
         return self.get_use()
