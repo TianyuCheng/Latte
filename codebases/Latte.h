@@ -13,6 +13,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <limits>
 #include <algorithm>    // std::random_shuffle
 #include <mkl.h>
 
@@ -68,14 +69,17 @@ inline int argmax (float* vec, int size) {
     assert(size > 0 && "empty vector input.");
     int max_index = 0;
     float max_value = *vec;
-    for (int i = 1; i < size; i++) 
+    for (int i = 1; i < size; i++) {
+        if (!(*(vec+i) < INFINITY)) return i;
         if (*(vec+i) > max_value) {
             max_index = i;
             max_value = *(vec+i);
         }
+    }
     return max_index;
 }
 void Xaiver_initialize (float* mat, int n_j, int n_jp) {
+    // n_j  = 4; n_jp = 3;
     float high = sqrt(6.0 / (n_j+n_jp)), low = -1.0 * high;
     // boost::random::random_device generator;
     // boost::random::mt19937 generator ();
@@ -175,7 +179,7 @@ inline void sgemm_copy (float* sink, float* source, int n) {
 inline void sgemm_print (float* C, int dim_x, int dim_y) {
     for (int i = 0; i < dim_x; i ++) {
         for (int j = 0; j < dim_y; j ++) {
-            cout << *(C+5*i+j) << " ";
+            cout << *(C+dim_y*i+j) << " ";
         }
         cout << endl;
     }
@@ -197,6 +201,7 @@ void read_mnist(string filename, vector<float*> &features, vector<int> &labels,
     size_t num_features = count(line.begin(), line.end(), ',');
     assert (num_features % fea_dim_x == 0 && "features not in rectangular shape");
     size_t n_fea_dim_x = num_features / fea_dim_x;
+    cout << fea_dim_x << ","  << n_fea_dim_x << endl;
 
     int label;
     char comma;
@@ -231,7 +236,7 @@ void read_mnist(string filename, vector<float*> &features, vector<int> &labels,
 #endif
 
     // start normalizing features
-    #pragma omp parallel for
+    // #pragma omp parallel for
     for (int i = 0; i < features.size(); i++) {
         float *data_point = features[i];
         for (int i = 0; i < n_fea_dim_x; i++) {
