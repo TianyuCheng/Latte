@@ -21,13 +21,13 @@ generate
 # SUFFIX="-t-f"
 # generate
 
-FLAGS="batch"
-SUFFIX="-b"
-generate
-
-FLAGS="batch tiling"
-SUFFIX="-b-t"
-generate
+# FLAGS="batch"
+# SUFFIX="-b"
+# generate
+#
+# FLAGS="batch tiling"
+# SUFFIX="-b-t"
+# generate
 
 # FLAGS="batch tiling fusion"
 # SUFFIX="-b-t-f"
@@ -45,13 +45,13 @@ generate
 # SUFFIX="-m-t-f"
 # generate
 
-FLAGS="mkl batch"
-SUFFIX="-m-b"
-generate
-
-FLAGS="mkl batch tiling"
-SUFFIX="-m-b-t"
-generate
+# FLAGS="mkl batch"
+# SUFFIX="-m-b"
+# generate
+#
+# FLAGS="mkl batch tiling"
+# SUFFIX="-m-b-t"
+# generate
 
 # FLAGS="mkl batch tiling fusion"
 # SUFFIX="-m-b-t-f"
