@@ -5,7 +5,7 @@ EXE="mnist-fc-fc"
 function generate() { 
     make clean sbatch mini $FLAGS $EXE SBATCH=${EXE}${SUFFIX}
     mv $EXE ${EXE}${SUFFIX}
-    echo ./${EXE}${SFFIX} >> ./${EXE}${SUFFIX}.sbatch
+    echo ./${EXE}${SUFFIX} >> ./${EXE}${SUFFIX}.sbatch
     sbatch ./${EXE}${SUFFIX}.sbatch
 } 
 
