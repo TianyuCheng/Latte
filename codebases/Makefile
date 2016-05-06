@@ -14,21 +14,23 @@ test_dir   := ../testcases
 tests      := $(patsubst %.py, %, $(shell (cd $(test_dir); ls *.py)))
 deletes    := $(patsubst %, %.cpp, $(tests))
 
-all: sbatch clean $(tests)
+SBATCH	   := run.sbatch
+
+all: clean $(tests)
 
 Latte: Latte.cpp
 	$(CC) -c ${CXX_FLAGS} $<
 	$(CC) -o Latte Latte.o ${LINK_FLAGS}
 
 sbatch:
-	@echo "#!/bin/bash"          > run.sbatch
-	@echo "#SBATCH -J latte"     >> run.sbatch
-	@echo "#SBATCH -o latte.out" >> run.sbatch
-	@echo "#SBATCH -e latte.err" >> run.sbatch
-	@echo "#SBATCH -n 2" 	     >> run.sbatch
-	@echo "#SBATCH -p normal"    >> run.sbatch
-	@echo "#SBATCH -t 00:00:20"  >> run.sbatch
-	@echo ""  				     >> run.sbatch
+	@echo "#!/bin/bash"              > $(SBATCH).batch
+	@echo "#SBATCH -J $(SBATCH)"     >> $(SBATCH).batch 
+	@echo "#SBATCH -o $(SBATCH).out" >> $(SBATCH).batch 
+	@echo "#SBATCH -e $(SBATCH).err" >> $(SBATCH).batch 
+	@echo "#SBATCH -n 2" 	     	 >> $(SBATCH).batch 
+	@echo "#SBATCH -p normal"    	 >> $(SBATCH).batch 
+	@echo "#SBATCH -t 01:00:00"  	 >> $(SBATCH).batch 
+	@echo ""  				     	 >> $(SBATCH).batch 
 
 mkl:
 	$(eval GEN_FLAGS := $(GEN_FLAGS) -m)
@@ -48,7 +50,7 @@ mini:
 %: %.cpp
 	$(CC) -c ${CXX_FLAGS} $< -o $<.o
 	$(CC) -o $@ $<.o ${LINK_FLAGS}
-	@echo "./$@" >> run.sbatch
+	@echo "./$@" >> $(SBATCH).batch
 
 %.cpp: $(test_dir)/%.py
 	$(GEN) $(GEN_FLAGS) $< $@

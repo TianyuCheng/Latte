@@ -47,3 +47,4 @@ fc-meanp-fc
 *.sbatch
 *.out
 *.err
+sbatches/*
