@@ -197,10 +197,10 @@ def make_load_data(networks2enms):
         load_block.append("vector<int> train_labels, test_labels;");
 
         # we need number of features
-        load_block.append("""read_libsvm("%s", train_features, train_labels, %d, %d, %d);""" % (\
-            enm["train_file"], enm["dim_x"], enm["dim_y"], enm['nLabels']))
-        load_block.append("""read_libsvm("%s", test_features, test_labels, %d, %d, %d);""" % (\
-            enm["test_file"], enm["dim_x"], enm["dim_y"], enm['nLabels']))
+        load_block.append("""read_%s("%s", train_features, train_labels, %d, %d, %d);""" % (\
+            data_format, enm["train_file"], enm["dim_x"], enm["dim_y"], enm['nLabels']))
+        load_block.append("""read_%s("%s", test_features, test_labels, %d, %d, %d);""" % (\
+            data_format, enm["test_file"], enm["dim_x"], enm["dim_y"], enm['nLabels']))
         
         load_block.append("assert (train_features.size() == train_labels.size());")
         load_block.append("assert (test_features.size() == test_labels.size());")
@@ -435,6 +435,8 @@ def main(options, program_file, cpp_file):
                 if 'Neuron' not in layer: 
                     if layer['type'] == 'LibsvmDataLayer':
                         layer['Neuron'] = 'DataNeuron'
+                    if layer['type'] == 'MnistDataLayer':
+                        layer['Neuron'] = 'DataNeuron'
                     elif layer['type'] == 'SoftmaxLossLayer':
                         layer['Neuron'] = 'SoftmaxNeuron'
                     else:
@@ -446,12 +448,16 @@ def main(options, program_file, cpp_file):
         layer_names = map(lambda x: x['name'], networks2enms[net_name])
         layer_dict = dict(zip(layer_names, networks2enms[net_name]))
         layers = filter(lambda x: x['prev'] == None, networks2enms[net_name])
+        if len(layers) != 1:
+            print "ERROR (NEXT LAYER): ", layers
         assert len(layers) == 1
         layer_name = layers[0]['name']
         num_layers = len(networks2enms[net_name]) - 1
         while num_layers > 0:
             next_layer = filter(lambda x: x['prev'] == layer_name, networks2enms[net_name])
             print next_layer
+            if len(next_layer) != 1:
+                print "ERROR (NEXT LAYER): ", next_layer
             assert len(next_layer) == 1
             num_layers -= 1
             layers = layers + next_layer
