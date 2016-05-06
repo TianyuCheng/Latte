@@ -473,6 +473,9 @@ class GetPointerNode(Node):
         child = self.children[0]
         child.find_and_replace(to_find, replacement)
 
+    def get_writes(self):
+        return self.children[0].get_writes()
+
     def __str__(self):
         return "(&%s)" % str(self.children[0])
         
@@ -522,6 +525,33 @@ class CallNode(Node):
         # check children
         for child in self.children:
             child.find_and_replace(to_find, replacement)
+
+    def get_writes(self):
+        variable_names = []
+        array_accesses = []
+
+        # get the number of arguments
+        num_args = len(self.args_rw)
+
+        for i in range(num_args):
+            rw_bit = self.args_rw[i]
+
+            # if an argument is potentially written to...
+            if 0x2 & rw_bit:
+                child = self.children[i]
+
+                # get var names and or array accesses for that child
+                a, b = child.get_writes();
+                
+                # append the corresponding things to the right arrays
+                for j in a:
+                    variable_names.append(j)
+                for j in b:
+                    array_accesses.append(j)
+            else:
+                continue
+
+        return variable_names, array_accesses
 
     def __str__(self):
         args = ', '.join(map(str, self.children))
