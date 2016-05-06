@@ -1,6 +1,6 @@
 #/bin/bash
 
-EXE="mnist-fc-fc"
+EXE="mnist-fc"
 
 function generate() { 
     make clean sbatch mini $FLAGS $EXE SBATCH=${EXE}${SUFFIX}
