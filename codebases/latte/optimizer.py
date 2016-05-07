@@ -235,7 +235,6 @@ class FusionOptimizer(Optimizer):
             layer_type = self.name2enm[current_ensemble]
             one2one = layer_type[-1]["one2one"]
 
-
             for other_ensemble in to_loop_over:
                 # shouldn't be ourselves in the new list we are looping over
                 assert not other_ensemble == current_ensemble
@@ -384,7 +383,6 @@ class FusionOptimizer(Optimizer):
                 print "going to check", current_ensemble, other_ensemble,\
                       "dependencies"
 
-                one2one = True
                 for var_name in w_variable_names:
                     if var_name in r_variable_names:
                         print var_name, "is written in for loop 1 but read in 2nd loop"
@@ -455,10 +453,21 @@ class FusionOptimizer(Optimizer):
                     # also make sure that the array isn't being read as a whole
                     # i.e as a var name
                     if array_name in r_variable_names:
-                        print "the second loop is reading an array 1st loop",\
-                              "writes to"
-                        fusion_good = False
-                        break
+                        if one2one2:
+                            # this var name is an array, and if the layer is 1 to 1, it
+                            # apparently means it only affects the area x, y: compare
+                            # again with this knowledge
+                            indices = ["x", "y"]
+                            if not array_indices == indices:
+                                print "the second loop is reading an array 1st loop",\
+                                      "writes to:", array_name
+                                fusion_good = False
+                                break
+                        else:
+                            print "the second loop is reading an array 1st loop",\
+                                  "writes to:", array_name
+                            fusion_good = False
+                            break
 
                 if not fusion_good:
                     # if fusion isn't good, end fusion 
@@ -469,8 +478,8 @@ class FusionOptimizer(Optimizer):
                 r_variable_names, r_array_accesses = my_for_node.get_reads()
 
                 print "now analyzing loop 2 to loop 1 dependencies"
-                print w_variable_names, w_array_accesses
-                print r_variable_names, r_array_accesses
+                #print w_variable_names, w_array_accesses
+                #print r_variable_names, r_array_accesses
 
                 # the only problems that could exist are if the second for loop
                 # writes to an index that the first 1 is going to read in a later
@@ -544,12 +553,22 @@ class FusionOptimizer(Optimizer):
                     # also make sure that the array isn't being read as a whole
                     # i.e as a var name
                     if array_name in r_variable_names:
-                        print "the first loop is reading an array 2nd loop",\
-                              "writes to:", array_name
-                        print my_for_node
-                        print other_for_node
-                        fusion_good = False
-                        break
+                        if one2one:
+                            # this var name is an array, and if the layer is 1 to 1, it
+                            # apparently means it only affects the area x, y: compare
+                            # again with this knowledge
+                            indices = ["x", "y"]
+                            if not array_indices == indices:
+                                print "the first loop is reading an array 2nd loop",\
+                                      "writes to:", array_name
+                                fusion_good = False
+                                break
+
+                        else:
+                            print "the first loop is reading an array 2nd loop",\
+                                  "writes to:", array_name
+                            fusion_good = False
+                            break
 
                 if not fusion_good:
                     # if fusion isn't good, continue to the next loop
