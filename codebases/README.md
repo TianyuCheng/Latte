@@ -297,6 +297,8 @@ Assumptions/Design Decisions/Notes
 
 There may be other assumptions that are not listed here.
 
+- We assume tiling is always legal.
+
 - Fusion does not currently work for most of our tests. It works only for
 the 1 to 1 layer used in iris-fc-relu.
 
