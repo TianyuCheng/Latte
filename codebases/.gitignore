@@ -45,3 +45,6 @@ fc-meanp-fc
 
 *.sbatch
 sbatches/*
+
+# Loc's run script on Stampede
+run.sb
