@@ -50,19 +50,6 @@ def read_libsvm (file_name, fea_dim_x, fea_dim_y):
     fread.close()
     return features, labels
 
-def LibsvmDataLayer(net, train_file, test_file, dim_x, dim_y, n_classes):
-    # read data files
-    train_features, train_labels = read_libsvm(train_file, dim_x, fea_dim_y)
-    test_features, test_labels  = read_libsvm(test_file, dim_x, fea_dim_y)
-
-    # print "test_labels: ", test_labels
-    net.set_datasets(train_features, train_labels, test_features, test_labels)
-
-    # construct data and label ensembles
-    data_enm = Ensemble(1, fea_dim_y, DataNeuron)
-    net.set_data_ensemble(data_enm)
-    return data_enm
-
 def FullyConnectedLayer(net, prev, dim_x, dim_y, TYPE):
     # construct a new ensemble
     cur_enm = Ensemble(dim_x, dim_y, TYPE)
