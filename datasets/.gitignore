@@ -1,0 +1,4 @@
+# ignore the really big higgs dataset
+higgs
+higgslib
+higgs*
