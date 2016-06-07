@@ -48,3 +48,7 @@ sbatches/*
 
 # Loc's run script on Stampede
 run.sb
+
+# Loc's test file
+test
+test.cpp
