@@ -15,10 +15,10 @@ net = Network()
 data_enm = LibsvmDataLayer(net,\
                     '../datasets/higgs-train.libsvm',\
                     '../datasets/higgs-test.libsvm', 1, 28, 2)
-ip1_enm = FullyConnectedLayer(net, data_enm, 1, 40, FCNeuron)
-ip2_enm = ConvolutionLayer(net, ip1_enm, 1, 40, WeightedNeuron, 1, 10)
-ip3_enm = FullyConnectedLayer(net, ip2_enm, 1, 10, FCNeuron)
-label_enm = SoftmaxLossLayer(net, ip3_enm, 1, 3)
+ip1_enm = FullyConnectedLayer(net, data_enm, 100, 100, FCNeuron)
+ip2_enm = PoolingLayer(net, ip1_enm, 50, 50, MeanPoolingNeuron, 2, 2)
+ip3_enm = FullyConnectedLayer(net, ip2_enm, 50, 50, FCNeuron)
+label_enm = SoftmaxLossLayer(net, ip3_enm, 1, 10)
 
 sgd = SGD(100, 0.1)
 solve(sgd, net)
